@@ -8,7 +8,7 @@
 | `jznsolutions/erlen-crm` | leer (nur README, früherer Versuch) | nicht verwendet |
 | `jznsolutions/Erlen-Page-2.0` (Website) | statische Einzelseite (`index.html`, Logo, Hintergrundbild). Farben `#0B0F1A` / `#1E2A47`. Bewerbungsformular leitet derzeit nur auf Calendly weiter, speichert nichts. | **Nicht verändert.** Logo, Hintergrund und Farben übernommen. Anbindung über definierte Schnittstelle (siehe `WEBSITE_INTEGRATION.md`). |
 
-Da Website (statisches HTML) und CRM (Next.js) unterschiedliche Technik nutzen, werden sie **nicht** zu einer Anwendung zusammengelegt. Empfohlen: Website auf `erlen.de`, Portal auf `portal.erlen.de`.
+**Update:** Die Website wurde neu in dieselbe Next.js-Anwendung integriert (Route-Gruppe `src/app/(website)`). Website und Portal laufen unter einer Domain `www.erlen-sales.de`; interne Bereiche sind für Suchmaschinen gesperrt und nur angemeldet erreichbar. Siehe `WEBSITE_INTEGRATION.md`.
 
 ## 2. Technischer Stack
 

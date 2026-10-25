@@ -45,7 +45,7 @@ Supabase → **Authentication**:
 
 1. **Sign In / Providers**: „**Allow new users to sign up**“ **ausschalten** (Konten entstehen nur per Einladung). Provider **Email** bleibt **aktiv**.
 2. **Email**-Provider: Mindestlänge Passwort **10**, Anforderung „Buchstaben und Ziffern“.
-3. **URL Configuration**: *Site URL* = `https://portal.erlen.de`; *Redirect URLs*: `https://portal.erlen.de/auth/callback`.
+3. **URL Configuration**: *Site URL* = `https://www.erlen-sales.de`; *Redirect URLs*: `https://www.erlen-sales.de/auth/callback`.
 4. **Emails → SMTP Settings**: eigenen SMTP-Server eintragen (z. B. von Resend oder deinem E-Mail-Anbieter). Ohne eigenen SMTP verschickt Supabase nur sehr wenige E-Mails („Passwort vergessen“ funktioniert sonst kaum).
 5. Optional: **Emails → Templates** → Vorlage „Reset Password“ ins Deutsche übersetzen.
 
@@ -59,21 +59,22 @@ Supabase → **Authentication**:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key |
-| `NEXT_PUBLIC_SITE_URL` | `https://portal.erlen.de` |
+| `NEXT_PUBLIC_SITE_URL` | `https://www.erlen-sales.de` |
 | `SUPABASE_SECRET_KEY` | Secret key (**nur hier, nirgendwo sonst**) |
 | `RATE_LIMIT_SALT` | beliebige lange Zufallszeichenkette (mind. 16 Zeichen) |
-| `APPLICATION_ALLOWED_ORIGINS` | `https://erlen.de,https://www.erlen.de` (Adresse(n) der Website) |
+| `APPLICATION_ALLOWED_ORIGINS` | leer lassen (nur nötig, falls ein externes Formular Bewerbungen schickt) |
 | `RESEND_API_KEY` | optional |
 | `EMAIL_FROM` | optional, z. B. `ERLEN Vertriebsagentur <portal@erlen.de>` |
 
 4. **Deploy** klicken. Danach unter **Settings → Functions → Region** möglichst **Frankfurt (fra1)** wählen und erneut deployen.
 5. Auftragsverarbeitungsvertrag (DPA) mit Vercel abschließen.
 
-## Schritt 5 – Domain `portal.erlen.de`
+## Schritt 5 – Domain `www.erlen-sales.de` (Website + Portal)
 
-1. Vercel → Projekt → **Settings → Domains** → `portal.erlen.de` hinzufügen.
-2. Beim Domain-Anbieter einen **CNAME**-Eintrag anlegen: Name `portal`, Ziel wie von Vercel angezeigt (meist `cname.vercel-dns.com`).
+1. Vercel → Projekt → **Settings → Domains** → `www.erlen-sales.de` **und** `erlen-sales.de` hinzufügen (Vercel bietet an, die Variante ohne „www“ automatisch weiterzuleiten – annehmen).
+2. Beim Domain-Anbieter die DNS-Einträge genau so setzen, wie Vercel sie anzeigt (typisch: `A`-Eintrag für `@` und `CNAME` für `www`). Dadurch zeigt die Domain nicht mehr auf die alte Website.
 3. Warten, bis Vercel „Valid Configuration“ anzeigt (SSL wird automatisch erstellt).
+4. Startseite aufrufen → neue Website; `www.erlen-sales.de/login` → Mitarbeiter-Login.
 
 ## Schritt 6 – Ersten Administrator anlegen
 
@@ -83,7 +84,7 @@ Supabase → **Authentication**:
    select public.bootstrap_admin('deine@erlen.de');
    ```
    Das funktioniert nur, solange es noch keinen aktiven Administrator gibt.
-3. Unter `https://portal.erlen.de` anmelden. Weitere Mitarbeiter lädst du ab jetzt im Portal ein (siehe `BEDIENUNG.md`).
+3. Unter `https://www.erlen-sales.de` anmelden. Weitere Mitarbeiter lädst du ab jetzt im Portal ein (siehe `BEDIENUNG.md`).
 
 ## Schritt 7 – Grundkonfiguration im Portal
 
@@ -96,7 +97,8 @@ Supabase → **Authentication**:
 
 ## Schritt 8 – Smoke-Test nach jedem Deployment (5 Minuten)
 
-1. `https://portal.erlen.de/dashboard` im privaten Fenster öffnen → Umleitung auf Login. ✔
+1. `https://www.erlen-sales.de` öffnen → neue Website; Testbewerbung absenden → erscheint im Portal unter „Bewerber“. ✔
+1. `https://www.erlen-sales.de/dashboard` im privaten Fenster öffnen → Umleitung auf Login. ✔
 2. Als Admin anmelden → Dashboard lädt, keine Fehlermeldung. ✔
 3. Testleistung als Vertriebspartner-Testkonto einreichen, als Teamleiter bestätigen → erscheint im Dashboard. ✔
 4. Testdokument hochladen, nur für „Teamleiter“ freigeben → mit Vertriebspartner-Konto nicht sichtbar. ✔

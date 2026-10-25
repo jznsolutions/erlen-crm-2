@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: { default: "ERLEN Portal", template: "%s · ERLEN Portal" },
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+};
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

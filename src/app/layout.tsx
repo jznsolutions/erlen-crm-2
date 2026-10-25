@@ -3,9 +3,9 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "ERLEN CRM", template: "%s · ERLEN CRM" },
-  description: "Internes Mitarbeiterportal der ERLEN Vertriebsagentur",
-  robots: { index: false, follow: false },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.erlen-sales.de"),
+  title: { default: "ERLEN Vertriebsagentur", template: "%s · ERLEN" },
+  description: "ERLEN Vertriebsagentur – Karriere im Vertrieb mit leistungsabhängigem Einkommen.",
 };
 
 export const viewport: Viewport = {

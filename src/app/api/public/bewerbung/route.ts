@@ -1,10 +1,8 @@
-import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env.server";
-import { applicationSchema } from "@/lib/validation";
+import { submitApplication } from "@/lib/applications";
 
-// Öffentlicher Endpunkt für das Bewerbungsformular der ERLEN-Website.
+// Öffentlicher Endpunkt für externe Bewerbungsformulare (die eigene Website nutzt die Server Action).
 // Schutz: Origin-Allowlist (CORS), Honeypot, Ratenbegrenzung, Größenlimit, Einwilligungspflicht.
 // Es werden keine Daten zurückgegeben – nur Erfolg/Misserfolg.
 
@@ -46,30 +44,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Ungültige Daten" }, { status: 400, headers });
   }
 
-  const parsed = applicationSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: parsed.error.issues[0]?.message ?? "Ungültige Daten" }, { status: 422, headers });
-  }
-  // Honeypot ausgefüllt -> stillschweigend „erfolgreich“ (Bots erhalten kein Signal)
-  if (parsed.data.website) return NextResponse.json({ ok: true }, { status: 200, headers });
-
-  const admin = createAdminClient();
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unbekannt";
-  const key = "apply:" + createHash("sha256").update(ip + serverEnv().RATE_LIMIT_SALT).digest("hex").slice(0, 32);
-  const { data: allowed } = await admin.rpc("rate_limit_hit", { p_key: key, p_window_seconds: 3600, p_max: 5 });
-  if (allowed === false) return NextResponse.json({ ok: false, error: "Zu viele Anfragen. Bitte später erneut versuchen." }, { status: 429, headers });
-
-  const { error } = await admin.from("applicants").insert({
-    full_name: parsed.data.full_name,
-    email: parsed.data.email,
-    phone: parsed.data.phone,
-    message: parsed.data.message ?? null,
-    source: parsed.data.source || "website",
-    consent_at: new Date().toISOString(),
-  });
-  if (error) {
-    console.error("[bewerbung]", error.code);
-    return NextResponse.json({ ok: false, error: "Bewerbung konnte nicht gespeichert werden." }, { status: 500, headers });
-  }
+  const result = await submitApplication(body, ip);
+  if (!result.ok) return NextResponse.json({ ok: false, error: result.error }, { status: result.status, headers });
   return NextResponse.json({ ok: true }, { status: 201, headers });
 }

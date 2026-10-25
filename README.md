@@ -1,6 +1,6 @@
-# ERLEN CRM – Mitarbeiterportal der ERLEN Vertriebsagentur
+# ERLEN – Website & Mitarbeiterportal der ERLEN Vertriebsagentur
 
-Internes CRM- und Mitarbeiterportal: Mitarbeiterprofile, Rollen & Rechte, Teams, Leistungs-Tracking mit Freigabeprozess, Ziele & Rankings, die Schulungsplattform **ERLEN Academy**, geschützte Dokumente, Einladungen/Onboarding, Benachrichtigungen, Berichte und eine Bewerberschnittstelle für die Website.
+Öffentliche Website (Startseite mit Bewerbungsformular) und internes CRM-/Mitarbeiterportal in einer Anwendung unter `www.erlen-sales.de`. Das Portal: Mitarbeiterprofile, Rollen & Rechte, Teams, Leistungs-Tracking mit Freigabeprozess, Ziele & Rankings, die Schulungsplattform **ERLEN Academy**, geschützte Dokumente, Einladungen/Onboarding, Benachrichtigungen, Berichte und eine Bewerberschnittstelle für die Website.
 
 **Aktueller Stand und offene Punkte:** siehe [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
 
@@ -12,13 +12,14 @@ Internes CRM- und Mitarbeiterportal: Mitarbeiterprofile, Rollen & Rechte, Teams,
 | [`docs/BEDIENUNG.md`](docs/BEDIENUNG.md) | Mitarbeiter einladen, Rollen vergeben, Teams, Kennzahlen, Academy, Dokumente |
 | [`docs/KENNZAHLEN.md`](docs/KENNZAHLEN.md) | Welche Leistung wann zählt (Status, Storno, Korrektur, Duplikate) |
 | [`docs/SICHERHEIT_DATENSCHUTZ.md`](docs/SICHERHEIT_DATENSCHUTZ.md) | Sicherheitskonzept, getestete Szenarien, DSGVO-To-dos, Löschkonzept |
-| [`docs/WEBSITE_INTEGRATION.md`](docs/WEBSITE_INTEGRATION.md) | Login-Link und Bewerbungsformular der Website anbinden |
+| [`docs/WEBSITE_INTEGRATION.md`](docs/WEBSITE_INTEGRATION.md) | Öffentliche Website: Aufbau, Inhalte anpassen, SEO, Schutz des Portals |
+| [`docs/demo/ERLEN-CRM-Demo.html`](docs/demo/ERLEN-CRM-Demo.html) | Klickbare Offline-Vorschau von Website und Portal (Beispieldaten) |
 | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md) | Bestandsaufnahme, Technik, Datenmodell, Berechtigungsmatrix, Kosten, Risiken |
 
 ## Für Nicht-Entwickler: Was brauche ich?
 
 * Ein **Supabase**-Konto (Datenbank & Login) und ein **Vercel**-Konto (Hosting). Kosten für den Echtbetrieb: ca. 25 USD (Supabase Pro) + ca. 20 USD (Vercel Pro) pro Monat (bitte aktuelle Preise prüfen).
-* Zugriff auf die DNS-Einstellungen der Domain für `portal.erlen.de`.
+* Zugriff auf die DNS-Einstellungen der Domain `erlen-sales.de`.
 * Die komplette Anleitung mit Klickpfaden: [`docs/EINRICHTUNG_PRODUKTION.md`](docs/EINRICHTUNG_PRODUKTION.md).
 
 ## Lokale Entwicklung (für Entwickler)
@@ -64,6 +65,7 @@ Testkonten nach `seed:dev` (Passwort `Erlen-Dev-2026`): `admin@erlen.local`, `le
 supabase/migrations/   Datenbankschema, RLS-Richtlinien, Geschäftslogik (RPC), Stammdaten
 src/proxy.ts           Sitzungsprüfung & Login-Umleitung
 src/lib/               Auth (DAL), Supabase-Clients, Validierung, Kennzahlen, Datum
+src/app/(website)/     Öffentliche Website: Startseite, Bewerbung, Impressum, Datenschutz
 src/app/(auth)/        Login, Passwort, Einladung annehmen
 src/app/(portal)/      Dashboard, Leistungen, Ziele, Academy, Dokumente, Mitarbeiter, Teams, Berichte, Verwaltung
 src/app/api/           Export, Dokument-Download, öffentliche Bewerbungs-API

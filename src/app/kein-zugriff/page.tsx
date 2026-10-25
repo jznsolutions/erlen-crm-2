@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+export const metadata = { robots: { index: false, follow: false } };
+
 export default function NoAccess() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">

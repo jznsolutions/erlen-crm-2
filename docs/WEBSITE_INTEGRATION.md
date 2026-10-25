@@ -1,76 +1,28 @@
-# Anbindung der ERLEN-Website
+# Website & Portal unter einer Domain
 
-Die Website (`Erlen-Page-2.0`, statisches HTML) wurde **nicht verändert**. Empfohlene Struktur:
+Die öffentliche Website und das Mitarbeiterportal sind **eine Anwendung** unter **einer Domain** (`www.erlen-sales.de`):
 
-| Bereich | Adresse |
-|---|---|
-| Öffentliche Website & Bewerbungsseite | `https://erlen.de` |
-| Interner Login / Mitarbeiterportal / Admin / Academy | `https://portal.erlen.de` |
-
-## 1. Login-Link auf der Website
-
-Einen dezenten Link (z. B. im Footer) ergänzen:
-
-```html
-<a href="https://portal.erlen.de/login" rel="nofollow">Mitarbeiter-Login</a>
-```
-
-Es werden **keine Passwörter oder Sitzungen** zwischen Website und Portal ausgetauscht – die Anmeldung findet ausschließlich auf `portal.erlen.de` statt.
-
-## 2. Bewerbungsformular an das Portal anbinden
-
-Derzeit leitet das Formular nur zu Calendly weiter und speichert keine Daten. Das Portal stellt einen gesicherten Endpunkt bereit:
-
-`POST https://portal.erlen.de/api/public/bewerbung` (JSON)
-
-| Feld | Pflicht | Beschreibung |
+| Adresse | Für wen | Suchmaschinen |
 |---|---|---|
-| `full_name` | ja | Vor- und Nachname |
-| `email` | ja | E-Mail |
-| `phone` | ja | Telefonnummer |
-| `consent` | ja | `true` – Einwilligung in die Datenverarbeitung (Checkbox!) |
-| `message` | nein | Freitext |
-| `source` | nein | z. B. `website` |
-| `website` | – | Honeypot-Feld, muss leer bleiben (Spam-Schutz) |
+| `/` – Startseite mit Bewerbung | alle Besucher | indexiert (Titel, Beschreibung, strukturierte Daten, Sitemap) |
+| `/impressum`, `/datenschutz` | alle | indexiert |
+| `/login` (dezent im Kopf- und Fußbereich verlinkt) | Mitarbeitende | **gesperrt** (`noindex`, `robots.txt`) |
+| `/dashboard`, `/academy`, `/admin/…` usw. | nur angemeldete, aktive Konten | **gesperrt**; ohne Anmeldung Umleitung auf `/login` |
 
-Schutzmaßnahmen: nur Anfragen von den in `APPLICATION_ALLOWED_ORIGINS` eingetragenen Adressen, max. 5 Bewerbungen pro Stunde und IP, Größenlimit, keine Rückgabe von Daten.
+Fremde Besucher landen auf der Startseite. Das Portal ist nur mit einem per Einladung angelegten Konto nutzbar – es gibt keine Registrierung. Wer `/login` aufruft, sieht nur das Anmeldeformular.
 
-### Beispiel (ersetzt `submitForm` in `index.html`)
+## Inhalte anpassen
 
-```html
-<form id="bewerbung" onsubmit="submitForm(event)">
-  <input name="full_name" placeholder="Vollständiger Name" required>
-  <input name="phone" placeholder="Telefonnummer" required>
-  <input name="email" type="email" placeholder="Email Adresse" required>
-  <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
-  <label style="font-size:13px;opacity:.8"><input type="checkbox" name="consent" required>
-    Ich willige ein, dass meine Angaben zur Bearbeitung meiner Bewerbung gespeichert werden (<a href="/datenschutz">Datenschutz</a>).</label>
-  <button class="btn">Termin sichern</button>
-</form>
-<script>
-async function submitForm(e){
-  e.preventDefault();
-  const f = new FormData(e.target);
-  const res = await fetch("https://portal.erlen.de/api/public/bewerbung", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      full_name: f.get("full_name"), phone: f.get("phone"), email: f.get("email"),
-      consent: f.get("consent") === "on", website: f.get("website"), source: "website"
-    })
-  });
-  if (res.ok) { window.location.href = "https://calendly.com/DEIN-LINK"; }
-  else { const d = await res.json().catch(() => ({})); alert(d.error || "Bitte später erneut versuchen."); }
-}
-</script>
-```
+* **Texte der Startseite:** `src/app/(website)/page.tsx` (Abschnitte Hero, Kennzahlen, Haltung, Vorteile, Produkte, Ablauf, Zielgruppen, FAQ, Bewerbung).
+* **Kontaktdaten, WhatsApp, Calendly, Kennzahlen:** `src/lib/site.ts`. Felder mit `null` werden ausgeblendet. Die bisherige Website enthielt nur Platzhalter (WhatsApp `49123456789`, allgemeiner Calendly-Link) – bitte echte Werte eintragen.
+* **Impressum und Datenschutz:** `src/app/(website)/impressum/page.tsx` und `…/datenschutz/page.tsx` – **Vorlagen, vor dem Livegang vervollständigen und prüfen lassen.**
 
-> Die Website braucht dann ebenfalls eine Datenschutzerklärung, die diese Verarbeitung beschreibt.
+## Bewerbungen
 
-## 3. Vom Bewerber zum Mitarbeiter
+Das Formular auf der Startseite speichert Bewerbungen direkt im Portal (Bereich **Bewerber**), mit Einwilligungspflicht, Spam-Schutz (Honeypot) und Ratenbegrenzung. Nach dem Absenden kann optional ein Calendly-Link angezeigt werden (`calendlyUrl` in `src/lib/site.ts`).
 
-Portal → **Bewerber** → Status pflegen → **Einladen** → Einladungsformular ist vorausgefüllt → Einladungslink wird erzeugt (und per E-Mail versendet, falls Resend eingerichtet ist). Mit Annahme der Einladung ist die Person mit Rolle, Team, Vorgesetztem, Ausbilder und Pflichtschulungen eingerichtet.
+Für externe Formulare gibt es zusätzlich den Endpunkt `POST /api/public/bewerbung` (JSON: `full_name`, `email`, `phone`, `consent: true`, optional `message`); erlaubte Absender-Domains über `APPLICATION_ALLOWED_ORIGINS`.
 
-## 4. Gemeinsames Design
+## Umzug der bisherigen Website
 
-Das Portal nutzt Logo, Hintergrundbild und Farben der Website (`#0B0F1A`, `#1E2A47`). Optional kann die Website später ebenfalls auf Next.js migriert und mit dem Portal in einem Repository zusammengeführt werden – das ist für die Sicherheit **nicht** erforderlich.
+Die alte statische Seite (`Erlen-Page-2.0`) wurde nicht verändert. Zum Umstellen die Domain `erlen-sales.de` bzw. `www.erlen-sales.de` in Vercel diesem Projekt zuordnen (siehe `EINRICHTUNG_PRODUKTION.md`, Schritt 5). Danach kann das alte Hosting abgeschaltet werden.

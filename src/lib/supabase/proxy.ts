@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen", "/einladung", "/auth", "/api/public", "/datenschutz", "/impressum"];
+// Öffentliche Website (indexierbar)
+const WEBSITE_PATHS = ["/", "/impressum", "/datenschutz", "/robots.txt", "/sitemap.xml"];
+// Ohne Anmeldung erreichbar
+const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen", "/einladung", "/auth", "/api/public", "/datenschutz", "/impressum", "/robots.txt", "/sitemap.xml", "/manifest.webmanifest"];
 
 /** Erneuert die Sitzung und leitet nicht angemeldete Benutzer auf die Login-Seite. */
 export async function updateSession(request: NextRequest) {
@@ -39,5 +42,7 @@ export async function updateSession(request: NextRequest) {
     if (path !== "/") url.searchParams.set("weiter", path);
     return NextResponse.redirect(url);
   }
+  // Alles außer der öffentlichen Website wird für Suchmaschinen gesperrt
+  if (!WEBSITE_PATHS.includes(path)) response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }

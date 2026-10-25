@@ -11,7 +11,7 @@ Stand: 25.10.2026 · Branch `feature/crm-fundament`
 | 3 CRM-Kern | ✅ erledigt | Mitarbeiterprofile (inkl. Historie & Verwaltung), Teams/Unterteams/Historie, Vorgesetzte/Ausbilder, Leistungserfassung mit Freigabe, Storno, Korrektur, Duplikatschutz, 4 rollenabhängige Dashboards |
 | 4 Academy & Dokumente | ✅ erledigt | Kurse/Module/Lektionen (Text, Video, PDF, Quiz), Freigaben & Pflichtschulungen, Fortschrittsregeln, Ausbilder-Dokumentation & Feedback, Kursverwaltung, geschützte Dokumente & Mitteilungen |
 | 5 Ziele & Auswertungen | ✅ erledigt | Ziele (Person/Team/Agentur, Tag/Woche/Monat/Zeitraum), Bestenlisten (konfigurierbar je Rolle), Wettbewerbe, Berichte mit Filtern, CSV-Export (protokolliert) |
-| 6 Integration & Onboarding | ✅ erledigt (Website-Seite offen) | Einladungsprozess, Onboarding-Hinweise, Benachrichtigungen, Bewerber-API + Bewerberverwaltung. Website **nicht verändert** – Snippet in `docs/WEBSITE_INTEGRATION.md` |
+| 6 Integration & Onboarding | ✅ erledigt | Einladungsprozess, Onboarding, Benachrichtigungen, Bewerberverwaltung. **Neue öffentliche Website** in derselben App (Startseite, Bewerbung → Portal, Impressum/Datenschutz-Vorlagen, SEO, Portal für Suchmaschinen gesperrt) |
 | 7 Qualitätssicherung | ✅ erledigt (lokal) | Typecheck, Lint, Build grün; 17 Unit-, 68 Datenbank-, 11 E2E-Tests grün; Seiten-Crawl je Rolle ohne Fehler; Mobilansicht (390 px) geprüft |
 | 8 Deployment | ⏳ vorbereitet | Anleitung `docs/EINRICHTUNG_PRODUKTION.md`, `.env.example`, CI-Workflow. **Ausführung erfordert deine Konten** (Supabase, Vercel, DNS) |
 
@@ -20,7 +20,7 @@ Stand: 25.10.2026 · Branch `feature/crm-fundament`
 * `npm run typecheck` – ok · `npm run lint` – ok · `npm run build` – ok
 * `npm test` – 17/17 (Kennzahlen, Datum/Zeitzone, Open-Redirect, CSV-Injection, Validierung)
 * `npm run test:db` – 68/68 (alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy-Fortschritt, Quiz-Schutz, Einladungen)
-* `npm run test:e2e` – 11/11 (Zugriffsschutz, Leistungs-Workflow, Einladung end-to-end, Bewerber-API, Lektion/Mindestzeit, private Dokumente, Deaktivierung)
+* `npm run test:e2e` – 14/14 (Website öffentlich/indexierbar, Portal gesperrt, Bewerbung über Website, Zugriffsschutz, Leistungs-Workflow, Einladung, Bewerber-API, Lektion/Mindestzeit, private Dokumente, Deaktivierung)
 
 ## Bekannte Einschränkungen / noch nicht umgesetzt
 
@@ -41,5 +41,6 @@ Stand: 25.10.2026 · Branch `feature/crm-fundament`
 4. Ersten Admin per `bootstrap_admin` anlegen, Produkte/Teams/Einstellungen pflegen, Pflichtkurs anlegen (Schritte 6–7).
 5. Smoke-Test durchführen (Schritt 8); Pilotphase mit 1 Team.
 6. Datenschutz: AV-Verträge, Datenschutzhinweise prüfen lassen, Mitarbeitende informieren.
-7. Website: Login-Link und Bewerbungsformular gemäß `docs/WEBSITE_INTEGRATION.md` ergänzen.
+7. Website: echte Kontaktdaten/WhatsApp/Calendly in `src/lib/site.ts`, Impressum & Datenschutz vervollständigen, Texte (insb. FAQ) prüfen; Domain `erlen-sales.de` auf Vercel umstellen.
+7a. Das Vorbild `sales-focus.de` konnte aus der Entwicklungsumgebung nicht geladen werden (Netzwerk gesperrt) – Struktur basiert auf der bisherigen ERLEN-Seite und gängigen Karriereseiten; Feinschliff nach Screenshots des Vorbilds.
 8. Optional: SMTP/Resend einrichten, Supabase-Backups/PITR prüfen, Zwei-Faktor-Anmeldung für Admins ergänzen.

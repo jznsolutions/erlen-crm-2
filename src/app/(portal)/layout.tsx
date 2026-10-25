@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { requireUser } from "@/lib/auth";
@@ -6,6 +7,11 @@ import { signedUrl } from "@/lib/storage";
 import { NAV, type NavSection } from "@/components/layout/nav";
 import { MobileNav, Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
+
+export const metadata: Metadata = {
+  title: { default: "ERLEN Portal", template: "%s · ERLEN Portal" },
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+};
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
