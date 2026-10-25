@@ -81,7 +81,7 @@ Supabase → **Authentication**:
 1. Supabase → **Authentication → Users → Add user → Create new user**: deine geschäftliche E-Mail und ein sicheres Passwort, **Auto Confirm User** aktivieren.
 2. Supabase → **SQL Editor** → ausführen (E-Mail anpassen):
    ```sql
-   select public.bootstrap_admin('deine@erlen.de');
+   select public.bootstrap_admin('deine@erlen-sales.de');
    ```
    Das funktioniert nur, solange es noch keinen aktiven Administrator gibt.
 3. Unter `https://www.erlen-sales.de` anmelden. Weitere Mitarbeiter lädst du ab jetzt im Portal ein (siehe `BEDIENUNG.md`).
