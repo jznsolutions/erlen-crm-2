@@ -329,7 +329,8 @@ begin
     raise exception 'Keine Berechtigung' using errcode = '42501';
   end if;
   select * into l from public.lessons where id = p_lesson;
-  if l.lesson_type not in ('text', 'dokument') then
+  -- Externe Videos (ohne eigene Datei) können nicht gemessen werden -> ausdrückliche Bestätigung
+  if l.lesson_type not in ('text', 'dokument') and not (l.lesson_type = 'video' and l.video_path is null) then
     raise exception 'Diese Lektion wird über Video bzw. Quiz abgeschlossen.';
   end if;
   select * into p from public.lesson_progress where user_id = auth.uid() and lesson_id = p_lesson;
