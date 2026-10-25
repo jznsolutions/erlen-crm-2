@@ -15,9 +15,14 @@ const serverSchema = z.object({
 
 let cached: z.infer<typeof serverSchema> | null = null;
 
+/** Geheimer Schlüssel – eigener Name oder der Name der Vercel-Supabase-Integration. */
+export function secretKey(): string | undefined {
+  return process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || undefined;
+}
+
 export function serverEnv() {
   cached ??= serverSchema.parse({
-    SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+    SUPABASE_SECRET_KEY: secretKey(),
     APPLICATION_ALLOWED_ORIGINS: process.env.APPLICATION_ALLOWED_ORIGINS,
     RESEND_API_KEY: process.env.RESEND_API_KEY || undefined,
     EMAIL_FROM: process.env.EMAIL_FROM || undefined,
