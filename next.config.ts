@@ -22,8 +22,14 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Klickbare Offline-Vorschau (Beispieldaten) unter /demo
+  async rewrites() {
+    return [{ source: "/demo", destination: "/demo/index.html" }];
+  },
   async headers() {
     return [
+      { source: "/demo/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/demo", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
       {
         source: "/:path*",
         headers: [

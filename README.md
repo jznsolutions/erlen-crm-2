@@ -13,7 +13,7 @@
 | [`docs/KENNZAHLEN.md`](docs/KENNZAHLEN.md) | Welche Leistung wann zählt (Status, Storno, Korrektur, Duplikate) |
 | [`docs/SICHERHEIT_DATENSCHUTZ.md`](docs/SICHERHEIT_DATENSCHUTZ.md) | Sicherheitskonzept, getestete Szenarien, DSGVO-To-dos, Löschkonzept |
 | [`docs/WEBSITE_INTEGRATION.md`](docs/WEBSITE_INTEGRATION.md) | Öffentliche Website: Aufbau, Inhalte anpassen, SEO, Schutz des Portals |
-| [`docs/demo/ERLEN-CRM-Demo.html`](docs/demo/ERLEN-CRM-Demo.html) | Klickbare Offline-Vorschau von Website und Portal (Beispieldaten) |
+| [`public/demo/index.html`](public/demo/index.html) – online unter `/demo` | Klickbare Offline-Vorschau von Website und Portal (Beispieldaten) |
 | [`docs/ARCHITEKTUR.md`](docs/ARCHITEKTUR.md) | Bestandsaufnahme, Technik, Datenmodell, Berechtigungsmatrix, Kosten, Risiken |
 
 ## Für Nicht-Entwickler: Was brauche ich?
