@@ -13,7 +13,9 @@ Fremde Besucher landen auf der Startseite. Das Portal ist nur mit einem per Einl
 
 ## Inhalte anpassen
 
-* **Texte der Startseite:** `src/app/(website)/page.tsx` (Abschnitte Hero, Kennzahlen, Haltung, Vorteile, Produkte, Ablauf, Zielgruppen, FAQ, Bewerbung).
+* **Texte der Startseite:** `src/app/(website)/page.tsx` (Hero, Laufband, Kennzahlen, Über ERLEN, Märkte, Karrierepfad, Vorteile, Quiz, Erfolgsgeschichten, Ablauf, FAQ, Bewerbung, Kontakt). Animationen und Display-Schrift: `src/app/(website)/website.css`.
+* **Optionale Abschnitte** in `src/lib/site.ts` – erscheinen erst mit echten Inhalten: Einkommensangaben je Karrierestufe (`careerLevels[].income`), Erfolgsgeschichten (`testimonials`, nur mit Einverständnis der Personen), Partner/Auftraggeber (`partners`, nur mit Erlaubnis), Standort/Kontakt (`address`, `email`, `phone`).
+* **Quiz** „Passt ERLEN zu dir?“: `src/components/website/quiz.tsx`. Die Antworten werden nur bei einer Bewerbung als Nachricht mitgesendet.
 * **Kontaktdaten, WhatsApp, Calendly, Kennzahlen:** `src/lib/site.ts`. Felder mit `null` werden ausgeblendet. Die bisherige Website enthielt nur Platzhalter (WhatsApp `49123456789`, allgemeiner Calendly-Link) – bitte echte Werte eintragen.
 * **Impressum und Datenschutz:** `src/app/(website)/impressum/page.tsx` und `…/datenschutz/page.tsx` – **Vorlagen, vor dem Livegang vervollständigen und prüfen lassen.**
 

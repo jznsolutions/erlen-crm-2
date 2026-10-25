@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { applyAction, type ApplyState } from "@/app/(website)/actions";
@@ -8,7 +8,7 @@ import { applyAction, type ApplyState } from "@/app/(website)/actions";
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="group inline-flex h-13 w-full items-center justify-center gap-2 rounded-full bg-white px-8 font-semibold text-[#0b0f1a] transition hover:bg-white/90 disabled:opacity-60">
+    <button type="submit" disabled={pending} className="btn-light group w-full disabled:opacity-60">
       {pending ? <Loader2 className="size-5 animate-spin" /> : null}
       {pending ? "Wird gesendet …" : "Bewerbung absenden"}
       {!pending ? <ArrowRight className="size-5 transition-transform group-hover:translate-x-0.5" /> : null}
@@ -16,10 +16,17 @@ function Submit() {
   );
 }
 
-const field = "h-13 w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 text-base text-white placeholder:text-white/40 outline-none transition focus:border-white/50 focus:bg-white/[0.09] aria-[invalid=true]:border-red-400";
+const field = "h-14 w-full rounded-2xl border border-white/15 bg-white/[0.06] px-4 text-base text-white placeholder:text-white/40 outline-none transition focus:border-white/50 focus:bg-white/[0.09] aria-[invalid=true]:border-red-400";
 
 export function ApplyForm({ calendlyUrl }: { calendlyUrl: string | null }) {
   const [state, action] = useActionState<ApplyState, FormData>(applyAction, null);
+  const msgRef = useRef<HTMLTextAreaElement>(null);
+  // Ergebnis des Quiz in die Nachricht übernehmen
+  useEffect(() => {
+    const on = (e: Event) => { if (msgRef.current) msgRef.current.value = String((e as CustomEvent).detail ?? ""); };
+    window.addEventListener("erlen:quiz", on);
+    return () => window.removeEventListener("erlen:quiz", on);
+  }, []);
   if (state?.ok) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center" role="status">
@@ -56,7 +63,7 @@ export function ApplyForm({ calendlyUrl }: { calendlyUrl: string | null }) {
       </div>
       <div>
         <label htmlFor="ap-msg" className="sr-only">Nachricht (optional)</label>
-        <textarea id="ap-msg" name="message" defaultValue={v?.message} rows={3} maxLength={2000} placeholder="Erzähl uns kurz von dir (optional)" className={field.replace("h-13", "") + " py-3"} />
+        <textarea ref={msgRef} id="ap-msg" name="message" defaultValue={v?.message} rows={3} maxLength={2000} placeholder="Erzähl uns kurz von dir (optional)" className={field.replace("h-13", "") + " py-3"} />
       </div>
       {/* Honeypot – für Menschen unsichtbar */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-0 overflow-hidden">

@@ -13,8 +13,9 @@ export function SiteFooter() {
         <div>
           <p className="text-sm font-semibold text-white">Website</p>
           <ul className="mt-4 space-y-2.5 text-sm text-white/55">
-            <li><Link href="/#warum-erlen" className="hover:text-white">Warum ERLEN</Link></li>
-            <li><Link href="/#ablauf" className="hover:text-white">Dein Weg</Link></li>
+            <li><Link href="/#ueber" className="hover:text-white">Über ERLEN</Link></li>
+            <li><Link href="/#karriere" className="hover:text-white">Karriere</Link></li>
+            <li><Link href="/#quiz" className="hover:text-white">Passt ERLEN zu dir?</Link></li>
             <li><Link href="/#faq" className="hover:text-white">FAQ</Link></li>
             <li><Link href="/#bewerben" className="hover:text-white">Bewerben</Link></li>
           </ul>

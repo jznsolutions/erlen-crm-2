@@ -7,6 +7,7 @@ test.describe("Öffentliche Website", () => {
     expect(res?.status()).toBe(200);
     expect(res?.headers()["x-robots-tag"]).toBeUndefined();
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Verdiene Geld im Vertrieb.");
+    await expect(page.getByRole("banner").getByRole("link", { name: "Bewerben", exact: true })).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index, follow/);
     await expect(page.getByRole("link", { name: "Mitarbeiter-Login" })).toBeVisible();
 
@@ -40,4 +41,12 @@ test.describe("Öffentliche Website", () => {
     await page.goto("/bewerber");
     await expect(page.getByText(name)).toBeVisible();
   });
+});
+
+test("Quiz führt zum Ergebnis und übernimmt Antworten in die Bewerbung", async ({ page }) => {
+  await page.goto("/#quiz");
+  for (let i = 0; i < 6; i++) await page.locator("#quiz button").filter({ hasText: /\S/ }).first().click();
+  await expect(page.getByRole("heading", { name: /Du passt|Gute|Lass uns/ })).toBeVisible();
+  await page.getByRole("button", { name: "Jetzt bewerben" }).click();
+  await expect(page.locator("#ap-msg")).toHaveValue(/Quiz-Antworten/);
 });
