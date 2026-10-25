@@ -4,7 +4,7 @@ export function Card({ className, ...props }: React.ComponentProps<"div">) {
   return <div className={cn("rounded-xl border bg-card text-card-foreground shadow-[0_1px_2px_rgba(11,15,26,0.04)]", className)} {...props} />;
 }
 export function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex flex-col gap-1 p-5 pb-3 sm:flex-row sm:items-start sm:justify-between", className)} {...props} />;
+  return <div className={cn("flex flex-wrap items-start justify-between gap-x-3 gap-y-2 p-5 pb-3", className)} {...props} />;
 }
 export function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
   return <h3 className={cn("text-[15px] font-semibold tracking-tight", className)} {...props} />;

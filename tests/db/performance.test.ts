@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { asUser, close, connect, expectDbError, one, type Db } from "./helpers";
+import { close, connect, expectDbError, one, type Db } from "./helpers";
 import { createOrg, type Org } from "./fixtures";
 
 let db: Db;
