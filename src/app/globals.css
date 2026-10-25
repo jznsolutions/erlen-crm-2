@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* ERLEN Design-Tokens – entsättigtes Navy, Schwarz/Weiß, dezente Grautöne */
+:root {
+  --background: #f5f6f8;
+  --foreground: #0b0f1a;
+  --card: #ffffff;
+  --card-foreground: #0b0f1a;
+  --muted: #eef0f4;
+  --muted-foreground: #5b6475;
+  --border: #e2e5eb;
+  --input: #d5d9e1;
+  --primary: #1e2a47;
+  --primary-hover: #2a3a60;
+  --primary-foreground: #ffffff;
+  --accent: #e8ecf4;
+  --accent-foreground: #1e2a47;
+  --ring: #3b5182;
+  --success: #17724f;
+  --success-soft: #e3f3ec;
+  --warning: #8a5a00;
+  --warning-soft: #fbf1db;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --info: #1c5cab;
+  --info-soft: #e6effb;
+  --sidebar: #0b0f1a;
+  --sidebar-foreground: #aab2c3;
+  --sidebar-active: #1e2a47;
+  --sidebar-border: #1a2133;
+  /* Diagrammfarben (validierte Kategorienreihenfolge) */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #6250d6;
+  --chart-8: #e34948;
+  --chart-primary: #256abf;
+  --chart-pending: #9ec5f4;
+  --chart-grid: #e8eaef;
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-border: var(--sidebar-border);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Markdown-Inhalte der Academy */
+.prose-erlen h1 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+.prose-erlen h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
+.prose-erlen h3 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+.prose-erlen p { margin: 0.75rem 0; line-height: 1.7; }
+.prose-erlen ul { list-style: disc; padding-left: 1.25rem; margin: 0.75rem 0; }
+.prose-erlen ol { list-style: decimal; padding-left: 1.25rem; margin: 0.75rem 0; }
+.prose-erlen li { margin: 0.25rem 0; line-height: 1.6; }
+.prose-erlen strong { font-weight: 600; }
+.prose-erlen a { color: var(--info); text-decoration: underline; }
+.prose-erlen blockquote { border-left: 3px solid var(--border); padding-left: 1rem; color: var(--muted-foreground); }
