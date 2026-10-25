@@ -37,7 +37,7 @@ Stand: 25.10.2026 · Branch `feature/crm-fundament`
 
 1. Branch prüfen und nach `main` übernehmen (Pull Request).
 2. Supabase-Projekt (Frankfurt, Pro) anlegen → Migrationen einspielen → Auth-Einstellungen setzen (`docs/EINRICHTUNG_PRODUKTION.md`, Schritte 1–3).
-3. Vercel-Projekt anlegen, Umgebungsvariablen eintragen, `portal.erlen.de` verbinden (Schritte 4–5).
+3. Vercel-Projekt anlegen, Umgebungsvariablen eintragen, `www.erlen-sales.de` verbinden (Schritte 4–5).
 4. Ersten Admin per `bootstrap_admin` anlegen, Produkte/Teams/Einstellungen pflegen, Pflichtkurs anlegen (Schritte 6–7).
 5. Smoke-Test durchführen (Schritt 8); Pilotphase mit 1 Team.
 6. Datenschutz: AV-Verträge, Datenschutzhinweise prüfen lassen, Mitarbeitende informieren.

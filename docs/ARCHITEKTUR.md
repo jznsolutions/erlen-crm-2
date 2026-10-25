@@ -101,7 +101,7 @@ Konventionen: UUID-Primärschlüssel, `timestamptz` (UTC) für Zeitpunkte, `date
 | Supabase | Datenbank, Login, Dateien | Free-Tarif zum Testen; für Produktion **Pro-Tarif empfohlen** (tägliche Backups, keine Pausierung, größere Dateien) – ca. 25 USD/Monat |
 | Vercel | Hosting | Hobby nur privat/nicht-kommerziell; für Firmen **Pro** – ca. 20 USD/Monat je Mitglied |
 | Resend (optional) | Einladungs-E-Mails | Free-Tarif reicht meist; eigene Domain mit DNS-Einträgen nötig |
-| Domain | `portal.erlen.de` | bestehende Domain, DNS-Eintrag beim Domain-Anbieter |
+| Domain | `www.erlen-sales.de` | bestehende Domain, DNS-Eintrag beim Domain-Anbieter |
 
 ## 7. Risiken
 

@@ -64,7 +64,7 @@ Supabase → **Authentication**:
 | `RATE_LIMIT_SALT` | beliebige lange Zufallszeichenkette (mind. 16 Zeichen) |
 | `APPLICATION_ALLOWED_ORIGINS` | leer lassen (nur nötig, falls ein externes Formular Bewerbungen schickt) |
 | `RESEND_API_KEY` | optional |
-| `EMAIL_FROM` | optional, z. B. `ERLEN Vertriebsagentur <portal@erlen.de>` |
+| `EMAIL_FROM` | optional, z. B. `ERLEN Vertriebsagentur <portal@erlen-sales.de>` |
 
 4. **Deploy** klicken. Danach unter **Settings → Functions → Region** möglichst **Frankfurt (fra1)** wählen und erneut deployen.
 5. Auftragsverarbeitungsvertrag (DPA) mit Vercel abschließen.
