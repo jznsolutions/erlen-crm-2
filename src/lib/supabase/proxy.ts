@@ -8,6 +8,16 @@ const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen"
 
 /** Erneuert die Sitzung und leitet nicht angemeldete Benutzer auf die Login-Seite. */
 export async function updateSession(request: NextRequest) {
+  const path0 = request.nextUrl.pathname;
+  // Ohne Supabase-Konfiguration: nur die öffentliche Website, alles andere -> Hinweisseite
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+    if (WEBSITE_PATHS.includes(path0) || path0 === "/portal-einrichtung") return NextResponse.next();
+    if (path0.startsWith("/api/")) return NextResponse.json({ error: "Portal noch nicht eingerichtet" }, { status: 503 });
+    const url = request.nextUrl.clone();
+    url.pathname = "/portal-einrichtung";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

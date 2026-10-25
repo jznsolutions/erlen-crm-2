@@ -7,8 +7,22 @@ const publicSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.url().default("http://localhost:3000"),
 });
 
-export const publicEnv = publicSchema.parse({
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || undefined,
-});
+type PublicEnv = z.infer<typeof publicSchema>;
+let cached: PublicEnv | null = null;
+
+/** Ist das Portal (Supabase) konfiguriert? Ohne Konfiguration läuft nur die öffentliche Website. */
+export function isPortalConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+}
+
+function load(): PublicEnv {
+  cached ??= publicSchema.parse({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || undefined,
+  });
+  return cached;
+}
+
+// Wird erst beim ersten Zugriff geprüft – so lässt sich die App auch ohne Supabase bauen.
+export const publicEnv = new Proxy({} as PublicEnv, { get: (_, key: string) => load()[key as keyof PublicEnv] });
