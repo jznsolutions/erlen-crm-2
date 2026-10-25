@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { serverEnv } from "@/lib/env.server";
+import { secretKey, serverEnv } from "@/lib/env.server";
 import { applicationSchema } from "@/lib/validation";
 import { isPortalConfigured } from "@/lib/env";
 
@@ -21,7 +21,7 @@ export async function submitApplication(input: unknown, ip: string): Promise<App
   // Honeypot ausgefüllt -> stillschweigend „erfolgreich“ (Bots erhalten kein Signal)
   if (parsed.data.website) return { ok: true };
 
-  if (!isPortalConfigured() || !process.env.SUPABASE_SECRET_KEY) {
+  if (!isPortalConfigured() || !secretKey()) {
     console.error("[bewerbung] Supabase ist nicht konfiguriert – Bewerbung kann nicht gespeichert werden.");
     return { ok: false, status: 503, error: "Online-Bewerbungen sind in Kürze verfügbar. Bitte kontaktiere uns direkt." };
   }

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Alert } from "@/components/ui/misc";
 import { getCurrentUser } from "@/lib/auth";
+import { getSetupStatus } from "@/lib/setup";
+import Link from "next/link";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Anmelden" };
@@ -15,10 +17,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   if (await getCurrentUser()) redirect("/dashboard");
   const msg = params.fehler ? messages[params.fehler] : undefined;
+  const setup = await getSetupStatus();
+  const needsSetup = setup.database && !setup.error && (!setup.initialized || !setup.hasAdmin);
   return (
     <div>
       <h1 className="text-xl font-semibold tracking-tight">Willkommen zurück</h1>
       <p className="mt-1 mb-6 text-sm text-muted-foreground">Melde dich mit deinem ERLEN-Konto an.</p>
+      {needsSetup ? (
+        <Alert tone="info" className="mb-4" title="Portal noch nicht eingerichtet">
+          <Link href="/einrichtung" className="underline">Jetzt einrichten</Link> – Datenbank anlegen und Administrator-Konto erstellen.
+        </Alert>
+      ) : null}
       {params.abgemeldet ? <Alert tone="success" className="mb-4">Du wurdest abgemeldet.</Alert> : null}
       {msg ? <Alert tone={msg.tone} className="mb-4">{msg.text}</Alert> : null}
       <LoginForm next={params.weiter} />

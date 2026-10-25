@@ -24,6 +24,11 @@
 
 ## Schritt 2 – Datenbank einrichten (Migrationen)
 
+**Variante 0 (am einfachsten, wenn Supabase über die Vercel-Integration verknüpft ist):**
+Seite `https://DEINE-ADRESSE/einrichtung` öffnen → „Datenbank jetzt einrichten“ → danach direkt dein Administrator-Konto anlegen (innerhalb von 60 Minuten). Die Seite funktioniert nur bei leerer Datenbank bzw. solange es keinen Administrator gibt. Schritt 6 entfällt dann.
+
+**Variante SQL-Datei:** Inhalt von `supabase/SETUP_PRODUKTION.sql` im Supabase-SQL-Editor einfügen und ausführen (enthält alle Migrationen, nur einmal ausführen).
+
 **Variante A (empfohlen, auf einem Computer mit Node.js):**
 
 ```bash

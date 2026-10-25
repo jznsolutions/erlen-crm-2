@@ -1,17 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isPortalConfigured, supabasePublicKey, supabaseUrl } from "@/lib/env";
 
 // Öffentliche Website (indexierbar)
 const WEBSITE_PATHS = ["/", "/impressum", "/datenschutz", "/robots.txt", "/sitemap.xml"];
 // Ohne Anmeldung erreichbar
-const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen", "/einladung", "/auth", "/api/public", "/datenschutz", "/impressum", "/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/demo"];
+const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen", "/einladung", "/auth", "/api/public", "/datenschutz", "/impressum", "/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/demo", "/einrichtung"];
 
 /** Erneuert die Sitzung und leitet nicht angemeldete Benutzer auf die Login-Seite. */
 export async function updateSession(request: NextRequest) {
   const path0 = request.nextUrl.pathname;
   // Ohne Supabase-Konfiguration: nur die öffentliche Website, alles andere -> Hinweisseite
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    if (WEBSITE_PATHS.includes(path0) || path0 === "/portal-einrichtung" || path0 === "/demo" || path0.startsWith("/demo/")) return NextResponse.next();
+  if (!isPortalConfigured()) {
+    if (WEBSITE_PATHS.includes(path0) || path0 === "/portal-einrichtung" || path0 === "/einrichtung" || path0 === "/demo" || path0.startsWith("/demo/")) return NextResponse.next();
     if (path0.startsWith("/api/")) return NextResponse.json({ error: "Portal noch nicht eingerichtet" }, { status: 503 });
     const url = request.nextUrl.clone();
     url.pathname = "/portal-einrichtung";
@@ -20,8 +21,8 @@ export async function updateSession(request: NextRequest) {
   }
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    supabaseUrl()!,
+    supabasePublicKey()!,
     {
       cookies: {
         getAll() {

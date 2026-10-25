@@ -50,3 +50,10 @@ test("Quiz führt zum Ergebnis und übernimmt Antworten in die Bewerbung", async
   await page.getByRole("button", { name: "Jetzt bewerben" }).click();
   await expect(page.locator("#ap-msg")).toHaveValue(/Quiz-Antworten/);
 });
+
+test("Einrichtungsseite ist nach der Einrichtung wirkungslos", async ({ page }) => {
+  await page.goto("/einrichtung");
+  await expect(page.getByText("Fertig eingerichtet")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Datenbank jetzt einrichten" })).toHaveCount(0);
+  await expect(page.locator("#s-email")).toHaveCount(0);
+});

@@ -1,0 +1,3757 @@
+-- =============================================================================
+-- ERLEN – Einrichtung der Produktionsdatenbank (automatisch erzeugt)
+-- =============================================================================
+-- Anleitung: Supabase → SQL Editor → New query → gesamten Inhalt dieser Datei
+-- einfügen → "Run". NUR EINMAL in einer leeren Datenbank ausführen.
+-- Enthält: 20261025000100_core.sql, 20261025000200_core_seed_and_rpc.sql, 20261025000300_performance.sql, 20261025000400_academy.sql, 20261025000500_documents_storage.sql, 20261025000600_onboarding_notifications.sql
+-- =============================================================================
+
+begin;
+
+-- ----- 20261025000100_core.sql -----
+-- =============================================================================
+-- ERLEN CRM – Kern: Rollen, Berechtigungen, Profile, Teams, Hierarchie, Audit
+-- =============================================================================
+-- Grundprinzipien
+--  * Clients (Rolle "authenticated") dürfen Tabellen nur LESEN, gefiltert durch RLS.
+--  * Alle schreibenden Vorgänge laufen über RPC-Funktionen (SECURITY DEFINER),
+--    die Berechtigungen und Geschäftsregeln serverseitig in der Datenbank prüfen.
+--  * Interne Hilfsfunktionen liegen im Schema "private", das nicht über die
+--    REST-API veröffentlicht wird.
+--  * Alle Zeitpunkte als timestamptz (UTC gespeichert), Geschäftstage als date
+--    in der Zeitzone Europe/Berlin.
+-- =============================================================================
+
+create schema if not exists private;
+grant usage on schema private to authenticated, service_role;
+
+-- -----------------------------------------------------------------------------
+-- Aufzählungstypen
+-- -----------------------------------------------------------------------------
+create type public.user_status as enum ('eingeladen', 'aktiv', 'deaktiviert');
+create type public.team_member_role as enum ('mitglied', 'teamleiter');
+create type public.relationship_type as enum ('vorgesetzter', 'ausbilder');
+create type public.permission_effect as enum ('grant', 'deny');
+create type public.partner_status as enum ('in_ausbildung', 'aktiv', 'pausiert', 'beendet');
+
+-- -----------------------------------------------------------------------------
+-- Hilfsfunktion: aktuelles Geschäftsdatum (Europe/Berlin)
+-- -----------------------------------------------------------------------------
+create or replace function private.today_berlin()
+returns date
+language sql
+stable
+set search_path = ''
+as $$
+  select (now() at time zone 'Europe/Berlin')::date;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- Rollen und Berechtigungen
+-- -----------------------------------------------------------------------------
+create table public.roles (
+  id uuid primary key default gen_random_uuid(),
+  key text not null unique check (key ~ '^[a-z_]+$'),
+  name text not null,
+  description text,
+  hierarchy_level int not null,
+  created_at timestamptz not null default now()
+);
+
+create table public.permissions (
+  key text primary key check (key ~ '^[a-z_]+(\.[a-z_]+)+$'),
+  category text not null,
+  description text not null
+);
+
+create table public.role_permissions (
+  role_id uuid not null references public.roles (id) on delete cascade,
+  permission_key text not null references public.permissions (key) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (role_id, permission_key)
+);
+
+-- -----------------------------------------------------------------------------
+-- Profile (Basisdaten, 1:1 zu auth.users)
+-- -----------------------------------------------------------------------------
+create sequence public.employee_number_seq start 1001;
+
+create table public.profiles (
+  id uuid primary key references auth.users (id) on delete restrict,
+  employee_number text not null unique
+    default ('E' || lpad(nextval('public.employee_number_seq')::text, 5, '0')),
+  first_name text not null check (char_length(first_name) between 1 and 100),
+  last_name text not null check (char_length(last_name) between 1 and 100),
+  email text not null check (position('@' in email) > 1),
+  avatar_path text,
+  role_id uuid not null references public.roles (id),
+  status public.user_status not null default 'aktiv',
+  deactivated_at timestamptz,
+  anonymized_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index profiles_email_lower_idx on public.profiles (lower(email));
+create index profiles_role_idx on public.profiles (role_id);
+create index profiles_status_idx on public.profiles (status);
+
+-- Sensible bzw. berufliche Zusatzdaten (getrennt, damit sie gezielt geschützt sind)
+create table public.employee_details (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  phone text check (phone is null or phone ~ '^[0-9 +()/-]{5,30}$'),
+  entry_date date,
+  sales_start_date date,
+  sales_region text check (sales_region is null or char_length(sales_region) <= 120),
+  partner_status public.partner_status not null default 'in_ausbildung',
+  updated_at timestamptz not null default now()
+);
+
+-- Individuelle Berechtigungen (Ergänzung oder Einschränkung der Rolle)
+create table public.user_permissions (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  permission_key text not null references public.permissions (key) on delete cascade,
+  effect public.permission_effect not null,
+  reason text,
+  granted_by uuid references public.profiles (id),
+  created_at timestamptz not null default now(),
+  primary key (user_id, permission_key)
+);
+
+-- -----------------------------------------------------------------------------
+-- Teams und Organisationsstruktur
+-- -----------------------------------------------------------------------------
+create table public.teams (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 2 and 120),
+  description text,
+  parent_team_id uuid references public.teams (id) on delete restrict,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (parent_team_id is null or parent_team_id <> id)
+);
+create unique index teams_name_lower_idx on public.teams (lower(name));
+create index teams_parent_idx on public.teams (parent_team_id);
+
+-- Mitgliedschaften werden nie gelöscht, sondern beendet (ended_at) -> Teamhistorie
+create table public.team_memberships (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references public.teams (id) on delete restrict,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  member_role public.team_member_role not null default 'mitglied',
+  includes_subteams boolean not null default false,
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  end_reason text,
+  created_by uuid references public.profiles (id),
+  check (ended_at is null or ended_at >= started_at),
+  check (member_role = 'teamleiter' or includes_subteams = false)
+);
+-- Ein Mitarbeiter ist gleichzeitig höchstens in einem Team reguläres Mitglied
+create unique index team_memberships_one_active_member_idx
+  on public.team_memberships (user_id) where ended_at is null and member_role = 'mitglied';
+create unique index team_memberships_active_unique_idx
+  on public.team_memberships (team_id, user_id, member_role) where ended_at is null;
+create index team_memberships_team_idx on public.team_memberships (team_id) where ended_at is null;
+create index team_memberships_user_idx on public.team_memberships (user_id);
+
+-- Vorgesetzten- und Ausbilderzuordnung (mit Historie)
+create table public.reporting_relationships (
+  id uuid primary key default gen_random_uuid(),
+  employee_id uuid not null references public.profiles (id) on delete cascade,
+  manager_id uuid not null references public.profiles (id) on delete cascade,
+  relation_type public.relationship_type not null,
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  created_by uuid references public.profiles (id),
+  check (employee_id <> manager_id),
+  check (ended_at is null or ended_at >= started_at)
+);
+create unique index reporting_one_active_idx
+  on public.reporting_relationships (employee_id, relation_type) where ended_at is null;
+create index reporting_manager_idx
+  on public.reporting_relationships (manager_id, relation_type) where ended_at is null;
+
+-- -----------------------------------------------------------------------------
+-- Systemeinstellungen
+-- -----------------------------------------------------------------------------
+create table public.organization_settings (
+  key text primary key check (key ~ '^[a-z_]+$'),
+  value jsonb not null,
+  description text,
+  updated_by uuid references public.profiles (id),
+  updated_at timestamptz not null default now()
+);
+
+-- -----------------------------------------------------------------------------
+-- Audit-Log (nur anhängen, niemals ändern)
+-- -----------------------------------------------------------------------------
+create table public.audit_logs (
+  id bigint generated always as identity primary key,
+  occurred_at timestamptz not null default now(),
+  actor_id uuid,
+  action text not null,
+  table_name text not null,
+  record_id text,
+  subject_user_id uuid,
+  old_data jsonb,
+  new_data jsonb
+);
+create index audit_logs_occurred_idx on public.audit_logs (occurred_at desc);
+create index audit_logs_subject_idx on public.audit_logs (subject_user_id, occurred_at desc);
+create index audit_logs_table_idx on public.audit_logs (table_name, record_id);
+
+create or replace function private.audit_logs_immutable()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'Audit-Logs sind unveränderlich';
+end;
+$$;
+create trigger audit_logs_no_update before update or delete on public.audit_logs
+  for each row execute function private.audit_logs_immutable();
+
+-- Generischer Audit-Trigger. TG_ARGV[0] = Spalte, die den betroffenen Mitarbeiter enthält.
+create or replace function private.audit_trigger()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_old jsonb;
+  v_new jsonb;
+  v_subject uuid;
+  v_record text;
+  v_subject_col text := tg_argv[0];
+begin
+  if tg_op in ('UPDATE', 'DELETE') then v_old := to_jsonb(old); end if;
+  if tg_op in ('INSERT', 'UPDATE') then v_new := to_jsonb(new); end if;
+  -- Geheimnisse niemals protokollieren
+  v_old := v_old - 'token_hash';
+  v_new := v_new - 'token_hash';
+  if tg_op = 'UPDATE' and v_old = v_new then
+    return new;
+  end if;
+  if v_subject_col is not null then
+    v_subject := coalesce(v_new ->> v_subject_col, v_old ->> v_subject_col)::uuid;
+  end if;
+  v_record := coalesce(v_new ->> 'id', v_old ->> 'id',
+                       coalesce(v_new, v_old) ->> 'key',
+                       coalesce(v_new, v_old) ->> 'user_id');
+  insert into public.audit_logs (actor_id, action, table_name, record_id, subject_user_id, old_data, new_data)
+  values (auth.uid(), lower(tg_op), tg_table_name, v_record, v_subject, v_old, v_new);
+  return coalesce(new, old);
+end;
+$$;
+
+-- Explizite Audit-Einträge aus RPCs (z. B. Exporte)
+create or replace function private.audit_event(
+  p_action text, p_table text, p_record text, p_subject uuid, p_data jsonb)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  insert into public.audit_logs (actor_id, action, table_name, record_id, subject_user_id, new_data)
+  values (auth.uid(), p_action, p_table, p_record, p_subject, p_data);
+$$;
+
+create or replace function private.touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+create trigger profiles_touch before update on public.profiles
+  for each row execute function private.touch_updated_at();
+create trigger employee_details_touch before update on public.employee_details
+  for each row execute function private.touch_updated_at();
+create trigger teams_touch before update on public.teams
+  for each row execute function private.touch_updated_at();
+
+create trigger profiles_audit after insert or update or delete on public.profiles
+  for each row execute function private.audit_trigger('id');
+create trigger employee_details_audit after insert or update or delete on public.employee_details
+  for each row execute function private.audit_trigger('user_id');
+create trigger user_permissions_audit after insert or update or delete on public.user_permissions
+  for each row execute function private.audit_trigger('user_id');
+create trigger role_permissions_audit after insert or update or delete on public.role_permissions
+  for each row execute function private.audit_trigger();
+create trigger teams_audit after insert or update or delete on public.teams
+  for each row execute function private.audit_trigger();
+create trigger team_memberships_audit after insert or update or delete on public.team_memberships
+  for each row execute function private.audit_trigger('user_id');
+create trigger reporting_relationships_audit after insert or update or delete on public.reporting_relationships
+  for each row execute function private.audit_trigger('employee_id');
+create trigger organization_settings_audit after insert or update or delete on public.organization_settings
+  for each row execute function private.audit_trigger();
+
+-- Zyklen in der Teamhierarchie verhindern
+create or replace function private.prevent_team_cycle()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.parent_team_id is not null and exists (
+    with recursive ancestors(id) as (
+      select new.parent_team_id
+      union
+      select t.parent_team_id from public.teams t join ancestors a on t.id = a.id
+      where t.parent_team_id is not null
+    )
+    select 1 from ancestors where id = new.id
+  ) then
+    raise exception 'Ungültige Teamhierarchie: Zyklus erkannt';
+  end if;
+  return new;
+end;
+$$;
+create trigger teams_prevent_cycle before insert or update of parent_team_id on public.teams
+  for each row execute function private.prevent_team_cycle();
+
+-- =============================================================================
+-- Berechtigungslogik
+-- =============================================================================
+
+-- Effektive Berechtigung: Rolle + individuelle Freigabe − individuelle Sperre.
+-- Inaktive Konten haben grundsätzlich keine Berechtigungen.
+create or replace function private.has_permission(p_user uuid, p_permission text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = p_user
+      and p.status = 'aktiv'
+      and (
+        exists (
+          select 1 from public.user_permissions up
+          where up.user_id = p.id and up.permission_key = p_permission and up.effect = 'grant'
+        )
+        or (
+          exists (
+            select 1 from public.role_permissions rp
+            where rp.role_id = p.role_id and rp.permission_key = p_permission
+          )
+          and not exists (
+            select 1 from public.user_permissions up
+            where up.user_id = p.id and up.permission_key = p_permission and up.effect = 'deny'
+          )
+        )
+      )
+  );
+$$;
+
+create or replace function private.is_active_user(p_user uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.profiles where id = p_user and status = 'aktiv');
+$$;
+
+-- Teams, die ein Teamleiter aktuell führt (inkl. Unterteams, falls ausdrücklich freigegeben)
+create or replace function private.led_team_ids(p_user uuid)
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with recursive scope(team_id, deep) as (
+    select tm.team_id, tm.includes_subteams
+    from public.team_memberships tm
+    where tm.user_id = p_user and tm.member_role = 'teamleiter' and tm.ended_at is null
+    union
+    select t.id, true
+    from public.teams t
+    join scope s on t.parent_team_id = s.team_id
+    where s.deep
+  )
+  select distinct team_id from scope;
+$$;
+
+-- Aktuelles Team (reguläre Mitgliedschaft) eines Mitarbeiters
+create or replace function private.current_team_id(p_user uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select team_id from public.team_memberships
+  where user_id = p_user and member_role = 'mitglied' and ended_at is null
+  limit 1;
+$$;
+
+-- Zentrale Sichtbarkeitsfunktion.
+-- p_domain: 'employees' | 'performance' | 'training.progress'
+-- Liefert alle Benutzer-IDs, deren Daten des Bereichs der Betrachter sehen darf.
+create or replace function private.visible_user_ids(p_viewer uuid, p_domain text)
+returns setof uuid
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if p_viewer is null or not private.is_active_user(p_viewer) then
+    return;
+  end if;
+
+  if private.has_permission(p_viewer, p_domain || '.read.all') then
+    return query select id from public.profiles;
+    return;
+  end if;
+
+  if private.has_permission(p_viewer, p_domain || '.read.self') then
+    return next p_viewer;
+  end if;
+
+  if private.has_permission(p_viewer, p_domain || '.read.team') then
+    -- Mitglieder geführter Teams
+    return query
+      select tm.user_id
+      from public.team_memberships tm
+      where tm.ended_at is null
+        and tm.member_role = 'mitglied'
+        and tm.team_id in (select private.led_team_ids(p_viewer));
+    -- direkt unterstellte Mitarbeiter
+    return query
+      select rr.employee_id
+      from public.reporting_relationships rr
+      where rr.manager_id = p_viewer and rr.relation_type = 'vorgesetzter' and rr.ended_at is null;
+  end if;
+
+  if private.has_permission(p_viewer, p_domain || '.read.assigned') then
+    return query
+      select rr.employee_id
+      from public.reporting_relationships rr
+      where rr.manager_id = p_viewer and rr.relation_type = 'ausbilder' and rr.ended_at is null;
+  end if;
+end;
+$$;
+
+create or replace function private.can_access_user(p_viewer uuid, p_target uuid, p_domain text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p_target in (select private.visible_user_ids(p_viewer, p_domain));
+$$;
+
+-- Personen, deren Basisprofil (Name, Rolle) ein Benutzer immer sehen darf:
+-- eigene Vorgesetzte, eigener Ausbilder und Leiter des eigenen Teams.
+create or replace function private.own_contact_ids(p_viewer uuid)
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select rr.manager_id from public.reporting_relationships rr
+  where rr.employee_id = p_viewer and rr.ended_at is null
+  union
+  select tl.user_id from public.team_memberships tl
+  where tl.member_role = 'teamleiter' and tl.ended_at is null
+    and tl.team_id = private.current_team_id(p_viewer);
+$$;
+
+-- Gehört ein Team in den Verwaltungs-/Sichtbereich des Betrachters?
+create or replace function private.can_view_team(p_viewer uuid, p_team uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select private.is_active_user(p_viewer) and (
+    private.has_permission(p_viewer, 'employees.read.all')
+    or private.has_permission(p_viewer, 'teams.manage')
+    or p_team in (select private.led_team_ids(p_viewer))
+    or p_team = private.current_team_id(p_viewer)
+  );
+$$;
+
+-- Hilfsfunktion für RPCs: Berechtigung prüfen oder abbrechen
+create or replace function private.require_permission(p_permission text)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null or not private.has_permission(auth.uid(), p_permission) then
+    raise exception 'Keine Berechtigung (%)', p_permission using errcode = '42501';
+  end if;
+end;
+$$;
+
+grant execute on all functions in schema private to authenticated, service_role;
+
+-- =============================================================================
+-- Öffentliche Lese-Hilfen für die Oberfläche
+-- =============================================================================
+
+create or replace function public.my_permissions()
+returns text[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(p.key order by p.key), '{}')
+  from public.permissions p
+  where private.has_permission(auth.uid(), p.key);
+$$;
+
+-- =============================================================================
+-- Row Level Security
+-- =============================================================================
+alter table public.roles enable row level security;
+alter table public.permissions enable row level security;
+alter table public.role_permissions enable row level security;
+alter table public.profiles enable row level security;
+alter table public.employee_details enable row level security;
+alter table public.user_permissions enable row level security;
+alter table public.teams enable row level security;
+alter table public.team_memberships enable row level security;
+alter table public.reporting_relationships enable row level security;
+alter table public.organization_settings enable row level security;
+alter table public.audit_logs enable row level security;
+
+-- Rollen- und Berechtigungskatalog: für aktive Benutzer lesbar (keine Personendaten)
+create policy roles_select on public.roles for select to authenticated
+  using (private.is_active_user((select auth.uid())));
+create policy permissions_select on public.permissions for select to authenticated
+  using (private.is_active_user((select auth.uid())));
+create policy role_permissions_select on public.role_permissions for select to authenticated
+  using (private.is_active_user((select auth.uid())));
+
+create policy profiles_select on public.profiles for select to authenticated
+  using (
+    id in (select private.visible_user_ids((select auth.uid()), 'employees'))
+    or (private.is_active_user((select auth.uid()))
+        and id in (select private.own_contact_ids((select auth.uid()))))
+  );
+
+create policy employee_details_select on public.employee_details for select to authenticated
+  using (user_id in (select private.visible_user_ids((select auth.uid()), 'employees')));
+
+create policy user_permissions_select on public.user_permissions for select to authenticated
+  using (
+    user_id = (select auth.uid())
+    or private.has_permission((select auth.uid()), 'roles.assign')
+  );
+
+create policy teams_select on public.teams for select to authenticated
+  using (private.can_view_team((select auth.uid()), id));
+
+create policy team_memberships_select on public.team_memberships for select to authenticated
+  using (
+    user_id in (select private.visible_user_ids((select auth.uid()), 'employees'))
+    or (private.can_view_team((select auth.uid()), team_id) and member_role = 'teamleiter')
+  );
+
+create policy reporting_relationships_select on public.reporting_relationships for select to authenticated
+  using (
+    employee_id in (select private.visible_user_ids((select auth.uid()), 'employees'))
+  );
+
+create policy organization_settings_select on public.organization_settings for select to authenticated
+  using (private.is_active_user((select auth.uid())));
+
+create policy audit_logs_select on public.audit_logs for select to authenticated
+  using (private.has_permission((select auth.uid()), 'audit.read'));
+
+-- =============================================================================
+-- Neue Benutzer: Profil automatisch anlegen
+-- =============================================================================
+-- Konten werden ausschließlich über Einladungen angelegt (siehe Onboarding-Migration).
+-- Benutzer, die ohne gültige Einladung entstehen (z. B. manuell im Supabase-Dashboard),
+-- erhalten die Rolle "vertriebspartner" im Status "deaktiviert" und müssen von
+-- einem Administrator freigeschaltet werden.
+create or replace function private.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_role uuid;
+begin
+  select id into v_role from public.roles where key = 'vertriebspartner';
+  insert into public.profiles (id, first_name, last_name, email, role_id, status, deactivated_at)
+  values (
+    new.id,
+    coalesce(nullif(new.raw_user_meta_data ->> 'first_name', ''), 'Neu'),
+    coalesce(nullif(new.raw_user_meta_data ->> 'last_name', ''), 'Benutzer'),
+    new.email,
+    v_role,
+    'deaktiviert',
+    now()
+  );
+  insert into public.employee_details (user_id) values (new.id);
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function private.handle_new_user();
+
+-- E-Mail-Änderungen im Auth-System in das Profil übernehmen
+create or replace function private.handle_user_email_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.email is distinct from old.email then
+    update public.profiles set email = new.email where id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_email_changed
+  after update of email on auth.users
+  for each row execute function private.handle_user_email_change();
+
+-- Ersten Systemadministrator festlegen. Nur über den SQL-Editor (Rolle postgres)
+-- ausführbar und nur, solange noch kein aktiver Administrator existiert.
+create or replace function public.bootstrap_admin(p_email text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_admin_role uuid;
+  v_user uuid;
+begin
+  select id into v_admin_role from public.roles where key = 'admin';
+  if exists (select 1 from public.profiles where role_id = v_admin_role and status = 'aktiv') then
+    raise exception 'Es existiert bereits ein aktiver Administrator.';
+  end if;
+  select id into v_user from public.profiles where lower(email) = lower(p_email);
+  if v_user is null then
+    raise exception 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.';
+  end if;
+  update public.profiles
+     set role_id = v_admin_role, status = 'aktiv', deactivated_at = null
+   where id = v_user;
+end;
+$$;
+revoke execute on function public.bootstrap_admin(text) from public, anon, authenticated, service_role;
+
+
+-- ----- 20261025000200_core_seed_and_rpc.sql -----
+-- =============================================================================
+-- ERLEN CRM – Stammdaten (Rollen, Berechtigungen) und Verwaltungs-RPCs
+-- Diese Stammdaten sind Teil des Systems (keine Beispieldaten).
+-- =============================================================================
+
+insert into public.roles (key, name, description, hierarchy_level) values
+  ('vertriebspartner', 'Vertriebspartner', 'Sieht eigene Daten, Schulungen und Dokumente.', 10),
+  ('ausbilder', 'Ausbilder', 'Betreut zugewiesene Auszubildende.', 20),
+  ('teamleiter', 'Teamleiter', 'Führt ein oder mehrere Teams.', 30),
+  ('agenturleiter', 'Agenturleiter', 'Agenturweite Steuerung und Auswertung.', 40),
+  ('admin', 'Systemadministrator', 'Technische und organisatorische Systemverwaltung.', 50);
+
+insert into public.permissions (key, category, description) values
+  ('employees.read.self', 'Mitarbeiter', 'Eigenes Profil einsehen'),
+  ('employees.read.assigned', 'Mitarbeiter', 'Profile zugewiesener Auszubildender einsehen'),
+  ('employees.read.team', 'Mitarbeiter', 'Profile der eigenen Teammitglieder einsehen'),
+  ('employees.read.all', 'Mitarbeiter', 'Alle Mitarbeiterprofile einsehen'),
+  ('employees.update', 'Mitarbeiter', 'Stammdaten von Mitarbeitern bearbeiten'),
+  ('employees.invite', 'Mitarbeiter', 'Mitarbeiter einladen'),
+  ('employees.deactivate', 'Mitarbeiter', 'Konten deaktivieren und reaktivieren'),
+  ('roles.assign', 'Administration', 'Rollen und individuelle Berechtigungen vergeben'),
+  ('teams.manage', 'Organisation', 'Teams, Teamzuordnungen und Hierarchie verwalten'),
+  ('performance.read.self', 'Leistung', 'Eigene Leistungsdaten einsehen'),
+  ('performance.read.assigned', 'Leistung', 'Leistungsdaten zugewiesener Auszubildender einsehen'),
+  ('performance.read.team', 'Leistung', 'Leistungsdaten des eigenen Teams einsehen'),
+  ('performance.read.all', 'Leistung', 'Agenturweite Leistungsdaten einsehen'),
+  ('performance.create', 'Leistung', 'Eigene Leistungen erfassen'),
+  ('performance.update', 'Leistung', 'Leistungen für Mitarbeiter im eigenen Bereich erfassen und bearbeiten'),
+  ('performance.approve', 'Leistung', 'Leistungen bestätigen, ablehnen, stornieren und korrigieren'),
+  ('products.manage', 'Leistung', 'Produkte und Leistungsarten verwalten'),
+  ('targets.manage', 'Ziele', 'Ziele im eigenen Bereich verwalten'),
+  ('competitions.manage', 'Ziele', 'Wettbewerbe verwalten'),
+  ('rankings.read', 'Ziele', 'Freigegebene Bestenlisten einsehen'),
+  ('training.read', 'Academy', 'Freigegebene Schulungen nutzen'),
+  ('training.manage', 'Academy', 'Kurse, Lektionen und Quizze verwalten'),
+  ('training.progress.read.self', 'Academy', 'Eigenen Lernfortschritt einsehen'),
+  ('training.progress.read.assigned', 'Academy', 'Lernfortschritt zugewiesener Auszubildender einsehen'),
+  ('training.progress.read.team', 'Academy', 'Lernfortschritt des Teams einsehen'),
+  ('training.progress.read.all', 'Academy', 'Lernfortschritt aller Mitarbeiter einsehen'),
+  ('training.progress.manage', 'Academy', 'Lernfortschritt im eigenen Bereich dokumentieren und Kurse zuweisen'),
+  ('training.notes.write', 'Academy', 'Feedback und Ausbildungsnotizen hinterlegen'),
+  ('documents.read', 'Dokumente', 'Freigegebene Dokumente lesen'),
+  ('documents.manage', 'Dokumente', 'Dokumente hochladen, freigeben und löschen'),
+  ('announcements.manage', 'Dokumente', 'Interne Ankündigungen veröffentlichen'),
+  ('reports.read.team', 'Berichte', 'Teamberichte einsehen'),
+  ('reports.read.all', 'Berichte', 'Agenturberichte einsehen'),
+  ('reports.export', 'Berichte', 'Berichte im eigenen Sichtbereich exportieren'),
+  ('applicants.read', 'Bewerber', 'Bewerbungen einsehen'),
+  ('applicants.manage', 'Bewerber', 'Bewerbungen bearbeiten und in Einladungen überführen'),
+  ('settings.manage', 'Administration', 'Systemeinstellungen bearbeiten'),
+  ('audit.read', 'Administration', 'Audit-Logs einsehen');
+
+-- Berechtigungsvorlagen je Rolle
+with matrix(role_key, perms) as (
+  values
+  ('vertriebspartner', array[
+    'employees.read.self', 'performance.read.self', 'performance.create',
+    'training.read', 'training.progress.read.self', 'documents.read', 'rankings.read']),
+  ('ausbilder', array[
+    'employees.read.self', 'performance.read.self', 'performance.create',
+    'training.read', 'training.progress.read.self', 'documents.read', 'rankings.read',
+    'employees.read.assigned', 'performance.read.assigned', 'training.progress.read.assigned',
+    'training.progress.manage', 'training.notes.write']),
+  ('teamleiter', array[
+    'employees.read.self', 'performance.read.self', 'performance.create',
+    'training.read', 'training.progress.read.self', 'documents.read', 'rankings.read',
+    'employees.read.assigned', 'performance.read.assigned', 'training.progress.read.assigned',
+    'employees.read.team', 'performance.read.team', 'training.progress.read.team',
+    'training.progress.manage', 'training.notes.write',
+    'performance.update', 'performance.approve', 'targets.manage',
+    'reports.read.team', 'reports.export']),
+  ('agenturleiter', array[
+    'employees.read.self', 'employees.read.all', 'employees.update',
+    'teams.manage',
+    'performance.read.self', 'performance.read.all', 'performance.create',
+    'performance.update', 'performance.approve', 'products.manage',
+    'targets.manage', 'competitions.manage', 'rankings.read',
+    'training.read', 'training.manage', 'training.progress.read.self', 'training.progress.read.all',
+    'training.progress.manage', 'training.notes.write',
+    'documents.read', 'documents.manage', 'announcements.manage',
+    'reports.read.team', 'reports.read.all', 'reports.export',
+    'applicants.read', 'applicants.manage'])
+)
+insert into public.role_permissions (role_id, permission_key)
+select r.id, unnest(m.perms)
+from matrix m join public.roles r on r.key = m.role_key;
+
+-- Administrator: sämtliche Berechtigungen
+insert into public.role_permissions (role_id, permission_key)
+select r.id, p.key from public.roles r cross join public.permissions p where r.key = 'admin';
+
+insert into public.organization_settings (key, value, description) values
+  ('agency', '{"name": "ERLEN Vertriebsagentur"}', 'Allgemeine Angaben zur Agentur'),
+  ('performance', '{"require_approval": true}',
+   'Leistungen müssen von einer berechtigten Person bestätigt werden'),
+  ('rankings', '{"enabled": true, "agency_roles": ["vertriebspartner","ausbilder","teamleiter","agenturleiter","admin"], "team_roles": ["vertriebspartner","ausbilder","teamleiter","agenturleiter","admin"]}',
+   'Sichtbarkeit der Bestenlisten je Rolle');
+
+-- =============================================================================
+-- RPCs: Benutzer- und Rechteverwaltung
+-- =============================================================================
+
+create or replace function private.active_admin_count()
+returns int
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select count(*)::int from public.profiles p join public.roles r on r.id = p.role_id
+  where r.key = 'admin' and p.status = 'aktiv';
+$$;
+
+create or replace function private.is_admin(p_user uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles p join public.roles r on r.id = p.role_id
+    where p.id = p_user and r.key = 'admin'
+  );
+$$;
+
+create or replace function private.notify(
+  p_user uuid, p_type text, p_title text, p_body text default null, p_link text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  -- Tabelle wird in der Onboarding-Migration angelegt; Funktion wird dort ersetzt.
+  return;
+end;
+$$;
+
+create or replace function public.admin_set_user_role(p_user uuid, p_role_key text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_role uuid;
+  v_old_admin boolean;
+begin
+  perform private.require_permission('roles.assign');
+  if p_user = auth.uid() then
+    raise exception 'Die eigene Rolle kann nicht geändert werden.' using errcode = '42501';
+  end if;
+  select id into v_role from public.roles where key = p_role_key;
+  if v_role is null then
+    raise exception 'Unbekannte Rolle';
+  end if;
+  v_old_admin := private.is_admin(p_user);
+  update public.profiles set role_id = v_role where id = p_user;
+  if not found then
+    raise exception 'Benutzer nicht gefunden';
+  end if;
+  if v_old_admin and p_role_key <> 'admin' and private.active_admin_count() < 1 then
+    raise exception 'Der letzte aktive Administrator kann nicht entfernt werden.';
+  end if;
+  perform private.notify(p_user, 'rolle_geaendert', 'Deine Rolle wurde geändert',
+    'Neue Rolle: ' || (select name from public.roles where id = v_role), '/profil');
+end;
+$$;
+
+create or replace function public.admin_set_user_permission(
+  p_user uuid, p_permission text, p_effect public.permission_effect, p_reason text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('roles.assign');
+  if p_user = auth.uid() then
+    raise exception 'Eigene Berechtigungen können nicht geändert werden.' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.permissions where key = p_permission) then
+    raise exception 'Unbekannte Berechtigung';
+  end if;
+  insert into public.user_permissions (user_id, permission_key, effect, reason, granted_by)
+  values (p_user, p_permission, p_effect, nullif(trim(p_reason), ''), auth.uid())
+  on conflict (user_id, permission_key)
+  do update set effect = excluded.effect, reason = excluded.reason,
+                granted_by = excluded.granted_by, created_at = now();
+end;
+$$;
+
+create or replace function public.admin_remove_user_permission(p_user uuid, p_permission text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('roles.assign');
+  if p_user = auth.uid() then
+    raise exception 'Eigene Berechtigungen können nicht geändert werden.' using errcode = '42501';
+  end if;
+  delete from public.user_permissions where user_id = p_user and permission_key = p_permission;
+end;
+$$;
+
+-- Berechtigungsvorlage einer Rolle anpassen
+create or replace function public.admin_set_role_permission(
+  p_role_key text, p_permission text, p_enabled boolean)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_role uuid;
+begin
+  perform private.require_permission('roles.assign');
+  if p_role_key = 'admin' then
+    raise exception 'Die Administratorrolle besitzt immer alle Berechtigungen.';
+  end if;
+  select id into v_role from public.roles where key = p_role_key;
+  if v_role is null then raise exception 'Unbekannte Rolle'; end if;
+  if p_enabled then
+    insert into public.role_permissions (role_id, permission_key)
+    values (v_role, p_permission) on conflict do nothing;
+  else
+    delete from public.role_permissions where role_id = v_role and permission_key = p_permission;
+  end if;
+end;
+$$;
+
+create or replace function public.admin_set_user_status(p_user uuid, p_status public.user_status)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('employees.deactivate');
+  if p_user = auth.uid() then
+    raise exception 'Das eigene Konto kann nicht deaktiviert werden.' using errcode = '42501';
+  end if;
+  if p_status = 'eingeladen' then
+    raise exception 'Ungültiger Status';
+  end if;
+  -- Nur Administratoren dürfen andere Administratoren (de)aktivieren
+  if private.is_admin(p_user) and not private.is_admin(auth.uid()) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  update public.profiles
+     set status = p_status,
+         deactivated_at = case when p_status = 'deaktiviert' then now() else null end
+   where id = p_user and anonymized_at is null;
+  if not found then raise exception 'Benutzer nicht gefunden'; end if;
+  if private.active_admin_count() < 1 then
+    raise exception 'Der letzte aktive Administrator kann nicht deaktiviert werden.';
+  end if;
+end;
+$$;
+
+-- Stammdaten durch berechtigte Personen (Admin/Agenturleitung)
+create or replace function public.admin_update_employee(
+  p_user uuid,
+  p_first_name text,
+  p_last_name text,
+  p_phone text,
+  p_entry_date date,
+  p_sales_start_date date,
+  p_sales_region text,
+  p_partner_status public.partner_status)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('employees.update');
+  if not private.can_access_user(auth.uid(), p_user, 'employees') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  update public.profiles
+     set first_name = trim(p_first_name), last_name = trim(p_last_name)
+   where id = p_user and anonymized_at is null;
+  if not found then raise exception 'Benutzer nicht gefunden'; end if;
+  insert into public.employee_details (user_id, phone, entry_date, sales_start_date, sales_region, partner_status)
+  values (p_user, nullif(trim(p_phone), ''), p_entry_date, p_sales_start_date, nullif(trim(p_sales_region), ''), p_partner_status)
+  on conflict (user_id) do update
+    set phone = excluded.phone, entry_date = excluded.entry_date,
+        sales_start_date = excluded.sales_start_date, sales_region = excluded.sales_region,
+        partner_status = excluded.partner_status;
+end;
+$$;
+
+-- Selbst bearbeitbare Angaben
+create or replace function public.update_own_profile(p_phone text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not private.is_active_user(auth.uid()) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  insert into public.employee_details (user_id, phone) values (auth.uid(), nullif(trim(p_phone), ''))
+  on conflict (user_id) do update set phone = excluded.phone;
+end;
+$$;
+
+create or replace function public.set_own_avatar(p_path text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not private.is_active_user(auth.uid()) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  if p_path is not null and p_path not like (auth.uid()::text || '/%') then
+    raise exception 'Ungültiger Dateipfad';
+  end if;
+  update public.profiles set avatar_path = p_path where id = auth.uid();
+end;
+$$;
+
+-- Kontrollierte Löschung: personenbezogene Daten entfernen, Geschäftsdaten anonym erhalten
+create or replace function public.admin_anonymize_user(p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('roles.assign');
+  perform private.require_permission('employees.deactivate');
+  if p_user = auth.uid() then
+    raise exception 'Das eigene Konto kann nicht anonymisiert werden.';
+  end if;
+  if exists (select 1 from public.profiles where id = p_user and status <> 'deaktiviert') then
+    raise exception 'Das Konto muss vor der Anonymisierung deaktiviert werden.';
+  end if;
+  update public.profiles
+     set first_name = 'Gelöschter', last_name = 'Benutzer',
+         email = 'geloescht+' || id::text || '@invalid.local',
+         avatar_path = null, anonymized_at = now()
+   where id = p_user;
+  update public.employee_details
+     set phone = null, sales_region = null
+   where user_id = p_user;
+end;
+$$;
+
+-- =============================================================================
+-- RPCs: Teams und Hierarchie
+-- =============================================================================
+
+create or replace function public.team_upsert(
+  p_id uuid, p_name text, p_description text, p_parent_team_id uuid, p_is_active boolean default true)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('teams.manage');
+  if p_id is null then
+    insert into public.teams (name, description, parent_team_id, is_active)
+    values (trim(p_name), nullif(trim(p_description), ''), p_parent_team_id, coalesce(p_is_active, true))
+    returning id into v_id;
+  else
+    update public.teams
+       set name = trim(p_name), description = nullif(trim(p_description), ''),
+           parent_team_id = p_parent_team_id, is_active = coalesce(p_is_active, true)
+     where id = p_id
+    returning id into v_id;
+    if v_id is null then raise exception 'Team nicht gefunden'; end if;
+  end if;
+  return v_id;
+end;
+$$;
+
+-- Mitarbeiter einem Team zuordnen. Bei regulärer Mitgliedschaft wird eine
+-- bestehende Mitgliedschaft in einem anderen Team beendet (Teamwechsel).
+create or replace function public.team_assign_member(
+  p_team uuid, p_user uuid, p_member_role public.team_member_role default 'mitglied',
+  p_includes_subteams boolean default false)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_team_name text;
+begin
+  perform private.require_permission('teams.manage');
+  select name into v_team_name from public.teams where id = p_team and is_active;
+  if v_team_name is null then raise exception 'Team nicht gefunden oder inaktiv'; end if;
+  if not exists (select 1 from public.profiles where id = p_user and anonymized_at is null) then
+    raise exception 'Benutzer nicht gefunden';
+  end if;
+
+  if exists (
+    select 1 from public.team_memberships
+    where team_id = p_team and user_id = p_user and member_role = p_member_role and ended_at is null
+  ) then
+    update public.team_memberships
+       set includes_subteams = (p_member_role = 'teamleiter' and coalesce(p_includes_subteams, false))
+     where team_id = p_team and user_id = p_user and member_role = p_member_role and ended_at is null
+    returning id into v_id;
+    return v_id;
+  end if;
+
+  if p_member_role = 'mitglied' then
+    update public.team_memberships
+       set ended_at = now(), end_reason = 'Teamwechsel'
+     where user_id = p_user and member_role = 'mitglied' and ended_at is null;
+  end if;
+
+  insert into public.team_memberships (team_id, user_id, member_role, includes_subteams, created_by)
+  values (p_team, p_user, p_member_role,
+          p_member_role = 'teamleiter' and coalesce(p_includes_subteams, false), auth.uid())
+  returning id into v_id;
+
+  perform private.notify(p_user, 'team_geaendert',
+    case when p_member_role = 'teamleiter' then 'Du leitest jetzt ein Team' else 'Neue Teamzuordnung' end,
+    'Team: ' || v_team_name, '/teams/' || p_team::text);
+  return v_id;
+end;
+$$;
+
+create or replace function public.team_end_membership(p_membership uuid, p_reason text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('teams.manage');
+  update public.team_memberships
+     set ended_at = now(), end_reason = coalesce(nullif(trim(p_reason), ''), 'Beendet')
+   where id = p_membership and ended_at is null;
+  if not found then raise exception 'Zuordnung nicht gefunden oder bereits beendet'; end if;
+end;
+$$;
+
+-- Vorgesetzten oder Ausbilder setzen (p_manager = null beendet die Zuordnung)
+create or replace function public.set_reporting_relationship(
+  p_employee uuid, p_manager uuid, p_type public.relationship_type)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('teams.manage');
+  if p_employee = p_manager then
+    raise exception 'Ein Mitarbeiter kann sich nicht selbst zugeordnet werden.';
+  end if;
+  if p_manager is not null and not exists (
+    select 1 from public.profiles where id = p_manager and status = 'aktiv') then
+    raise exception 'Die gewählte Führungskraft ist nicht aktiv.';
+  end if;
+  if exists (
+    select 1 from public.reporting_relationships
+    where employee_id = p_employee and relation_type = p_type and ended_at is null
+      and manager_id is not distinct from p_manager) then
+    return;
+  end if;
+  update public.reporting_relationships
+     set ended_at = now()
+   where employee_id = p_employee and relation_type = p_type and ended_at is null;
+  if p_manager is not null then
+    insert into public.reporting_relationships (employee_id, manager_id, relation_type, created_by)
+    values (p_employee, p_manager, p_type, auth.uid());
+    perform private.notify(p_employee, 'team_geaendert',
+      case when p_type = 'ausbilder' then 'Neuer Ausbilder zugeordnet' else 'Neue Führungskraft zugeordnet' end,
+      (select first_name || ' ' || last_name from public.profiles where id = p_manager), '/profil');
+  end if;
+end;
+$$;
+
+create or replace function public.admin_update_setting(p_key text, p_value jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('settings.manage');
+  update public.organization_settings
+     set value = p_value, updated_by = auth.uid(), updated_at = now()
+   where key = p_key;
+  if not found then raise exception 'Unbekannte Einstellung'; end if;
+end;
+$$;
+
+-- Historie eines Mitarbeiters (Rollen-, Team-, Status- und Zuordnungsänderungen)
+create or replace function public.get_profile_history(p_user uuid, p_limit int default 100)
+returns table (
+  occurred_at timestamptz,
+  table_name text,
+  action text,
+  actor_name text,
+  old_data jsonb,
+  new_data jsonb
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not private.can_access_user(auth.uid(), p_user, 'employees') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  return query
+    select a.occurred_at, a.table_name, a.action,
+           coalesce(ap.first_name || ' ' || ap.last_name, 'System'),
+           a.old_data, a.new_data
+    from public.audit_logs a
+    left join public.profiles ap on ap.id = a.actor_id
+    where a.subject_user_id = p_user
+      and a.table_name in ('profiles', 'team_memberships', 'reporting_relationships',
+                           'performance_records', 'lesson_progress')
+    order by a.occurred_at desc
+    limit least(greatest(p_limit, 1), 500);
+end;
+$$;
+
+
+-- ----- 20261025000300_performance.sql -----
+-- =============================================================================
+-- ERLEN CRM – Leistungserfassung, Freigaben, Stornos, Ziele, Wettbewerbe
+-- =============================================================================
+-- Zählregeln (verbindlich, siehe docs/KENNZAHLEN.md):
+--  * Offizielle Leistung, Zielerreichung, Rankings, Team- und Agenturwerte:
+--    ausschließlich Status 'bestaetigt'.
+--  * "Offen" (zur Prüfung): Status 'eingereicht' – separat ausgewiesen, nie addiert.
+--  * 'entwurf', 'abgelehnt', 'storniert', 'korrigiert' zählen nie.
+--  * Eine Korrektur ersetzt den Ursprungsdatensatz (Status 'korrigiert') durch
+--    einen neuen, verknüpften Datensatz -> keine Doppelzählung.
+-- =============================================================================
+
+create type public.performance_status as enum
+  ('entwurf', 'eingereicht', 'bestaetigt', 'abgelehnt', 'storniert', 'korrigiert');
+create type public.target_scope as enum ('mitarbeiter', 'team', 'agentur');
+create type public.target_period as enum ('tag', 'woche', 'monat', 'zeitraum');
+
+create table public.products (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 2 and 80),
+  description text,
+  unit_label text not null default 'Verträge' check (char_length(unit_label) between 1 and 40),
+  requires_external_ref boolean not null default false,
+  is_active boolean not null default true,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index products_name_lower_idx on public.products (lower(name));
+
+create table public.performance_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete restrict,
+  team_id uuid references public.teams (id) on delete set null,   -- Team zum Zeitpunkt der Erfassung
+  product_id uuid not null references public.products (id) on delete restrict,
+  occurred_on date not null,
+  quantity int not null check (quantity between 1 and 1000),
+  external_ref text check (external_ref is null or char_length(external_ref) between 1 and 120),
+  note text check (note is null or char_length(note) <= 1000),
+  status public.performance_status not null default 'entwurf',
+  corrects_record_id uuid references public.performance_records (id),
+  created_by uuid not null references public.profiles (id),
+  submitted_at timestamptz,
+  confirmed_at timestamptz,
+  confirmed_by uuid references public.profiles (id),
+  cancelled_at timestamptz,
+  cancelled_by uuid references public.profiles (id),
+  status_reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (occurred_on >= date '2000-01-01')
+);
+create index performance_user_date_idx on public.performance_records (user_id, occurred_on);
+create index performance_team_date_idx on public.performance_records (team_id, occurred_on);
+create index performance_status_date_idx on public.performance_records (status, occurred_on);
+create index performance_product_idx on public.performance_records (product_id);
+-- Vorgangs-ID je Produkt nur einmal in aktiven Datensätzen
+create unique index performance_external_ref_unique_idx
+  on public.performance_records (product_id, lower(external_ref))
+  where external_ref is not null and status in ('entwurf', 'eingereicht', 'bestaetigt');
+
+-- Protokoll von Stornos, Korrekturen und Bearbeitungen
+create table public.performance_adjustments (
+  id uuid primary key default gen_random_uuid(),
+  record_id uuid not null references public.performance_records (id) on delete cascade,
+  action text not null check (action in ('bearbeitet', 'eingereicht', 'zurueckgezogen', 'storniert', 'korrigiert')),
+  from_status public.performance_status,
+  to_status public.performance_status,
+  reason text,
+  changes jsonb,
+  replacement_record_id uuid references public.performance_records (id),
+  actor_id uuid references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+create index performance_adjustments_record_idx on public.performance_adjustments (record_id);
+
+-- Freigabeentscheidungen
+create table public.performance_approvals (
+  id uuid primary key default gen_random_uuid(),
+  record_id uuid not null references public.performance_records (id) on delete cascade,
+  decision text not null check (decision in ('bestaetigt', 'abgelehnt')),
+  comment text,
+  actor_id uuid not null references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+create index performance_approvals_record_idx on public.performance_approvals (record_id);
+
+create table public.targets (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) between 2 and 120),
+  scope public.target_scope not null,
+  user_id uuid references public.profiles (id) on delete cascade,
+  team_id uuid references public.teams (id) on delete cascade,
+  product_id uuid references public.products (id) on delete restrict,   -- null = alle Produkte
+  period public.target_period not null,
+  starts_on date not null,
+  ends_on date not null,
+  target_value int not null check (target_value between 1 and 1000000),
+  created_by uuid references public.profiles (id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (ends_on >= starts_on),
+  check (
+    (scope = 'mitarbeiter' and user_id is not null and team_id is null) or
+    (scope = 'team' and team_id is not null and user_id is null) or
+    (scope = 'agentur' and user_id is null and team_id is null)
+  )
+);
+create index targets_user_idx on public.targets (user_id);
+create index targets_team_idx on public.targets (team_id);
+
+-- Bereits gemeldete Zielerreichungen (verhindert doppelte Benachrichtigungen)
+create table public.target_achievements (
+  target_id uuid not null references public.targets (id) on delete cascade,
+  period_start date not null,
+  achieved_at timestamptz not null default now(),
+  primary key (target_id, period_start)
+);
+
+create table public.competitions (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) between 2 and 120),
+  description text,
+  product_id uuid references public.products (id) on delete restrict,
+  team_id uuid references public.teams (id) on delete cascade,   -- null = agenturweit
+  starts_on date not null,
+  ends_on date not null,
+  is_active boolean not null default true,
+  created_by uuid references public.profiles (id),
+  created_at timestamptz not null default now(),
+  check (ends_on >= starts_on)
+);
+
+create trigger products_touch before update on public.products
+  for each row execute function private.touch_updated_at();
+create trigger performance_records_touch before update on public.performance_records
+  for each row execute function private.touch_updated_at();
+create trigger targets_touch before update on public.targets
+  for each row execute function private.touch_updated_at();
+
+create trigger products_audit after insert or update or delete on public.products
+  for each row execute function private.audit_trigger();
+create trigger performance_records_audit after insert or update or delete on public.performance_records
+  for each row execute function private.audit_trigger('user_id');
+create trigger targets_audit after insert or update or delete on public.targets
+  for each row execute function private.audit_trigger('user_id');
+create trigger competitions_audit after insert or update or delete on public.competitions
+  for each row execute function private.audit_trigger();
+
+-- =============================================================================
+-- Sichtbarkeit
+-- =============================================================================
+
+create or replace function private.can_view_target(p_viewer uuid, p_target uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.targets t
+    where t.id = p_target
+      and private.is_active_user(p_viewer)
+      and (
+        private.has_permission(p_viewer, 'performance.read.all')
+        or (t.scope = 'agentur')
+        or (t.scope = 'mitarbeiter' and private.can_access_user(p_viewer, t.user_id, 'performance'))
+        or (t.scope = 'team' and (
+              t.team_id = private.current_team_id(p_viewer)
+              or t.team_id in (select private.led_team_ids(p_viewer))))
+      )
+  );
+$$;
+
+-- Darf der Betrachter Ziele für diesen Bereich verwalten?
+create or replace function private.can_manage_target(
+  p_viewer uuid, p_scope public.target_scope, p_user uuid, p_team uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select private.has_permission(p_viewer, 'targets.manage') and (
+    private.has_permission(p_viewer, 'performance.read.all')
+    or (p_scope = 'mitarbeiter' and p_user <> p_viewer
+        and private.can_access_user(p_viewer, p_user, 'performance'))
+    or (p_scope = 'team' and p_team in (select private.led_team_ids(p_viewer)))
+  );
+$$;
+
+alter table public.products enable row level security;
+alter table public.performance_records enable row level security;
+alter table public.performance_adjustments enable row level security;
+alter table public.performance_approvals enable row level security;
+alter table public.targets enable row level security;
+alter table public.target_achievements enable row level security;
+alter table public.competitions enable row level security;
+
+create policy products_select on public.products for select to authenticated
+  using (private.is_active_user((select auth.uid())));
+
+create policy performance_records_select on public.performance_records for select to authenticated
+  using (user_id in (select private.visible_user_ids((select auth.uid()), 'performance')));
+
+create policy performance_adjustments_select on public.performance_adjustments for select to authenticated
+  using (exists (
+    select 1 from public.performance_records r
+    where r.id = record_id
+      and r.user_id in (select private.visible_user_ids((select auth.uid()), 'performance'))));
+
+create policy performance_approvals_select on public.performance_approvals for select to authenticated
+  using (exists (
+    select 1 from public.performance_records r
+    where r.id = record_id
+      and r.user_id in (select private.visible_user_ids((select auth.uid()), 'performance'))));
+
+create policy targets_select on public.targets for select to authenticated
+  using (private.can_view_target((select auth.uid()), id));
+
+create policy target_achievements_select on public.target_achievements for select to authenticated
+  using (private.can_view_target((select auth.uid()), target_id));
+
+create policy competitions_select on public.competitions for select to authenticated
+  using (
+    private.has_permission((select auth.uid()), 'rankings.read')
+    and (team_id is null
+         or team_id = private.current_team_id((select auth.uid()))
+         or team_id in (select private.led_team_ids((select auth.uid())))
+         or private.has_permission((select auth.uid()), 'competitions.manage'))
+  );
+
+-- =============================================================================
+-- Hilfsfunktionen
+-- =============================================================================
+
+create or replace function private.setting(p_key text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select value from public.organization_settings where key = p_key;
+$$;
+
+-- Darf der Betrachter Leistungen dieses Mitarbeiters bestätigen/stornieren?
+create or replace function private.can_approve_for(p_viewer uuid, p_user uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p_viewer <> p_user
+     and private.has_permission(p_viewer, 'performance.approve')
+     and private.can_access_user(p_viewer, p_user, 'performance');
+$$;
+
+-- Zeitraum (Beginn, Ende) der aktuellen Periode eines Ziels zu einem Stichtag
+create or replace function private.target_window(
+  p_period public.target_period, p_starts date, p_ends date, p_day date)
+returns table (window_start date, window_end date)
+language sql
+immutable
+set search_path = ''
+as $$
+  select greatest(p_starts, w.s), least(p_ends, w.e)
+  from (
+    select
+      case p_period
+        when 'tag' then p_day
+        when 'woche' then date_trunc('week', p_day)::date
+        when 'monat' then date_trunc('month', p_day)::date
+        else p_starts end as s,
+      case p_period
+        when 'tag' then p_day
+        when 'woche' then (date_trunc('week', p_day) + interval '6 days')::date
+        when 'monat' then (date_trunc('month', p_day) + interval '1 month - 1 day')::date
+        else p_ends end as e
+  ) w;
+$$;
+
+-- Bestätigte Menge für ein Ziel in einem Zeitraum
+create or replace function private.target_actual(p_target uuid, p_from date, p_to date)
+returns bigint
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(sum(r.quantity), 0)
+  from public.targets t
+  join public.performance_records r
+    on r.status = 'bestaetigt'
+   and r.occurred_on between p_from and p_to
+   and (t.product_id is null or r.product_id = t.product_id)
+  where t.id = p_target
+    and case t.scope
+          when 'mitarbeiter' then r.user_id = t.user_id
+          when 'team' then r.team_id = t.team_id
+          else true end;
+$$;
+
+-- Nach einer Bestätigung prüfen, ob Ziele erreicht wurden, und benachrichtigen
+create or replace function private.check_target_achievements(p_user uuid, p_day date)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  t record;
+  w record;
+begin
+  for t in
+    select * from public.targets
+    where scope = 'mitarbeiter' and user_id = p_user and p_day between starts_on and ends_on
+  loop
+    select * into w from private.target_window(t.period, t.starts_on, t.ends_on, p_day);
+    if private.target_actual(t.id, w.window_start, w.window_end) >= t.target_value then
+      insert into public.target_achievements (target_id, period_start)
+      values (t.id, w.window_start) on conflict do nothing;
+      if found then
+        perform private.notify(p_user, 'ziel_erreicht', 'Ziel erreicht: ' || t.title,
+          'Glückwunsch! Du hast dein Ziel von ' || t.target_value || ' erreicht.', '/ziele');
+      end if;
+    end if;
+  end loop;
+end;
+$$;
+
+-- =============================================================================
+-- RPCs: Leistungserfassung
+-- =============================================================================
+
+-- Neue Leistung anlegen.
+-- p_submit: sofort einreichen (sonst Entwurf)
+-- p_confirm_duplicate: bewusste Bestätigung eines Duplikatverdachts
+create or replace function public.performance_create(
+  p_user uuid,
+  p_product uuid,
+  p_occurred_on date,
+  p_quantity int,
+  p_external_ref text default null,
+  p_note text default null,
+  p_submit boolean default true,
+  p_confirm_duplicate boolean default false)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_id uuid;
+  v_status public.performance_status := 'entwurf';
+  v_product public.products;
+  v_ref text := nullif(trim(p_external_ref), '');
+  v_auto_confirm boolean := false;
+begin
+  if v_actor is null or not private.is_active_user(v_actor) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  if p_user = v_actor then
+    perform private.require_permission('performance.create');
+  else
+    perform private.require_permission('performance.update');
+    if not private.can_access_user(v_actor, p_user, 'performance') then
+      raise exception 'Keine Berechtigung für diesen Mitarbeiter' using errcode = '42501';
+    end if;
+  end if;
+  if not private.is_active_user(p_user) then
+    raise exception 'Für inaktive Mitarbeiter können keine Leistungen erfasst werden.';
+  end if;
+
+  select * into v_product from public.products where id = p_product;
+  if v_product.id is null or not v_product.is_active then
+    raise exception 'Produkt nicht gefunden oder inaktiv';
+  end if;
+  if p_quantity is null or p_quantity < 1 or p_quantity > 1000 then
+    raise exception 'Ungültige Menge (1 bis 1000)';
+  end if;
+  if p_occurred_on is null or p_occurred_on > private.today_berlin() then
+    raise exception 'Das Datum darf nicht in der Zukunft liegen.';
+  end if;
+  if p_occurred_on < private.today_berlin() - 400 then
+    raise exception 'Das Datum liegt zu weit in der Vergangenheit.';
+  end if;
+  if v_product.requires_external_ref and v_ref is null then
+    raise exception 'Für dieses Produkt ist eine Vorgangs-ID erforderlich.';
+  end if;
+
+  if v_ref is not null and exists (
+    select 1 from public.performance_records
+    where product_id = p_product and lower(external_ref) = lower(v_ref)
+      and status in ('entwurf', 'eingereicht', 'bestaetigt')) then
+    raise exception 'DUPLIKAT_REFERENZ: Diese Vorgangs-ID wurde für dieses Produkt bereits erfasst.'
+      using errcode = '23505';
+  end if;
+
+  if not coalesce(p_confirm_duplicate, false) and exists (
+    select 1 from public.performance_records
+    where user_id = p_user and product_id = p_product and occurred_on = p_occurred_on
+      and quantity = p_quantity and status in ('entwurf', 'eingereicht', 'bestaetigt')
+      and (v_ref is null or external_ref is null)) then
+    raise exception 'DUPLIKAT_VERDACHT: Eine identische Leistung (Mitarbeiter, Produkt, Datum, Menge) existiert bereits.'
+      using errcode = 'P0001';
+  end if;
+
+  if coalesce(p_submit, true) then
+    v_status := 'eingereicht';
+    v_auto_confirm := not coalesce((private.setting('performance') ->> 'require_approval')::boolean, true)
+                      or private.can_approve_for(v_actor, p_user);
+    if v_auto_confirm then v_status := 'bestaetigt'; end if;
+  end if;
+
+  insert into public.performance_records (
+    user_id, team_id, product_id, occurred_on, quantity, external_ref, note, status,
+    created_by, submitted_at, confirmed_at, confirmed_by)
+  values (
+    p_user, private.current_team_id(p_user), p_product, p_occurred_on, p_quantity, v_ref,
+    nullif(trim(p_note), ''), v_status, v_actor,
+    case when v_status <> 'entwurf' then now() end,
+    case when v_status = 'bestaetigt' then now() end,
+    case when v_status = 'bestaetigt' then v_actor end)
+  returning id into v_id;
+
+  if v_status = 'bestaetigt' then
+    insert into public.performance_approvals (record_id, decision, comment, actor_id)
+    values (v_id, 'bestaetigt', 'Bei Erfassung bestätigt', v_actor);
+    perform private.check_target_achievements(p_user, p_occurred_on);
+  end if;
+  return v_id;
+end;
+$$;
+
+-- Entwurf oder abgelehnten Datensatz bearbeiten
+create or replace function public.performance_update_draft(
+  p_id uuid, p_product uuid, p_occurred_on date, p_quantity int,
+  p_external_ref text default null, p_note text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  r public.performance_records;
+  v_actor uuid := auth.uid();
+  v_ref text := nullif(trim(p_external_ref), '');
+begin
+  select * into r from public.performance_records where id = p_id for update;
+  if r.id is null then raise exception 'Datensatz nicht gefunden'; end if;
+  if not ((r.user_id = v_actor and private.has_permission(v_actor, 'performance.create'))
+          or (r.user_id <> v_actor and private.has_permission(v_actor, 'performance.update')
+              and private.can_access_user(v_actor, r.user_id, 'performance'))) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  if r.status not in ('entwurf', 'abgelehnt') then
+    raise exception 'Nur Entwürfe und abgelehnte Leistungen können bearbeitet werden. Bestätigte Leistungen werden über eine Korrektur geändert.';
+  end if;
+  if p_quantity < 1 or p_quantity > 1000 then raise exception 'Ungültige Menge (1 bis 1000)'; end if;
+  if p_occurred_on > private.today_berlin() then raise exception 'Das Datum darf nicht in der Zukunft liegen.'; end if;
+  if not exists (select 1 from public.products where id = p_product and is_active) then
+    raise exception 'Produkt nicht gefunden oder inaktiv';
+  end if;
+  if v_ref is not null and exists (
+    select 1 from public.performance_records
+    where id <> p_id and product_id = p_product and lower(external_ref) = lower(v_ref)
+      and status in ('entwurf', 'eingereicht', 'bestaetigt')) then
+    raise exception 'DUPLIKAT_REFERENZ: Diese Vorgangs-ID wurde für dieses Produkt bereits erfasst.'
+      using errcode = '23505';
+  end if;
+
+  update public.performance_records
+     set product_id = p_product, occurred_on = p_occurred_on, quantity = p_quantity,
+         external_ref = v_ref, note = nullif(trim(p_note), ''),
+         status = 'entwurf', status_reason = null
+   where id = p_id;
+
+  insert into public.performance_adjustments (record_id, action, from_status, to_status, changes, actor_id)
+  values (p_id, 'bearbeitet', r.status, 'entwurf',
+          jsonb_build_object('product_id', p_product, 'occurred_on', p_occurred_on,
+                             'quantity', p_quantity, 'external_ref', v_ref), v_actor);
+end;
+$$;
+
+-- Statuswechsel: einreichen, zurückziehen, bestätigen, ablehnen, stornieren, löschen (nur Entwurf)
+create or replace function public.performance_transition(p_id uuid, p_action text, p_reason text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  r public.performance_records;
+  v_actor uuid := auth.uid();
+  v_reason text := nullif(trim(p_reason), '');
+  v_is_owner_side boolean;
+  v_auto_confirm boolean;
+begin
+  select * into r from public.performance_records where id = p_id for update;
+  if r.id is null then raise exception 'Datensatz nicht gefunden'; end if;
+  if v_actor is null or not private.can_access_user(v_actor, r.user_id, 'performance') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+
+  v_is_owner_side := (r.user_id = v_actor and private.has_permission(v_actor, 'performance.create'))
+                  or (r.user_id <> v_actor and private.has_permission(v_actor, 'performance.update'));
+
+  case p_action
+    when 'einreichen' then
+      if not v_is_owner_side then raise exception 'Keine Berechtigung' using errcode = '42501'; end if;
+      if r.status not in ('entwurf', 'abgelehnt') then raise exception 'Nur Entwürfe können eingereicht werden.'; end if;
+      v_auto_confirm := not coalesce((private.setting('performance') ->> 'require_approval')::boolean, true)
+                        or private.can_approve_for(v_actor, r.user_id);
+      update public.performance_records
+         set status = case when v_auto_confirm then 'bestaetigt'::public.performance_status else 'eingereicht' end,
+             submitted_at = now(), status_reason = null,
+             confirmed_at = case when v_auto_confirm then now() end,
+             confirmed_by = case when v_auto_confirm then v_actor end
+       where id = p_id;
+      insert into public.performance_adjustments (record_id, action, from_status, to_status, actor_id)
+      values (p_id, 'eingereicht', r.status,
+              case when v_auto_confirm then 'bestaetigt'::public.performance_status else 'eingereicht' end, v_actor);
+      if v_auto_confirm then
+        insert into public.performance_approvals (record_id, decision, comment, actor_id)
+        values (p_id, 'bestaetigt', 'Bei Einreichung bestätigt', v_actor);
+      end if;
+      if v_auto_confirm then
+        perform private.check_target_achievements(r.user_id, r.occurred_on);
+      end if;
+
+    when 'zurueckziehen' then
+      if not v_is_owner_side then raise exception 'Keine Berechtigung' using errcode = '42501'; end if;
+      if r.status <> 'eingereicht' then raise exception 'Nur eingereichte Leistungen können zurückgezogen werden.'; end if;
+      update public.performance_records set status = 'entwurf', submitted_at = null where id = p_id;
+      insert into public.performance_adjustments (record_id, action, from_status, to_status, reason, actor_id)
+      values (p_id, 'zurueckgezogen', r.status, 'entwurf', v_reason, v_actor);
+
+    when 'loeschen' then
+      if not v_is_owner_side then raise exception 'Keine Berechtigung' using errcode = '42501'; end if;
+      if r.status <> 'entwurf' or r.submitted_at is not null or r.confirmed_at is not null then
+        raise exception 'Nur nie eingereichte Entwürfe können gelöscht werden.';
+      end if;
+      if exists (select 1 from public.performance_adjustments where record_id = p_id and action = 'eingereicht') then
+        raise exception 'Bereits eingereichte Leistungen können nicht gelöscht werden.';
+      end if;
+      delete from public.performance_records where id = p_id;
+
+    when 'bestaetigen' then
+      if not private.can_approve_for(v_actor, r.user_id) then
+        raise exception 'Keine Berechtigung (eigene Leistungen können nicht selbst bestätigt werden)' using errcode = '42501';
+      end if;
+      if r.status <> 'eingereicht' then raise exception 'Nur eingereichte Leistungen können bestätigt werden.'; end if;
+      update public.performance_records
+         set status = 'bestaetigt', confirmed_at = now(), confirmed_by = v_actor, status_reason = v_reason
+       where id = p_id;
+      insert into public.performance_approvals (record_id, decision, comment, actor_id)
+      values (p_id, 'bestaetigt', v_reason, v_actor);
+      perform private.check_target_achievements(r.user_id, r.occurred_on);
+
+    when 'ablehnen' then
+      if not private.can_approve_for(v_actor, r.user_id) then
+        raise exception 'Keine Berechtigung' using errcode = '42501';
+      end if;
+      if r.status <> 'eingereicht' then raise exception 'Nur eingereichte Leistungen können abgelehnt werden.'; end if;
+      if v_reason is null then raise exception 'Bitte eine Begründung angeben.'; end if;
+      update public.performance_records set status = 'abgelehnt', status_reason = v_reason where id = p_id;
+      insert into public.performance_approvals (record_id, decision, comment, actor_id)
+      values (p_id, 'abgelehnt', v_reason, v_actor);
+      perform private.notify(r.user_id, 'leistung_abgelehnt', 'Leistung abgelehnt', v_reason, '/leistungen');
+
+    when 'stornieren' then
+      if not private.can_approve_for(v_actor, r.user_id) then
+        raise exception 'Keine Berechtigung' using errcode = '42501';
+      end if;
+      if r.status not in ('eingereicht', 'bestaetigt') then
+        raise exception 'Nur eingereichte oder bestätigte Leistungen können storniert werden.';
+      end if;
+      if v_reason is null then raise exception 'Bitte eine Begründung angeben.'; end if;
+      update public.performance_records
+         set status = 'storniert', cancelled_at = now(), cancelled_by = v_actor, status_reason = v_reason
+       where id = p_id;
+      insert into public.performance_adjustments (record_id, action, from_status, to_status, reason, actor_id)
+      values (p_id, 'storniert', r.status, 'storniert', v_reason, v_actor);
+      perform private.notify(r.user_id, 'leistung_storniert', 'Leistung storniert', v_reason, '/leistungen');
+
+    else
+      raise exception 'Unbekannte Aktion';
+  end case;
+end;
+$$;
+
+-- Korrektur einer bestätigten Leistung: Ursprung -> 'korrigiert', neuer Datensatz -> 'bestaetigt'
+create or replace function public.performance_correct(
+  p_id uuid, p_product uuid, p_occurred_on date, p_quantity int, p_reason text)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  r public.performance_records;
+  v_actor uuid := auth.uid();
+  v_new uuid;
+  v_reason text := nullif(trim(p_reason), '');
+begin
+  select * into r from public.performance_records where id = p_id for update;
+  if r.id is null then raise exception 'Datensatz nicht gefunden'; end if;
+  if not private.can_approve_for(v_actor, r.user_id) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  if r.status <> 'bestaetigt' then raise exception 'Nur bestätigte Leistungen können korrigiert werden.'; end if;
+  if v_reason is null then raise exception 'Bitte eine Begründung angeben.'; end if;
+  if p_quantity < 1 or p_quantity > 1000 then raise exception 'Ungültige Menge (1 bis 1000)'; end if;
+  if p_occurred_on > private.today_berlin() then raise exception 'Das Datum darf nicht in der Zukunft liegen.'; end if;
+  if not exists (select 1 from public.products where id = p_product and is_active) then
+    raise exception 'Produkt nicht gefunden oder inaktiv';
+  end if;
+
+  update public.performance_records
+     set status = 'korrigiert', status_reason = v_reason
+   where id = p_id;
+
+  insert into public.performance_records (
+    user_id, team_id, product_id, occurred_on, quantity, external_ref, note, status,
+    corrects_record_id, created_by, submitted_at, confirmed_at, confirmed_by, status_reason)
+  values (
+    r.user_id, r.team_id, p_product, p_occurred_on, p_quantity, r.external_ref, r.note, 'bestaetigt',
+    r.id, v_actor, now(), now(), v_actor, 'Korrektur: ' || v_reason)
+  returning id into v_new;
+
+  insert into public.performance_adjustments (
+    record_id, action, from_status, to_status, reason, changes, replacement_record_id, actor_id)
+  values (p_id, 'korrigiert', 'bestaetigt', 'korrigiert', v_reason,
+          jsonb_build_object(
+            'vorher', jsonb_build_object('product_id', r.product_id, 'occurred_on', r.occurred_on, 'quantity', r.quantity),
+            'nachher', jsonb_build_object('product_id', p_product, 'occurred_on', p_occurred_on, 'quantity', p_quantity)),
+          v_new, v_actor);
+  insert into public.performance_approvals (record_id, decision, comment, actor_id)
+  values (v_new, 'bestaetigt', 'Korrektur: ' || v_reason, v_actor);
+  perform private.notify(r.user_id, 'leistung_korrigiert', 'Leistung korrigiert', v_reason, '/leistungen');
+  perform private.check_target_achievements(r.user_id, p_occurred_on);
+  return v_new;
+end;
+$$;
+
+-- =============================================================================
+-- Auswertungen (SECURITY INVOKER: RLS begrenzt automatisch den Sichtbereich)
+-- =============================================================================
+
+-- Tageswerte je Mitarbeiter, Team (zum Erfassungszeitpunkt), Produkt und Status
+create or replace function public.performance_daily(
+  p_from date, p_to date,
+  p_user_ids uuid[] default null,
+  p_team_id uuid default null,
+  p_product_id uuid default null)
+returns table (
+  day date, user_id uuid, team_id uuid, product_id uuid,
+  status public.performance_status, quantity bigint, records bigint)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select r.occurred_on, r.user_id, r.team_id, r.product_id, r.status,
+         sum(r.quantity), count(*)
+  from public.performance_records r
+  where r.occurred_on between p_from and p_to
+    and (p_to - p_from) <= 1100
+    and (p_user_ids is null or r.user_id = any (p_user_ids))
+    and (p_team_id is null or r.team_id = p_team_id)
+    and (p_product_id is null or r.product_id = p_product_id)
+  group by 1, 2, 3, 4, 5;
+$$;
+
+-- Fortschritt sichtbarer Ziele (aktuelle Periode zum Stichtag)
+create or replace function public.get_target_progress(p_day date default null)
+returns table (
+  target_id uuid, title text, scope public.target_scope, user_id uuid, team_id uuid,
+  product_id uuid, period public.target_period, target_value int,
+  window_start date, window_end date, actual bigint)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_day date := coalesce(p_day, private.today_berlin());
+begin
+  if not private.is_active_user(auth.uid()) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  return query
+    select t.id, t.title, t.scope, t.user_id, t.team_id, t.product_id, t.period, t.target_value,
+           w.window_start, w.window_end,
+           private.target_actual(t.id, w.window_start, w.window_end)
+    from public.targets t
+    cross join lateral private.target_window(t.period, t.starts_on, t.ends_on, v_day) w
+    where v_day between t.starts_on and t.ends_on
+      and private.can_view_target(auth.uid(), t.id)
+    order by t.scope, t.title;
+end;
+$$;
+
+-- Bestenliste (nur bestätigte Leistungen, nur aktive Mitarbeiter).
+-- Sichtbarkeit wird über organization_settings.rankings gesteuert.
+create or replace function public.get_leaderboard(
+  p_from date, p_to date, p_product_id uuid default null, p_team_id uuid default null)
+returns table (
+  rank bigint, user_id uuid, display_name text, team_name text, total bigint, is_me boolean)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_viewer uuid := auth.uid();
+  v_settings jsonb := private.setting('rankings');
+  v_role text;
+begin
+  if not private.has_permission(v_viewer, 'rankings.read') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  if not coalesce((v_settings ->> 'enabled')::boolean, false) then
+    raise exception 'Rankings sind deaktiviert.';
+  end if;
+  if p_to < p_from or (p_to - p_from) > 400 then
+    raise exception 'Ungültiger Zeitraum';
+  end if;
+  select r.key into v_role from public.profiles p join public.roles r on r.id = p.role_id where p.id = v_viewer;
+
+  if p_team_id is null then
+    if not (v_settings -> 'agency_roles') ? v_role then
+      raise exception 'Das Agenturranking ist für deine Rolle nicht freigegeben.' using errcode = '42501';
+    end if;
+  else
+    if not (v_settings -> 'team_roles') ? v_role then
+      raise exception 'Das Teamranking ist für deine Rolle nicht freigegeben.' using errcode = '42501';
+    end if;
+    if not (p_team_id = private.current_team_id(v_viewer)
+            or p_team_id in (select private.led_team_ids(v_viewer))
+            or private.has_permission(v_viewer, 'performance.read.all')) then
+      raise exception 'Keine Berechtigung für dieses Team' using errcode = '42501';
+    end if;
+  end if;
+
+  return query
+    with totals as (
+      select r.user_id, sum(r.quantity)::bigint as total
+      from public.performance_records r
+      where r.status = 'bestaetigt'
+        and r.occurred_on between p_from and p_to
+        and (p_product_id is null or r.product_id = p_product_id)
+        and (p_team_id is null or r.team_id = p_team_id)
+      group by r.user_id
+    )
+    select rank() over (order by t.total desc), p.id, p.first_name || ' ' || left(p.last_name, 1) || '.',
+           tm.name, t.total, p.id = v_viewer
+    from totals t
+    join public.profiles p on p.id = t.user_id and p.status = 'aktiv'
+    left join public.teams tm on tm.id = private.current_team_id(p.id)
+    order by 1, 3
+    limit 200;
+end;
+$$;
+
+-- =============================================================================
+-- RPCs: Produkte, Ziele, Wettbewerbe
+-- =============================================================================
+
+create or replace function public.product_upsert(
+  p_id uuid, p_name text, p_description text, p_unit_label text,
+  p_requires_external_ref boolean, p_is_active boolean, p_sort_order int default 0)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('products.manage');
+  if p_id is null then
+    insert into public.products (name, description, unit_label, requires_external_ref, is_active, sort_order)
+    values (trim(p_name), nullif(trim(p_description), ''), coalesce(nullif(trim(p_unit_label), ''), 'Verträge'),
+            coalesce(p_requires_external_ref, false), coalesce(p_is_active, true), coalesce(p_sort_order, 0))
+    returning id into v_id;
+  else
+    update public.products
+       set name = trim(p_name), description = nullif(trim(p_description), ''),
+           unit_label = coalesce(nullif(trim(p_unit_label), ''), 'Verträge'),
+           requires_external_ref = coalesce(p_requires_external_ref, false),
+           is_active = coalesce(p_is_active, true), sort_order = coalesce(p_sort_order, 0)
+     where id = p_id
+    returning id into v_id;
+    if v_id is null then raise exception 'Produkt nicht gefunden'; end if;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.target_upsert(
+  p_id uuid, p_title text, p_scope public.target_scope, p_user uuid, p_team uuid,
+  p_product uuid, p_period public.target_period, p_starts_on date, p_ends_on date, p_target_value int)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_existing public.targets;
+begin
+  if p_id is not null then
+    select * into v_existing from public.targets where id = p_id;
+    if v_existing.id is null then raise exception 'Ziel nicht gefunden'; end if;
+    if not private.can_manage_target(auth.uid(), v_existing.scope, v_existing.user_id, v_existing.team_id) then
+      raise exception 'Keine Berechtigung' using errcode = '42501';
+    end if;
+  end if;
+  if not private.can_manage_target(auth.uid(), p_scope, p_user, p_team) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+
+  if p_id is null then
+    insert into public.targets (title, scope, user_id, team_id, product_id, period,
+                                starts_on, ends_on, target_value, created_by)
+    values (trim(p_title), p_scope,
+            case when p_scope = 'mitarbeiter' then p_user end,
+            case when p_scope = 'team' then p_team end,
+            p_product, p_period, p_starts_on, p_ends_on, p_target_value, auth.uid())
+    returning id into v_id;
+    if p_scope = 'mitarbeiter' then
+      perform private.notify(p_user, 'ziel_neu', 'Neues Ziel: ' || trim(p_title), null, '/ziele');
+    end if;
+  else
+    update public.targets
+       set title = trim(p_title), scope = p_scope,
+           user_id = case when p_scope = 'mitarbeiter' then p_user end,
+           team_id = case when p_scope = 'team' then p_team end,
+           product_id = p_product, period = p_period, starts_on = p_starts_on,
+           ends_on = p_ends_on, target_value = p_target_value
+     where id = p_id
+    returning id into v_id;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.target_delete(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  t public.targets;
+begin
+  select * into t from public.targets where id = p_id;
+  if t.id is null then raise exception 'Ziel nicht gefunden'; end if;
+  if not private.can_manage_target(auth.uid(), t.scope, t.user_id, t.team_id) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  delete from public.targets where id = p_id;
+end;
+$$;
+
+create or replace function public.competition_upsert(
+  p_id uuid, p_title text, p_description text, p_product uuid, p_team uuid,
+  p_starts_on date, p_ends_on date, p_is_active boolean)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('competitions.manage');
+  if p_ends_on - p_starts_on > 400 then
+    raise exception 'Ein Wettbewerb darf höchstens 400 Tage dauern.';
+  end if;
+  if p_id is null then
+    insert into public.competitions (title, description, product_id, team_id, starts_on, ends_on, is_active, created_by)
+    values (trim(p_title), nullif(trim(p_description), ''), p_product, p_team, p_starts_on, p_ends_on,
+            coalesce(p_is_active, true), auth.uid())
+    returning id into v_id;
+  else
+    update public.competitions
+       set title = trim(p_title), description = nullif(trim(p_description), ''), product_id = p_product,
+           team_id = p_team, starts_on = p_starts_on, ends_on = p_ends_on, is_active = coalesce(p_is_active, true)
+     where id = p_id
+    returning id into v_id;
+    if v_id is null then raise exception 'Wettbewerb nicht gefunden'; end if;
+  end if;
+  return v_id;
+end;
+$$;
+
+
+-- ----- 20261025000400_academy.sql -----
+-- =============================================================================
+-- ERLEN CRM – ERLEN Academy (Kurse, Module, Lektionen, Quizze, Lernfortschritt)
+-- =============================================================================
+-- Fortschrittsregeln:
+--  * Das Öffnen einer Lektion setzt nur "in_bearbeitung".
+--  * Text-/Dokumentlektionen: Abschluss nur durch ausdrückliche Bestätigung,
+--    frühestens nach der Mindestlesezeit (min_seconds) seit dem Start.
+--  * Videolektionen: Abschluss, wenn mindestens 90 % der Videolänge als
+--    angesehen gemeldet wurden.
+--  * Quizlektionen: Abschluss ausschließlich durch ein bestandenes Quiz
+--    (Auswertung serverseitig; richtige Antworten werden nie an Lernende gesendet).
+--  * Ausbilder/Teamleiter können Fortschritt dokumentieren (Quelle "ausbilder").
+-- =============================================================================
+
+create type public.course_status as enum ('entwurf', 'veroeffentlicht', 'archiviert');
+create type public.lesson_type as enum ('text', 'video', 'dokument', 'quiz');
+create type public.progress_status as enum ('nicht_begonnen', 'in_bearbeitung', 'abgeschlossen');
+create type public.completion_source as enum ('selbst', 'video', 'quiz', 'ausbilder');
+
+create table public.courses (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) between 2 and 160),
+  description text,
+  cover_path text,
+  status public.course_status not null default 'entwurf',
+  sort_order int not null default 0,
+  created_by uuid references public.profiles (id),
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.course_modules (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid not null references public.courses (id) on delete cascade,
+  title text not null check (char_length(title) between 2 and 160),
+  description text,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index course_modules_course_idx on public.course_modules (course_id, sort_order);
+
+create table public.lessons (
+  id uuid primary key default gen_random_uuid(),
+  module_id uuid not null references public.course_modules (id) on delete cascade,
+  title text not null check (char_length(title) between 2 and 160),
+  lesson_type public.lesson_type not null,
+  content text,                       -- Markdown-Text
+  video_path text,                    -- Pfad im privaten Bucket "academy"
+  video_url text check (video_url is null or video_url ~ '^https://'),  -- optional: externer Player (z. B. Vimeo privat)
+  document_path text,                 -- Pfad im privaten Bucket "academy"
+  duration_minutes int check (duration_minutes is null or duration_minutes between 0 and 600),
+  min_seconds int not null default 30 check (min_seconds between 0 and 3600),
+  sort_order int not null default 0,
+  is_published boolean not null default false,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index lessons_module_idx on public.lessons (module_id, sort_order);
+
+-- Freigabe eines Kurses für Rolle, Team oder einzelne Person (genau eines davon)
+create table public.course_access (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid not null references public.courses (id) on delete cascade,
+  role_id uuid references public.roles (id) on delete cascade,
+  team_id uuid references public.teams (id) on delete cascade,
+  user_id uuid references public.profiles (id) on delete cascade,
+  is_mandatory boolean not null default false,  -- Pflichtschulung für diese Zielgruppe
+  created_at timestamptz not null default now(),
+  check (num_nonnulls(role_id, team_id, user_id) = 1)
+);
+create unique index course_access_unique_idx
+  on public.course_access (course_id, coalesce(role_id, team_id, user_id));
+
+-- Persönliche Zuweisungen (Pflichtschulungen mit optionaler Frist)
+create table public.course_assignments (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid not null references public.courses (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  assigned_by uuid references public.profiles (id),
+  due_on date,
+  is_mandatory boolean not null default true,
+  assigned_at timestamptz not null default now(),
+  unique (course_id, user_id)
+);
+create index course_assignments_user_idx on public.course_assignments (user_id);
+
+create table public.lesson_progress (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  lesson_id uuid not null references public.lessons (id) on delete cascade,
+  status public.progress_status not null default 'in_bearbeitung',
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  completion_source public.completion_source,
+  video_position_seconds int not null default 0,
+  video_duration_seconds int,
+  confirmed_by uuid references public.profiles (id),
+  note text,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, lesson_id)
+);
+create index lesson_progress_lesson_idx on public.lesson_progress (lesson_id);
+
+create table public.quizzes (
+  id uuid primary key default gen_random_uuid(),
+  lesson_id uuid not null unique references public.lessons (id) on delete cascade,
+  pass_percent int not null default 80 check (pass_percent between 1 and 100),
+  max_attempts int check (max_attempts is null or max_attempts between 1 and 50),
+  created_at timestamptz not null default now()
+);
+
+create table public.quiz_questions (
+  id uuid primary key default gen_random_uuid(),
+  quiz_id uuid not null references public.quizzes (id) on delete cascade,
+  question text not null check (char_length(question) between 3 and 1000),
+  allows_multiple boolean not null default false,
+  sort_order int not null default 0
+);
+create index quiz_questions_quiz_idx on public.quiz_questions (quiz_id, sort_order);
+
+create table public.quiz_answers (
+  id uuid primary key default gen_random_uuid(),
+  question_id uuid not null references public.quiz_questions (id) on delete cascade,
+  answer text not null check (char_length(answer) between 1 and 500),
+  is_correct boolean not null default false,
+  sort_order int not null default 0
+);
+create index quiz_answers_question_idx on public.quiz_answers (question_id, sort_order);
+
+create table public.quiz_attempts (
+  id uuid primary key default gen_random_uuid(),
+  quiz_id uuid not null references public.quizzes (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  score_percent int not null,
+  passed boolean not null,
+  answers jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index quiz_attempts_user_idx on public.quiz_attempts (user_id, quiz_id);
+
+-- Feedback und Ausbildungsnotizen
+create table public.training_notes (
+  id uuid primary key default gen_random_uuid(),
+  trainee_id uuid not null references public.profiles (id) on delete cascade,
+  author_id uuid not null references public.profiles (id),
+  body text not null check (char_length(body) between 1 and 5000),
+  shared_with_trainee boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index training_notes_trainee_idx on public.training_notes (trainee_id, created_at desc);
+
+create trigger courses_touch before update on public.courses
+  for each row execute function private.touch_updated_at();
+create trigger lessons_touch before update on public.lessons
+  for each row execute function private.touch_updated_at();
+create trigger lesson_progress_touch before update on public.lesson_progress
+  for each row execute function private.touch_updated_at();
+
+create trigger courses_audit after insert or update or delete on public.courses
+  for each row execute function private.audit_trigger();
+create trigger course_access_audit after insert or update or delete on public.course_access
+  for each row execute function private.audit_trigger('user_id');
+create trigger course_assignments_audit after insert or update or delete on public.course_assignments
+  for each row execute function private.audit_trigger('user_id');
+create trigger lesson_progress_audit after insert or update or delete on public.lesson_progress
+  for each row execute function private.audit_trigger('user_id');
+
+-- =============================================================================
+-- Sichtbarkeit
+-- =============================================================================
+
+-- Darf p_user den Kurs nutzen? (unabhängig davon, wer fragt)
+create or replace function private.course_available_to(p_user uuid, p_course uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.courses c
+    where c.id = p_course
+      and c.status = 'veroeffentlicht'
+      and private.has_permission(p_user, 'training.read')
+      and (
+        exists (select 1 from public.course_assignments ca where ca.course_id = c.id and ca.user_id = p_user)
+        or exists (
+          select 1 from public.course_access a
+          where a.course_id = c.id
+            and (a.user_id = p_user
+                 or a.role_id = (select role_id from public.profiles where id = p_user)
+                 or a.team_id = private.current_team_id(p_user)))
+      )
+  );
+$$;
+
+create or replace function private.can_view_course(p_viewer uuid, p_course uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select private.has_permission(p_viewer, 'training.manage')
+      or private.course_available_to(p_viewer, p_course);
+$$;
+
+create or replace function private.can_view_lesson(p_viewer uuid, p_lesson uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.lessons l
+    join public.course_modules m on m.id = l.module_id
+    where l.id = p_lesson
+      and (private.has_permission(p_viewer, 'training.manage')
+           or (l.is_published and private.course_available_to(p_viewer, m.course_id)))
+  );
+$$;
+
+-- Mandatory-Kurse für einen Benutzer automatisch zuweisen (Rolle/Team)
+create or replace function private.assign_mandatory_courses(p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  c record;
+begin
+  for c in
+    select distinct a.course_id, co.title
+    from public.course_access a
+    join public.courses co on co.id = a.course_id and co.status = 'veroeffentlicht'
+    where a.is_mandatory
+      and (a.user_id = p_user
+           or a.role_id = (select role_id from public.profiles where id = p_user)
+           or a.team_id = private.current_team_id(p_user))
+      and not exists (select 1 from public.course_assignments x where x.course_id = a.course_id and x.user_id = p_user)
+  loop
+    insert into public.course_assignments (course_id, user_id, assigned_by, is_mandatory)
+    values (c.course_id, p_user, auth.uid(), true);
+    perform private.notify(p_user, 'schulung_zugewiesen', 'Neue Pflichtschulung: ' || c.title, null,
+      '/academy/kurs/' || c.course_id::text);
+  end loop;
+end;
+$$;
+
+alter table public.courses enable row level security;
+alter table public.course_modules enable row level security;
+alter table public.lessons enable row level security;
+alter table public.course_access enable row level security;
+alter table public.course_assignments enable row level security;
+alter table public.lesson_progress enable row level security;
+alter table public.quizzes enable row level security;
+alter table public.quiz_questions enable row level security;
+alter table public.quiz_answers enable row level security;
+alter table public.quiz_attempts enable row level security;
+alter table public.training_notes enable row level security;
+
+create policy courses_select on public.courses for select to authenticated
+  using (private.can_view_course((select auth.uid()), id));
+create policy course_modules_select on public.course_modules for select to authenticated
+  using (private.can_view_course((select auth.uid()), course_id));
+create policy lessons_select on public.lessons for select to authenticated
+  using (private.can_view_lesson((select auth.uid()), id));
+create policy course_access_select on public.course_access for select to authenticated
+  using (private.has_permission((select auth.uid()), 'training.manage'));
+create policy course_assignments_select on public.course_assignments for select to authenticated
+  using (user_id in (select private.visible_user_ids((select auth.uid()), 'training.progress')));
+create policy lesson_progress_select on public.lesson_progress for select to authenticated
+  using (user_id in (select private.visible_user_ids((select auth.uid()), 'training.progress')));
+create policy quizzes_select on public.quizzes for select to authenticated
+  using (private.can_view_lesson((select auth.uid()), lesson_id));
+-- Fragen/Antworten (inkl. Lösung) nur für Kursverwaltung; Lernende nutzen get_quiz()
+create policy quiz_questions_select on public.quiz_questions for select to authenticated
+  using (private.has_permission((select auth.uid()), 'training.manage'));
+create policy quiz_answers_select on public.quiz_answers for select to authenticated
+  using (private.has_permission((select auth.uid()), 'training.manage'));
+create policy quiz_attempts_select on public.quiz_attempts for select to authenticated
+  using (user_id in (select private.visible_user_ids((select auth.uid()), 'training.progress')));
+create policy training_notes_select on public.training_notes for select to authenticated
+  using (
+    author_id = (select auth.uid())
+    or (trainee_id = (select auth.uid()) and shared_with_trainee)
+    or (trainee_id <> (select auth.uid())
+        and private.has_permission((select auth.uid()), 'training.notes.write')
+        and trainee_id in (select private.visible_user_ids((select auth.uid()), 'training.progress')))
+  );
+
+-- =============================================================================
+-- RPCs: Lernende
+-- =============================================================================
+
+create or replace function public.lesson_start(p_lesson uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not private.can_view_lesson(auth.uid(), p_lesson)
+     or not private.has_permission(auth.uid(), 'training.read') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  insert into public.lesson_progress (user_id, lesson_id, status)
+  values (auth.uid(), p_lesson, 'in_bearbeitung')
+  on conflict (user_id, lesson_id) do nothing;
+end;
+$$;
+
+-- Text- und Dokumentlektionen ausdrücklich abschließen
+create or replace function public.lesson_complete(p_lesson uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  l public.lessons;
+  p public.lesson_progress;
+begin
+  if not private.can_view_lesson(auth.uid(), p_lesson)
+     or not private.has_permission(auth.uid(), 'training.read') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  select * into l from public.lessons where id = p_lesson;
+  -- Externe Videos (ohne eigene Datei) können nicht gemessen werden -> ausdrückliche Bestätigung
+  if l.lesson_type not in ('text', 'dokument') and not (l.lesson_type = 'video' and l.video_path is null) then
+    raise exception 'Diese Lektion wird über Video bzw. Quiz abgeschlossen.';
+  end if;
+  select * into p from public.lesson_progress where user_id = auth.uid() and lesson_id = p_lesson;
+  if p.user_id is null then
+    raise exception 'Bitte öffne die Lektion zuerst.';
+  end if;
+  if p.status = 'abgeschlossen' then return; end if;
+  if now() < p.started_at + make_interval(secs => l.min_seconds) then
+    raise exception 'MINDESTZEIT: Bitte nimm dir etwas mehr Zeit für diese Lektion.';
+  end if;
+  update public.lesson_progress
+     set status = 'abgeschlossen', completed_at = now(), completion_source = 'selbst'
+   where user_id = auth.uid() and lesson_id = p_lesson;
+end;
+$$;
+
+-- Videofortschritt melden. Abschluss ab 90 % der Videolänge.
+create or replace function public.lesson_video_progress(p_lesson uuid, p_position int, p_duration int)
+returns public.progress_status
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  l public.lessons;
+  v_status public.progress_status;
+begin
+  if not private.can_view_lesson(auth.uid(), p_lesson)
+     or not private.has_permission(auth.uid(), 'training.read') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  select * into l from public.lessons where id = p_lesson;
+  if l.lesson_type <> 'video' then raise exception 'Keine Videolektion'; end if;
+  if p_duration is null or p_duration <= 0 or p_position < 0 or p_position > p_duration + 5 then
+    raise exception 'Ungültige Videodaten';
+  end if;
+  insert into public.lesson_progress (user_id, lesson_id, status, video_position_seconds, video_duration_seconds)
+  values (auth.uid(), p_lesson, 'in_bearbeitung', p_position, p_duration)
+  on conflict (user_id, lesson_id) do update
+    set video_position_seconds = greatest(public.lesson_progress.video_position_seconds, excluded.video_position_seconds),
+        video_duration_seconds = excluded.video_duration_seconds;
+
+  update public.lesson_progress
+     set status = 'abgeschlossen', completed_at = now(), completion_source = 'video'
+   where user_id = auth.uid() and lesson_id = p_lesson
+     and status <> 'abgeschlossen'
+     and video_position_seconds >= 0.9 * video_duration_seconds
+     -- Plausibilität: Abschluss frühestens nach 50 % der Videolänge in Echtzeit
+     and now() >= started_at + make_interval(secs => (0.5 * video_duration_seconds)::int);
+
+  select status into v_status from public.lesson_progress where user_id = auth.uid() and lesson_id = p_lesson;
+  return v_status;
+end;
+$$;
+
+-- Quiz ohne Lösungen abrufen
+create or replace function public.get_quiz(p_lesson uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_quiz public.quizzes;
+  v_attempts int;
+begin
+  if not private.can_view_lesson(auth.uid(), p_lesson) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  select * into v_quiz from public.quizzes where lesson_id = p_lesson;
+  if v_quiz.id is null then return null; end if;
+  select count(*) into v_attempts from public.quiz_attempts where quiz_id = v_quiz.id and user_id = auth.uid();
+  return jsonb_build_object(
+    'quiz_id', v_quiz.id,
+    'pass_percent', v_quiz.pass_percent,
+    'max_attempts', v_quiz.max_attempts,
+    'attempts_used', v_attempts,
+    'questions', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', q.id, 'question', q.question, 'allows_multiple', q.allows_multiple,
+        'answers', (select coalesce(jsonb_agg(jsonb_build_object('id', a.id, 'answer', a.answer) order by a.sort_order), '[]')
+                    from public.quiz_answers a where a.question_id = q.id)
+      ) order by q.sort_order)
+      from public.quiz_questions q where q.quiz_id = v_quiz.id), '[]'));
+end;
+$$;
+
+-- Quiz einreichen und serverseitig auswerten.
+-- p_answers: {"<question_id>": ["<answer_id>", ...], ...}
+create or replace function public.submit_quiz(p_lesson uuid, p_answers jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_quiz public.quizzes;
+  v_total int;
+  v_correct int := 0;
+  v_score int;
+  v_passed boolean;
+  v_attempts int;
+  q record;
+  v_given uuid[];
+  v_expected uuid[];
+begin
+  if not private.can_view_lesson(auth.uid(), p_lesson)
+     or not private.has_permission(auth.uid(), 'training.read') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  select * into v_quiz from public.quizzes where lesson_id = p_lesson;
+  if v_quiz.id is null then raise exception 'Kein Quiz vorhanden'; end if;
+  select count(*) into v_attempts from public.quiz_attempts where quiz_id = v_quiz.id and user_id = auth.uid();
+  if v_quiz.max_attempts is not null and v_attempts >= v_quiz.max_attempts then
+    raise exception 'Maximale Anzahl an Versuchen erreicht.';
+  end if;
+  select count(*) into v_total from public.quiz_questions where quiz_id = v_quiz.id;
+  if v_total = 0 then raise exception 'Das Quiz enthält keine Fragen.'; end if;
+
+  for q in select id from public.quiz_questions where quiz_id = v_quiz.id loop
+    select coalesce(array_agg(x::uuid order by x), '{}') into v_given
+      from jsonb_array_elements_text(coalesce(p_answers -> q.id::text, '[]'::jsonb)) x;
+    select coalesce(array_agg(a.id order by a.id), '{}') into v_expected
+      from public.quiz_answers a where a.question_id = q.id and a.is_correct;
+    if v_given = v_expected then v_correct := v_correct + 1; end if;
+  end loop;
+
+  v_score := round(100.0 * v_correct / v_total);
+  v_passed := v_score >= v_quiz.pass_percent;
+  insert into public.quiz_attempts (quiz_id, user_id, score_percent, passed, answers)
+  values (v_quiz.id, auth.uid(), v_score, v_passed, coalesce(p_answers, '{}'));
+
+  insert into public.lesson_progress (user_id, lesson_id, status)
+  values (auth.uid(), p_lesson, 'in_bearbeitung')
+  on conflict (user_id, lesson_id) do nothing;
+  if v_passed then
+    update public.lesson_progress
+       set status = 'abgeschlossen', completed_at = coalesce(completed_at, now()), completion_source = 'quiz'
+     where user_id = auth.uid() and lesson_id = p_lesson and status <> 'abgeschlossen';
+  end if;
+  return jsonb_build_object('score_percent', v_score, 'passed', v_passed,
+                            'correct', v_correct, 'total', v_total, 'pass_percent', v_quiz.pass_percent);
+end;
+$$;
+
+-- Kursfortschritt eines Mitarbeiters (für ihn selbst oder berechtigte Führungskräfte)
+create or replace function public.get_training_overview(p_user uuid default null)
+returns table (
+  course_id uuid, title text, is_mandatory boolean, due_on date,
+  total_lessons bigint, completed_lessons bigint, last_activity timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := coalesce(p_user, auth.uid());
+begin
+  if not private.can_access_user(auth.uid(), v_user, 'training.progress') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  return query
+    select c.id, c.title,
+           coalesce(ca.is_mandatory, false),
+           ca.due_on,
+           (select count(*) from public.lessons l join public.course_modules m on m.id = l.module_id
+             where m.course_id = c.id and l.is_published),
+           (select count(*) from public.lesson_progress lp
+              join public.lessons l on l.id = lp.lesson_id
+              join public.course_modules m on m.id = l.module_id
+             where m.course_id = c.id and l.is_published and lp.user_id = v_user and lp.status = 'abgeschlossen'),
+           (select max(lp.updated_at) from public.lesson_progress lp
+              join public.lessons l on l.id = lp.lesson_id
+              join public.course_modules m on m.id = l.module_id
+             where m.course_id = c.id and lp.user_id = v_user)
+    from public.courses c
+    left join public.course_assignments ca on ca.course_id = c.id and ca.user_id = v_user
+    where private.course_available_to(v_user, c.id)
+    order by coalesce(ca.is_mandatory, false) desc, c.sort_order, c.title;
+end;
+$$;
+
+-- =============================================================================
+-- RPCs: Ausbilder / Führungskräfte
+-- =============================================================================
+
+create or replace function public.trainer_set_lesson_progress(
+  p_user uuid, p_lesson uuid, p_status public.progress_status, p_note text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('training.progress.manage');
+  if p_user = auth.uid() or not private.can_access_user(auth.uid(), p_user, 'training.progress') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  if not exists (
+    select 1 from public.lessons l join public.course_modules m on m.id = l.module_id
+    where l.id = p_lesson and private.course_available_to(p_user, m.course_id)) then
+    raise exception 'Die Lektion ist für diesen Mitarbeiter nicht freigegeben.';
+  end if;
+  if p_status = 'nicht_begonnen' then
+    delete from public.lesson_progress where user_id = p_user and lesson_id = p_lesson;
+    return;
+  end if;
+  insert into public.lesson_progress (user_id, lesson_id, status, completed_at, completion_source, confirmed_by, note)
+  values (p_user, p_lesson, p_status,
+          case when p_status = 'abgeschlossen' then now() end,
+          case when p_status = 'abgeschlossen' then 'ausbilder'::public.completion_source end,
+          auth.uid(), nullif(trim(p_note), ''))
+  on conflict (user_id, lesson_id) do update
+    set status = excluded.status, completed_at = excluded.completed_at,
+        completion_source = excluded.completion_source, confirmed_by = excluded.confirmed_by,
+        note = excluded.note;
+end;
+$$;
+
+create or replace function public.training_note_add(p_trainee uuid, p_body text, p_shared boolean default false)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('training.notes.write');
+  if p_trainee = auth.uid() or not private.can_access_user(auth.uid(), p_trainee, 'training.progress') then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  insert into public.training_notes (trainee_id, author_id, body, shared_with_trainee)
+  values (p_trainee, auth.uid(), trim(p_body), coalesce(p_shared, false))
+  returning id into v_id;
+  if coalesce(p_shared, false) then
+    perform private.notify(p_trainee, 'feedback', 'Neues Feedback von deinem Ausbilder', null, '/academy');
+  end if;
+  return v_id;
+end;
+$$;
+
+-- Kurs persönlich zuweisen (Pflichtschulung)
+create or replace function public.course_assign(p_course uuid, p_user uuid, p_due_on date default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_title text;
+begin
+  if not (private.has_permission(auth.uid(), 'training.manage')
+          or (private.has_permission(auth.uid(), 'training.progress.manage')
+              and p_user <> auth.uid()
+              and private.can_access_user(auth.uid(), p_user, 'training.progress'))) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  select title into v_title from public.courses where id = p_course and status = 'veroeffentlicht';
+  if v_title is null then raise exception 'Kurs nicht gefunden oder nicht veröffentlicht'; end if;
+  insert into public.course_assignments (course_id, user_id, assigned_by, due_on, is_mandatory)
+  values (p_course, p_user, auth.uid(), p_due_on, true)
+  on conflict (course_id, user_id) do update set due_on = excluded.due_on, is_mandatory = true;
+  perform private.notify(p_user, 'schulung_zugewiesen', 'Neue Schulung zugewiesen: ' || v_title,
+    case when p_due_on is not null then 'Fällig bis ' || to_char(p_due_on, 'DD.MM.YYYY') end,
+    '/academy/kurs/' || p_course::text);
+end;
+$$;
+
+create or replace function public.course_unassign(p_course uuid, p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not (private.has_permission(auth.uid(), 'training.manage')
+          or (private.has_permission(auth.uid(), 'training.progress.manage')
+              and private.can_access_user(auth.uid(), p_user, 'training.progress'))) then
+    raise exception 'Keine Berechtigung' using errcode = '42501';
+  end if;
+  delete from public.course_assignments where course_id = p_course and user_id = p_user;
+end;
+$$;
+
+-- =============================================================================
+-- RPCs: Kursverwaltung (training.manage)
+-- =============================================================================
+
+create or replace function public.course_upsert(
+  p_id uuid, p_title text, p_description text, p_status public.course_status, p_sort_order int default 0)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('training.manage');
+  if p_id is null then
+    insert into public.courses (title, description, status, sort_order, created_by, published_at)
+    values (trim(p_title), nullif(trim(p_description), ''), p_status, coalesce(p_sort_order, 0), auth.uid(),
+            case when p_status = 'veroeffentlicht' then now() end)
+    returning id into v_id;
+  else
+    update public.courses
+       set title = trim(p_title), description = nullif(trim(p_description), ''), status = p_status,
+           sort_order = coalesce(p_sort_order, 0),
+           published_at = case when p_status = 'veroeffentlicht' then coalesce(published_at, now()) else published_at end
+     where id = p_id
+    returning id into v_id;
+    if v_id is null then raise exception 'Kurs nicht gefunden'; end if;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.course_set_cover(p_course uuid, p_path text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('training.manage');
+  update public.courses set cover_path = p_path where id = p_course;
+end;
+$$;
+
+create or replace function public.course_delete(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('training.manage');
+  if exists (select 1 from public.lesson_progress lp join public.lessons l on l.id = lp.lesson_id
+             join public.course_modules m on m.id = l.module_id where m.course_id = p_id) then
+    raise exception 'Kurs hat bereits Lernfortschritte. Bitte archivieren statt löschen.';
+  end if;
+  delete from public.courses where id = p_id;
+end;
+$$;
+
+-- Freigaben eines Kurses vollständig setzen.
+-- p_entries: [{"role_id":..}|{"team_id":..}|{"user_id":..}, "is_mandatory": bool]
+create or replace function public.course_set_access(p_course uuid, p_entries jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  e jsonb;
+  u record;
+begin
+  perform private.require_permission('training.manage');
+  delete from public.course_access where course_id = p_course;
+  for e in select * from jsonb_array_elements(coalesce(p_entries, '[]')) loop
+    insert into public.course_access (course_id, role_id, team_id, user_id, is_mandatory)
+    values (p_course, (e ->> 'role_id')::uuid, (e ->> 'team_id')::uuid, (e ->> 'user_id')::uuid,
+            coalesce((e ->> 'is_mandatory')::boolean, false));
+  end loop;
+  -- Pflichtschulungen sofort für betroffene aktive Benutzer zuweisen
+  for u in select id from public.profiles where status = 'aktiv' loop
+    perform private.assign_mandatory_courses(u.id);
+  end loop;
+end;
+$$;
+
+create or replace function public.module_upsert(
+  p_id uuid, p_course uuid, p_title text, p_description text, p_sort_order int)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('training.manage');
+  if p_id is null then
+    insert into public.course_modules (course_id, title, description, sort_order)
+    values (p_course, trim(p_title), nullif(trim(p_description), ''), coalesce(p_sort_order, 0))
+    returning id into v_id;
+  else
+    update public.course_modules
+       set title = trim(p_title), description = nullif(trim(p_description), ''), sort_order = coalesce(p_sort_order, 0)
+     where id = p_id
+    returning id into v_id;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.module_delete(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('training.manage');
+  if exists (select 1 from public.lesson_progress lp join public.lessons l on l.id = lp.lesson_id where l.module_id = p_id) then
+    raise exception 'Modul hat bereits Lernfortschritte und kann nicht gelöscht werden.';
+  end if;
+  delete from public.course_modules where id = p_id;
+end;
+$$;
+
+create or replace function public.lesson_upsert(
+  p_id uuid, p_module uuid, p_title text, p_type public.lesson_type, p_content text,
+  p_video_url text, p_duration_minutes int, p_min_seconds int, p_sort_order int, p_is_published boolean)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_was_published boolean := false;
+  v_course uuid;
+  v_course_title text;
+  u record;
+begin
+  perform private.require_permission('training.manage');
+  if p_id is null then
+    insert into public.lessons (module_id, title, lesson_type, content, video_url, duration_minutes,
+                                min_seconds, sort_order, is_published, published_at)
+    values (p_module, trim(p_title), p_type, p_content, nullif(trim(p_video_url), ''), p_duration_minutes,
+            coalesce(p_min_seconds, 30), coalesce(p_sort_order, 0), coalesce(p_is_published, false),
+            case when coalesce(p_is_published, false) then now() end)
+    returning id into v_id;
+  else
+    select is_published into v_was_published from public.lessons where id = p_id;
+    update public.lessons
+       set title = trim(p_title), lesson_type = p_type, content = p_content,
+           video_url = nullif(trim(p_video_url), ''), duration_minutes = p_duration_minutes,
+           min_seconds = coalesce(p_min_seconds, 30), sort_order = coalesce(p_sort_order, 0),
+           is_published = coalesce(p_is_published, false),
+           published_at = case when coalesce(p_is_published, false) then coalesce(published_at, now()) end
+     where id = p_id
+    returning id into v_id;
+    if v_id is null then raise exception 'Lektion nicht gefunden'; end if;
+  end if;
+
+  if p_type = 'quiz' then
+    insert into public.quizzes (lesson_id) values (v_id) on conflict (lesson_id) do nothing;
+  end if;
+
+  -- Benachrichtigung bei Neuveröffentlichung
+  if coalesce(p_is_published, false) and not coalesce(v_was_published, false) then
+    select c.id, c.title into v_course, v_course_title
+      from public.course_modules m join public.courses c on c.id = m.course_id
+     where m.id = (select module_id from public.lessons where id = v_id);
+    for u in select id from public.profiles where status = 'aktiv' loop
+      if private.course_available_to(u.id, v_course) then
+        perform private.notify(u.id, 'lektion_neu', 'Neue Lektion in „' || v_course_title || '“',
+          trim(p_title), '/academy/lektion/' || v_id::text);
+      end if;
+    end loop;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.lesson_set_media(p_lesson uuid, p_kind text, p_path text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('training.manage');
+  if p_kind = 'video' then
+    update public.lessons set video_path = p_path where id = p_lesson;
+  elsif p_kind = 'dokument' then
+    update public.lessons set document_path = p_path where id = p_lesson;
+  else
+    raise exception 'Ungültiger Medientyp';
+  end if;
+end;
+$$;
+
+create or replace function public.lesson_delete(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('training.manage');
+  if exists (select 1 from public.lesson_progress where lesson_id = p_id and status = 'abgeschlossen') then
+    raise exception 'Lektion wurde bereits abgeschlossen. Bitte stattdessen die Veröffentlichung aufheben.';
+  end if;
+  delete from public.lessons where id = p_id;
+end;
+$$;
+
+-- Quiz vollständig speichern.
+-- p_questions: [{"question": "...", "allows_multiple": bool, "answers": [{"answer": "...", "is_correct": bool}]}]
+create or replace function public.quiz_save(p_lesson uuid, p_pass_percent int, p_max_attempts int, p_questions jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_quiz uuid;
+  q jsonb;
+  a jsonb;
+  v_q uuid;
+  i int := 0;
+  j int;
+begin
+  perform private.require_permission('training.manage');
+  if not exists (select 1 from public.lessons where id = p_lesson and lesson_type = 'quiz') then
+    raise exception 'Keine Quizlektion';
+  end if;
+  insert into public.quizzes (lesson_id, pass_percent, max_attempts)
+  values (p_lesson, coalesce(p_pass_percent, 80), p_max_attempts)
+  on conflict (lesson_id) do update set pass_percent = excluded.pass_percent, max_attempts = excluded.max_attempts
+  returning id into v_quiz;
+  delete from public.quiz_questions where quiz_id = v_quiz;
+  for q in select * from jsonb_array_elements(coalesce(p_questions, '[]')) loop
+    i := i + 1;
+    if not exists (select 1 from jsonb_array_elements(q -> 'answers') x where (x ->> 'is_correct')::boolean) then
+      raise exception 'Jede Frage benötigt mindestens eine richtige Antwort (Frage %).', i;
+    end if;
+    insert into public.quiz_questions (quiz_id, question, allows_multiple, sort_order)
+    values (v_quiz, trim(q ->> 'question'), coalesce((q ->> 'allows_multiple')::boolean, false), i)
+    returning id into v_q;
+    j := 0;
+    for a in select * from jsonb_array_elements(q -> 'answers') loop
+      j := j + 1;
+      insert into public.quiz_answers (question_id, answer, is_correct, sort_order)
+      values (v_q, trim(a ->> 'answer'), coalesce((a ->> 'is_correct')::boolean, false), j);
+    end loop;
+  end loop;
+end;
+$$;
+
+
+-- ----- 20261025000500_documents_storage.sql -----
+-- =============================================================================
+-- ERLEN CRM – Dokumente, Ankündigungen und private Dateiablage
+-- =============================================================================
+
+create table public.document_categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 2 and 80),
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+create unique index document_categories_name_idx on public.document_categories (lower(name));
+
+create table public.documents (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) between 2 and 200),
+  description text,
+  category_id uuid references public.document_categories (id) on delete set null,
+  storage_path text not null unique,
+  file_name text not null,
+  mime_type text not null,
+  size_bytes bigint not null check (size_bytes > 0),
+  is_published boolean not null default true,
+  created_by uuid references public.profiles (id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index documents_category_idx on public.documents (category_id);
+create index documents_search_idx on public.documents
+  using gin (to_tsvector('german', title || ' ' || coalesce(description, '')));
+
+-- Freigaben: Rolle, Team oder Person (genau eines). Ohne Freigabe nur Dokumentverwaltung.
+create table public.document_permissions (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.documents (id) on delete cascade,
+  role_id uuid references public.roles (id) on delete cascade,
+  team_id uuid references public.teams (id) on delete cascade,
+  user_id uuid references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  check (num_nonnulls(role_id, team_id, user_id) = 1)
+);
+create unique index document_permissions_unique_idx
+  on public.document_permissions (document_id, coalesce(role_id, team_id, user_id));
+
+create table public.announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) between 2 and 200),
+  body text not null check (char_length(body) between 1 and 10000),
+  audience_role_ids uuid[] not null default '{}',   -- leer = alle aktiven Mitarbeiter
+  is_pinned boolean not null default false,
+  published_at timestamptz not null default now(),
+  expires_at timestamptz,
+  created_by uuid references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create trigger documents_touch before update on public.documents
+  for each row execute function private.touch_updated_at();
+create trigger documents_audit after insert or update or delete on public.documents
+  for each row execute function private.audit_trigger();
+create trigger document_permissions_audit after insert or update or delete on public.document_permissions
+  for each row execute function private.audit_trigger('user_id');
+create trigger announcements_audit after insert or update or delete on public.announcements
+  for each row execute function private.audit_trigger();
+
+create or replace function private.can_view_document(p_viewer uuid, p_document uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select private.has_permission(p_viewer, 'documents.manage')
+    or exists (
+      select 1 from public.documents d
+      where d.id = p_document
+        and d.is_published
+        and private.has_permission(p_viewer, 'documents.read')
+        and exists (
+          select 1 from public.document_permissions dp
+          where dp.document_id = d.id
+            and (dp.user_id = p_viewer
+                 or dp.role_id = (select role_id from public.profiles where id = p_viewer)
+                 or dp.team_id = private.current_team_id(p_viewer)))
+    );
+$$;
+
+create or replace function private.can_view_announcement(p_viewer uuid, p_audience uuid[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select private.is_active_user(p_viewer) and (
+    cardinality(p_audience) = 0
+    or (select role_id from public.profiles where id = p_viewer) = any (p_audience)
+    or private.has_permission(p_viewer, 'announcements.manage'));
+$$;
+
+alter table public.document_categories enable row level security;
+alter table public.documents enable row level security;
+alter table public.document_permissions enable row level security;
+alter table public.announcements enable row level security;
+
+create policy document_categories_select on public.document_categories for select to authenticated
+  using (private.is_active_user((select auth.uid())));
+create policy documents_select on public.documents for select to authenticated
+  using (private.can_view_document((select auth.uid()), id));
+create policy document_permissions_select on public.document_permissions for select to authenticated
+  using (private.has_permission((select auth.uid()), 'documents.manage'));
+create policy announcements_select on public.announcements for select to authenticated
+  using (
+    private.can_view_announcement((select auth.uid()), audience_role_ids)
+    and (published_at <= now() or private.has_permission((select auth.uid()), 'announcements.manage'))
+    and (expires_at is null or expires_at > now() or private.has_permission((select auth.uid()), 'announcements.manage'))
+  );
+
+-- =============================================================================
+-- RPCs
+-- =============================================================================
+
+create or replace function public.document_category_upsert(p_id uuid, p_name text, p_sort_order int default 0)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('documents.manage');
+  if p_id is null then
+    insert into public.document_categories (name, sort_order) values (trim(p_name), coalesce(p_sort_order, 0))
+    returning id into v_id;
+  else
+    update public.document_categories set name = trim(p_name), sort_order = coalesce(p_sort_order, 0)
+     where id = p_id returning id into v_id;
+  end if;
+  return v_id;
+end;
+$$;
+
+-- Dokument registrieren (Datei wurde zuvor in den privaten Bucket "documents" hochgeladen)
+create or replace function public.document_create(
+  p_title text, p_description text, p_category uuid, p_storage_path text,
+  p_file_name text, p_mime_type text, p_size_bytes bigint, p_access jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  perform private.require_permission('documents.manage');
+  if not exists (select 1 from storage.objects where bucket_id = 'documents' and name = p_storage_path) then
+    raise exception 'Datei wurde nicht gefunden. Bitte erneut hochladen.';
+  end if;
+  insert into public.documents (title, description, category_id, storage_path, file_name, mime_type, size_bytes, created_by)
+  values (trim(p_title), nullif(trim(p_description), ''), p_category, p_storage_path, p_file_name, p_mime_type,
+          p_size_bytes, auth.uid())
+  returning id into v_id;
+  perform public.document_set_access(v_id, p_access);
+  return v_id;
+end;
+$$;
+
+create or replace function public.document_update(
+  p_id uuid, p_title text, p_description text, p_category uuid, p_is_published boolean, p_access jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('documents.manage');
+  update public.documents
+     set title = trim(p_title), description = nullif(trim(p_description), ''),
+         category_id = p_category, is_published = coalesce(p_is_published, true)
+   where id = p_id;
+  if not found then raise exception 'Dokument nicht gefunden'; end if;
+  perform public.document_set_access(p_id, p_access);
+end;
+$$;
+
+-- p_access: [{"role_id": ...} | {"team_id": ...} | {"user_id": ...}]
+create or replace function public.document_set_access(p_document uuid, p_access jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  e jsonb;
+begin
+  perform private.require_permission('documents.manage');
+  delete from public.document_permissions where document_id = p_document;
+  for e in select * from jsonb_array_elements(coalesce(p_access, '[]')) loop
+    insert into public.document_permissions (document_id, role_id, team_id, user_id)
+    values (p_document, (e ->> 'role_id')::uuid, (e ->> 'team_id')::uuid, (e ->> 'user_id')::uuid);
+  end loop;
+end;
+$$;
+
+-- Löscht den Datensatz und gibt den Speicherpfad zurück (Datei wird serverseitig entfernt)
+create or replace function public.document_delete(p_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_path text;
+begin
+  perform private.require_permission('documents.manage');
+  delete from public.documents where id = p_id returning storage_path into v_path;
+  if v_path is null then raise exception 'Dokument nicht gefunden'; end if;
+  return v_path;
+end;
+$$;
+
+create or replace function public.announcement_upsert(
+  p_id uuid, p_title text, p_body text, p_audience_role_ids uuid[], p_is_pinned boolean,
+  p_expires_at timestamptz, p_notify boolean default true)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  u record;
+begin
+  perform private.require_permission('announcements.manage');
+  if p_id is null then
+    insert into public.announcements (title, body, audience_role_ids, is_pinned, expires_at, created_by)
+    values (trim(p_title), trim(p_body), coalesce(p_audience_role_ids, '{}'), coalesce(p_is_pinned, false),
+            p_expires_at, auth.uid())
+    returning id into v_id;
+    if coalesce(p_notify, true) then
+      for u in select id from public.profiles where status = 'aktiv' and id <> auth.uid() loop
+        if private.can_view_announcement(u.id, coalesce(p_audience_role_ids, '{}')) then
+          perform private.notify(u.id, 'ankuendigung', 'Neue Mitteilung: ' || trim(p_title), null, '/dokumente#mitteilungen');
+        end if;
+      end loop;
+    end if;
+  else
+    update public.announcements
+       set title = trim(p_title), body = trim(p_body), audience_role_ids = coalesce(p_audience_role_ids, '{}'),
+           is_pinned = coalesce(p_is_pinned, false), expires_at = p_expires_at
+     where id = p_id returning id into v_id;
+    if v_id is null then raise exception 'Mitteilung nicht gefunden'; end if;
+  end if;
+  return v_id;
+end;
+$$;
+
+create or replace function public.announcement_delete(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('announcements.manage');
+  delete from public.announcements where id = p_id;
+end;
+$$;
+
+-- =============================================================================
+-- Private Storage-Buckets und Zugriffsrichtlinien
+-- =============================================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
+  ('documents', 'documents', false, 52428800, null),
+  ('academy', 'academy', false, 524288000,
+   array['video/mp4', 'video/webm', 'application/pdf', 'image/png', 'image/jpeg', 'image/webp']),
+  ('avatars', 'avatars', false, 2097152, array['image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do nothing;
+
+create or replace function private.can_read_academy_object(p_viewer uuid, p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select private.has_permission(p_viewer, 'training.manage')
+    or exists (select 1 from public.lessons l
+               where (l.video_path = p_name or l.document_path = p_name)
+                 and private.can_view_lesson(p_viewer, l.id))
+    or exists (select 1 from public.courses c
+               where c.cover_path = p_name and private.can_view_course(p_viewer, c.id));
+$$;
+
+create or replace function private.can_read_avatar(p_viewer uuid, p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.avatar_path = p_name
+      and (p.id in (select private.visible_user_ids(p_viewer, 'employees'))
+           or p.id in (select private.own_contact_ids(p_viewer)))
+  ) or (private.is_active_user(p_viewer) and split_part(p_name, '/', 1) = p_viewer::text);
+$$;
+
+grant execute on all functions in schema private to authenticated, service_role;
+
+create policy storage_documents_select on storage.objects for select to authenticated
+  using (bucket_id = 'documents' and (
+    private.has_permission((select auth.uid()), 'documents.manage')
+    or exists (select 1 from public.documents d
+               where d.storage_path = name and private.can_view_document((select auth.uid()), d.id))));
+create policy storage_documents_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'documents' and private.has_permission((select auth.uid()), 'documents.manage'));
+create policy storage_documents_delete on storage.objects for delete to authenticated
+  using (bucket_id = 'documents' and private.has_permission((select auth.uid()), 'documents.manage'));
+
+create policy storage_academy_select on storage.objects for select to authenticated
+  using (bucket_id = 'academy' and private.can_read_academy_object((select auth.uid()), name));
+create policy storage_academy_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'academy' and private.has_permission((select auth.uid()), 'training.manage'));
+create policy storage_academy_update on storage.objects for update to authenticated
+  using (bucket_id = 'academy' and private.has_permission((select auth.uid()), 'training.manage'));
+create policy storage_academy_delete on storage.objects for delete to authenticated
+  using (bucket_id = 'academy' and private.has_permission((select auth.uid()), 'training.manage'));
+
+create policy storage_avatars_select on storage.objects for select to authenticated
+  using (bucket_id = 'avatars' and private.can_read_avatar((select auth.uid()), name));
+create policy storage_avatars_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'avatars' and private.is_active_user((select auth.uid()))
+              and split_part(name, '/', 1) = (select auth.uid())::text);
+create policy storage_avatars_update on storage.objects for update to authenticated
+  using (bucket_id = 'avatars' and split_part(name, '/', 1) = (select auth.uid())::text);
+create policy storage_avatars_delete on storage.objects for delete to authenticated
+  using (bucket_id = 'avatars' and split_part(name, '/', 1) = (select auth.uid())::text);
+
+
+-- ----- 20261025000600_onboarding_notifications.sql -----
+-- =============================================================================
+-- ERLEN CRM – Benachrichtigungen, Einladungen/Onboarding, Bewerber, Rechte
+-- =============================================================================
+
+create table public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  type text not null,
+  title text not null,
+  body text,
+  link text check (link is null or link ~ '^/'),
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index notifications_user_idx on public.notifications (user_id, created_at desc);
+create index notifications_unread_idx on public.notifications (user_id) where read_at is null;
+
+alter table public.notifications enable row level security;
+create policy notifications_select on public.notifications for select to authenticated
+  using (user_id = (select auth.uid()));
+
+create or replace function private.notify(
+  p_user uuid, p_type text, p_title text, p_body text default null, p_link text default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_user is null then return; end if;
+  insert into public.notifications (user_id, type, title, body, link)
+  values (p_user, p_type, left(p_title, 200), left(p_body, 1000), p_link);
+end;
+$$;
+
+create or replace function public.notifications_mark_read(p_ids uuid[] default null)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.notifications
+     set read_at = now()
+   where user_id = auth.uid() and read_at is null
+     and (p_ids is null or id = any (p_ids));
+end;
+$$;
+
+-- =============================================================================
+-- Einladungen
+-- =============================================================================
+-- Der Klartext-Token existiert nur im Einladungslink. Gespeichert wird
+-- ausschließlich ein SHA-256-Hash. Einladungen sind zeitlich begrenzt und
+-- einmalig verwendbar.
+create table public.invitations (
+  id uuid primary key default gen_random_uuid(),
+  email text not null check (position('@' in email) > 1),
+  first_name text not null check (char_length(first_name) between 1 and 100),
+  last_name text not null check (char_length(last_name) between 1 and 100),
+  role_id uuid not null references public.roles (id),
+  team_id uuid references public.teams (id) on delete set null,
+  supervisor_id uuid references public.profiles (id) on delete set null,
+  trainer_id uuid references public.profiles (id) on delete set null,
+  token_hash text not null unique check (token_hash ~ '^[0-9a-f]{64}$'),
+  expires_at timestamptz not null,
+  accepted_at timestamptz,
+  accepted_user_id uuid references public.profiles (id),
+  revoked_at timestamptz,
+  applicant_id uuid,
+  invited_by uuid references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+create unique index invitations_open_email_idx on public.invitations (lower(email))
+  where accepted_at is null and revoked_at is null;
+
+create trigger invitations_audit after insert or update or delete on public.invitations
+  for each row execute function private.audit_trigger();
+
+alter table public.invitations enable row level security;
+create policy invitations_select on public.invitations for select to authenticated
+  using (private.has_permission((select auth.uid()), 'employees.invite'));
+
+-- Einladung anlegen (Token-Hash wird serverseitig erzeugt)
+create or replace function public.invitation_create(
+  p_email text, p_first_name text, p_last_name text, p_role_key text,
+  p_team uuid, p_supervisor uuid, p_trainer uuid, p_token_hash text,
+  p_valid_hours int default 72, p_applicant uuid default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_role uuid;
+  v_id uuid;
+  v_email text := lower(trim(p_email));
+begin
+  perform private.require_permission('employees.invite');
+  select id into v_role from public.roles where key = p_role_key;
+  if v_role is null then raise exception 'Unbekannte Rolle'; end if;
+  -- Höhere Rollen als Vertriebspartner dürfen nur mit Rechtevergabe-Berechtigung eingeladen werden
+  if p_role_key <> 'vertriebspartner' then
+    perform private.require_permission('roles.assign');
+  end if;
+  if exists (select 1 from public.profiles where lower(email) = v_email) then
+    raise exception 'Für diese E-Mail-Adresse existiert bereits ein Konto.';
+  end if;
+  if p_valid_hours < 1 or p_valid_hours > 336 then
+    raise exception 'Gültigkeit muss zwischen 1 Stunde und 14 Tagen liegen.';
+  end if;
+  -- Offene Einladungen an dieselbe Adresse werden ersetzt
+  update public.invitations set revoked_at = now()
+   where lower(email) = v_email and accepted_at is null and revoked_at is null;
+  insert into public.invitations (email, first_name, last_name, role_id, team_id, supervisor_id, trainer_id,
+                                  token_hash, expires_at, invited_by, applicant_id)
+  values (v_email, trim(p_first_name), trim(p_last_name), v_role, p_team, p_supervisor, p_trainer,
+          p_token_hash, now() + make_interval(hours => p_valid_hours), auth.uid(), p_applicant)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+create or replace function public.invitation_revoke(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('employees.invite');
+  update public.invitations set revoked_at = now()
+   where id = p_id and accepted_at is null and revoked_at is null;
+  if not found then raise exception 'Einladung nicht gefunden oder bereits verwendet'; end if;
+end;
+$$;
+
+-- Nur für den Server (service_role): gültige Einladung anhand des Token-Hashes prüfen
+create or replace function public.invitation_lookup(p_token_hash text)
+returns table (id uuid, email text, first_name text, last_name text, role_name text, expires_at timestamptz)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select i.id, i.email, i.first_name, i.last_name, r.name, i.expires_at
+  from public.invitations i join public.roles r on r.id = i.role_id
+  where i.token_hash = p_token_hash
+    and i.accepted_at is null and i.revoked_at is null and i.expires_at > now();
+$$;
+
+-- Einladung für einen (neu angelegten) Auth-Benutzer einlösen – einmalig und atomar.
+-- Legt das Profil an bzw. aktiviert das beim Anlegen entstandene, deaktivierte Profil.
+create or replace function private.apply_invitation(p_invitation uuid, p_user uuid, p_email text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_inv public.invitations;
+begin
+  update public.invitations
+     set accepted_at = now()
+   where id = p_invitation and accepted_at is null and revoked_at is null and expires_at > now()
+     and lower(email) = lower(p_email)
+  returning * into v_inv;
+  if v_inv.id is null then
+    raise exception 'Einladung ist ungültig, abgelaufen oder wurde bereits verwendet.';
+  end if;
+
+  insert into public.profiles (id, first_name, last_name, email, role_id, status)
+  values (p_user, v_inv.first_name, v_inv.last_name, p_email, v_inv.role_id, 'aktiv')
+  on conflict (id) do update
+    set first_name = excluded.first_name, last_name = excluded.last_name, role_id = excluded.role_id,
+        status = 'aktiv', deactivated_at = null;
+  insert into public.employee_details (user_id, entry_date) values (p_user, private.today_berlin())
+  on conflict (user_id) do update set entry_date = coalesce(public.employee_details.entry_date, excluded.entry_date);
+  update public.invitations set accepted_user_id = p_user where id = v_inv.id;
+
+  if v_inv.team_id is not null then
+    insert into public.team_memberships (team_id, user_id, member_role, created_by)
+    values (v_inv.team_id, p_user, 'mitglied', v_inv.invited_by);
+  end if;
+  if v_inv.supervisor_id is not null and v_inv.supervisor_id <> p_user then
+    insert into public.reporting_relationships (employee_id, manager_id, relation_type, created_by)
+    values (p_user, v_inv.supervisor_id, 'vorgesetzter', v_inv.invited_by);
+  end if;
+  if v_inv.trainer_id is not null and v_inv.trainer_id <> p_user then
+    insert into public.reporting_relationships (employee_id, manager_id, relation_type, created_by)
+    values (p_user, v_inv.trainer_id, 'ausbilder', v_inv.invited_by);
+  end if;
+  perform private.notify(p_user, 'willkommen', 'Willkommen bei ERLEN!',
+    'Dein Konto ist eingerichtet. Ergänze bitte dein Profil und starte deine Pflichtschulungen.', '/dashboard');
+  perform private.notify(v_inv.invited_by, 'einladung_angenommen',
+    'Einladung angenommen: ' || v_inv.first_name || ' ' || v_inv.last_name, null, '/mitarbeiter/' || p_user::text);
+end;
+$$;
+
+-- Neuer Auth-Benutzer: deaktiviertes Profil anlegen bzw. Einladung direkt einlösen,
+-- falls die Einladungs-ID bereits beim Anlegen in den App-Metadaten steht.
+create or replace function private.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_role uuid;
+  v_inv_id uuid := nullif(new.raw_app_meta_data ->> 'invitation_id', '')::uuid;
+begin
+  if v_inv_id is not null then
+    perform private.apply_invitation(v_inv_id, new.id, new.email);
+    return new;
+  end if;
+  select id into v_role from public.roles where key = 'vertriebspartner';
+  insert into public.profiles (id, first_name, last_name, email, role_id, status, deactivated_at)
+  values (
+    new.id,
+    coalesce(nullif(new.raw_user_meta_data ->> 'first_name', ''), 'Neu'),
+    coalesce(nullif(new.raw_user_meta_data ->> 'last_name', ''), 'Benutzer'),
+    new.email, v_role, 'deaktiviert', now());
+  insert into public.employee_details (user_id) values (new.id);
+  return new;
+end;
+$$;
+
+-- Nur für den Server (service_role): Einladung nach dem Anlegen des Kontos einlösen.
+create or replace function public.invitation_accept(p_invitation uuid, p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_email text;
+begin
+  select email into v_email from auth.users where id = p_user;
+  if v_email is null then raise exception 'Benutzer nicht gefunden'; end if;
+  if exists (select 1 from public.invitations where id = p_invitation and accepted_user_id = p_user) then
+    return; -- bereits durch den Trigger eingelöst
+  end if;
+  perform private.apply_invitation(p_invitation, p_user, v_email);
+end;
+$$;
+
+-- Pflichtschulungen automatisch zuweisen bei Aktivierung, Rollen- oder Teamwechsel
+create or replace function private.profiles_assign_courses()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.status = 'aktiv' then
+    perform private.assign_mandatory_courses(new.id);
+  end if;
+  return new;
+end;
+$$;
+create trigger profiles_assign_courses after insert or update of role_id, status on public.profiles
+  for each row execute function private.profiles_assign_courses();
+
+create or replace function private.memberships_assign_courses()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.ended_at is null and private.is_active_user(new.user_id) then
+    perform private.assign_mandatory_courses(new.user_id);
+  end if;
+  return new;
+end;
+$$;
+create trigger team_memberships_assign_courses after insert on public.team_memberships
+  for each row execute function private.memberships_assign_courses();
+
+-- =============================================================================
+-- Bewerber (Anbindung der ERLEN-Website)
+-- =============================================================================
+create type public.applicant_status as enum ('neu', 'kontaktiert', 'gespraech', 'angenommen', 'abgelehnt');
+
+create table public.applicants (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null check (char_length(full_name) between 2 and 160),
+  email text not null check (position('@' in email) > 1 and char_length(email) <= 254),
+  phone text not null check (phone ~ '^[0-9 +()/-]{5,30}$'),
+  message text check (message is null or char_length(message) <= 2000),
+  source text not null default 'website' check (char_length(source) <= 60),
+  status public.applicant_status not null default 'neu',
+  notes text check (notes is null or char_length(notes) <= 5000),
+  consent_at timestamptz not null,
+  handled_by uuid references public.profiles (id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index applicants_status_idx on public.applicants (status, created_at desc);
+
+alter table public.invitations
+  add constraint invitations_applicant_fk foreign key (applicant_id) references public.applicants (id) on delete set null;
+
+create trigger applicants_touch before update on public.applicants
+  for each row execute function private.touch_updated_at();
+create trigger applicants_audit after update or delete on public.applicants
+  for each row execute function private.audit_trigger();
+
+alter table public.applicants enable row level security;
+create policy applicants_select on public.applicants for select to authenticated
+  using (private.has_permission((select auth.uid()), 'applicants.read'));
+
+create or replace function public.applicant_update(p_id uuid, p_status public.applicant_status, p_notes text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('applicants.manage');
+  update public.applicants
+     set status = p_status, notes = nullif(trim(p_notes), ''), handled_by = auth.uid()
+   where id = p_id;
+  if not found then raise exception 'Bewerbung nicht gefunden'; end if;
+end;
+$$;
+
+create or replace function public.applicant_delete(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('applicants.manage');
+  delete from public.applicants where id = p_id;
+end;
+$$;
+
+-- Löschkonzept: abgeschlossene Bewerbungen nach Ablauf der Frist entfernen
+create or replace function public.purge_applicants(p_days int default 180)
+returns int
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_count int;
+begin
+  delete from public.applicants
+   where status in ('abgelehnt', 'angenommen', 'neu', 'kontaktiert', 'gespraech')
+     and updated_at < now() - make_interval(days => greatest(p_days, 30));
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+-- Einfache Ratenbegrenzung für öffentliche Endpunkte (nur Server/service_role)
+create table private.rate_limits (
+  key text not null,
+  window_start timestamptz not null,
+  hits int not null default 0,
+  primary key (key, window_start)
+);
+
+create or replace function public.rate_limit_hit(p_key text, p_window_seconds int, p_max int)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_window timestamptz := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
+  v_hits int;
+begin
+  delete from private.rate_limits where window_start < now() - interval '1 day';
+  insert into private.rate_limits (key, window_start, hits) values (p_key, v_window, 1)
+  on conflict (key, window_start) do update set hits = private.rate_limits.hits + 1
+  returning hits into v_hits;
+  return v_hits <= p_max;
+end;
+$$;
+
+-- Export-Protokollierung (Exporte werden serverseitig erzeugt)
+create or replace function public.log_export(p_kind text, p_filters jsonb, p_rows int)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.require_permission('reports.export');
+  perform private.audit_event('export', p_kind, null, null,
+    jsonb_build_object('filter', p_filters, 'zeilen', p_rows));
+end;
+$$;
+
+-- =============================================================================
+-- Rechtevergabe: Clients lesen nur (RLS), schreiben nur über RPCs
+-- =============================================================================
+revoke all on all tables in schema public from anon;
+revoke insert, update, delete, truncate, references, trigger on all tables in schema public from authenticated;
+grant select on all tables in schema public to authenticated;
+grant all on all tables in schema public to service_role;
+revoke all on all sequences in schema public from anon, authenticated;
+
+alter default privileges in schema public revoke all on tables from anon;
+alter default privileges in schema public revoke insert, update, delete, truncate on tables from authenticated;
+alter default privileges in schema public revoke execute on functions from public, anon;
+
+revoke all on all tables in schema private from anon, authenticated;
+
+revoke execute on all functions in schema public from public, anon;
+grant execute on all functions in schema public to authenticated, service_role;
+
+-- Ausschließlich serverseitig (service_role) nutzbare Funktionen
+revoke execute on function public.invitation_lookup(text) from authenticated;
+revoke execute on function public.invitation_accept(uuid, uuid) from authenticated;
+revoke execute on function public.rate_limit_hit(text, int, int) from authenticated;
+revoke execute on function public.purge_applicants(int) from authenticated;
+revoke execute on function public.bootstrap_admin(text) from authenticated, service_role;
+
+revoke execute on all functions in schema private from public, anon;
+
+commit;
+
+select 'ERLEN-Datenbank erfolgreich eingerichtet' as ergebnis;
