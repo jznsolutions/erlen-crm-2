@@ -18,7 +18,7 @@ export async function updateOwnProfile(_: ActionResult | null, fd: FormData): Pr
   const parsed = z.object({ phone: phone.optional() }).safeParse(formToObject(fd));
   if (!parsed.success) return fromZodError(parsed.error);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("update_own_profile", { p_phone: parsed.data.phone as string });
+  const { error } = await supabase.rpc("update_own_profile", { p_phone: (parsed.data.phone ?? null) as string });
   return error ? fromDbError(error) : done("Profil gespeichert.");
 }
 
@@ -52,10 +52,10 @@ export async function updateEmployee(_: ActionResult | null, fd: FormData): Prom
     p_user: d.user_id,
     p_first_name: d.first_name,
     p_last_name: d.last_name,
-    p_phone: d.phone as string,
-    p_entry_date: d.entry_date as string,
-    p_sales_start_date: d.sales_start_date as string,
-    p_sales_region: d.sales_region as string,
+    p_phone: (d.phone ?? null) as string,
+    p_entry_date: (d.entry_date ?? null) as string,
+    p_sales_start_date: (d.sales_start_date ?? null) as string,
+    p_sales_region: (d.sales_region ?? null) as string,
     p_partner_status: d.partner_status,
   });
   return error ? fromDbError(error) : done("Stammdaten gespeichert.");
@@ -81,7 +81,7 @@ export async function setUserPermission(_: ActionResult | null, fd: FormData): P
   const { error } =
     d.effect === "remove"
       ? await supabase.rpc("admin_remove_user_permission", { p_user: d.user_id, p_permission: d.permission })
-      : await supabase.rpc("admin_set_user_permission", { p_user: d.user_id, p_permission: d.permission, p_effect: d.effect, p_reason: d.reason as string });
+      : await supabase.rpc("admin_set_user_permission", { p_user: d.user_id, p_permission: d.permission, p_effect: d.effect, p_reason: (d.reason ?? null) as string });
   return error ? fromDbError(error) : done("Berechtigung aktualisiert.");
 }
 
@@ -124,7 +124,7 @@ export async function endMembership(_: ActionResult | null, fd: FormData): Promi
   const parsed = z.object({ id: uuid, reason: optionalText(200) }).safeParse(formToObject(fd));
   if (!parsed.success) return fromZodError(parsed.error);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("team_end_membership", { p_membership: parsed.data.id, p_reason: parsed.data.reason as string });
+  const { error } = await supabase.rpc("team_end_membership", { p_membership: parsed.data.id, p_reason: (parsed.data.reason ?? null) as string });
   return error ? fromDbError(error) : done("Zuordnung beendet.");
 }
 
@@ -134,7 +134,7 @@ export async function setManager(_: ActionResult | null, fd: FormData): Promise<
   if (!parsed.success) return fromZodError(parsed.error);
   const d = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("set_reporting_relationship", { p_employee: d.user_id, p_manager: d.manager_id as string, p_type: d.type });
+  const { error } = await supabase.rpc("set_reporting_relationship", { p_employee: d.user_id, p_manager: (d.manager_id ?? null) as string, p_type: d.type });
   return error ? fromDbError(error) : done(d.type === "ausbilder" ? "Ausbilder gespeichert." : "Vorgesetzter gespeichert.");
 }
 

@@ -38,7 +38,7 @@ export async function saveProduct(_: ActionResult | null, fd: FormData): Promise
   const d = parsed.data;
   const supabase = await createClient();
   const { error } = await supabase.rpc("product_upsert", {
-    p_id: d.id as string, p_name: d.name, p_description: d.description as string, p_unit_label: d.unit_label,
+    p_id: (d.id ?? null) as string, p_name: d.name, p_description: (d.description ?? null) as string, p_unit_label: d.unit_label,
     p_requires_external_ref: d.requires_external_ref, p_is_active: d.is_active, p_sort_order: d.sort_order,
   });
   return error ? fromDbError(error) : ok("Produkt gespeichert.");
@@ -83,8 +83,8 @@ export async function saveCompetition(_: ActionResult | null, fd: FormData): Pro
   const d = parsed.data;
   const supabase = await createClient();
   const { error } = await supabase.rpc("competition_upsert", {
-    p_id: d.id as string, p_title: d.title, p_description: d.description as string, p_product: d.product_id as string,
-    p_team: d.team_id as string, p_starts_on: d.starts_on, p_ends_on: d.ends_on, p_is_active: d.is_active,
+    p_id: (d.id ?? null) as string, p_title: d.title, p_description: (d.description ?? null) as string, p_product: (d.product_id ?? null) as string,
+    p_team: (d.team_id ?? null) as string, p_starts_on: d.starts_on, p_ends_on: d.ends_on, p_is_active: d.is_active,
   });
   return error ? fromDbError(error) : ok("Wettbewerb gespeichert.");
 }

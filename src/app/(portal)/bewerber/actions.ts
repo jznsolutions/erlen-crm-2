@@ -11,7 +11,7 @@ export async function updateApplicant(_: ActionResult | null, fd: FormData): Pro
   const parsed = z.object({ id: uuid, status: z.enum(["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"]), notes: optionalText(5000) }).safeParse(formToObject(fd));
   if (!parsed.success) return fromZodError(parsed.error);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("applicant_update", { p_id: parsed.data.id, p_status: parsed.data.status, p_notes: parsed.data.notes as string });
+  const { error } = await supabase.rpc("applicant_update", { p_id: parsed.data.id, p_status: parsed.data.status, p_notes: (parsed.data.notes ?? null) as string });
   if (error) return fromDbError(error);
   revalidatePath("/bewerber");
   return { ok: true, message: "Bewerbung aktualisiert." };

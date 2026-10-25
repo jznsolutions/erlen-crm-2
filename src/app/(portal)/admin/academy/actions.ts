@@ -18,7 +18,7 @@ export async function saveCourse(_: ActionResult | null, fd: FormData): Promise<
   if (!parsed.success) return fromZodError(parsed.error);
   const d = parsed.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("course_upsert", { p_id: d.id as string, p_title: d.title, p_description: d.description as string, p_status: d.status, p_sort_order: d.sort_order });
+  const { data, error } = await supabase.rpc("course_upsert", { p_id: (d.id ?? null) as string, p_title: d.title, p_description: (d.description ?? null) as string, p_status: d.status, p_sort_order: d.sort_order });
   return error ? fromDbError(error) : ok("Kurs gespeichert.", { id: data });
 }
 
@@ -37,7 +37,7 @@ export async function saveModule(_: ActionResult | null, fd: FormData): Promise<
   if (!parsed.success) return fromZodError(parsed.error);
   const d = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("module_upsert", { p_id: d.id as string, p_course: d.course_id, p_title: d.title, p_description: d.description as string, p_sort_order: d.sort_order });
+  const { error } = await supabase.rpc("module_upsert", { p_id: (d.id ?? null) as string, p_course: d.course_id, p_title: d.title, p_description: (d.description ?? null) as string, p_sort_order: d.sort_order });
   return error ? fromDbError(error) : ok("Modul gespeichert.");
 }
 
@@ -70,7 +70,7 @@ export async function saveLesson(_: ActionResult | null, fd: FormData): Promise<
   const d = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("lesson_upsert", {
-    p_id: d.id as string, p_module: d.module_id, p_title: d.title, p_type: d.lesson_type, p_content: (d.content ?? null) as string,
+    p_id: (d.id ?? null) as string, p_module: d.module_id, p_title: d.title, p_type: d.lesson_type, p_content: (d.content ?? null) as string,
     p_video_url: (d.video_url || null) as string, p_duration_minutes: (d.duration_minutes ?? null) as number, p_min_seconds: d.min_seconds,
     p_sort_order: d.sort_order, p_is_published: d.is_published,
   });
@@ -119,7 +119,7 @@ export async function saveQuiz(input: z.infer<typeof quizSchema>): Promise<Actio
   if (!parsed.success) return fromZodError(parsed.error);
   const d = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("quiz_save", { p_lesson: d.lesson_id, p_pass_percent: d.pass_percent, p_max_attempts: d.max_attempts as number, p_questions: d.questions });
+  const { error } = await supabase.rpc("quiz_save", { p_lesson: d.lesson_id, p_pass_percent: d.pass_percent, p_max_attempts: (d.max_attempts ?? null) as number, p_questions: d.questions });
   return error ? fromDbError(error) : ok("Quiz gespeichert.");
 }
 

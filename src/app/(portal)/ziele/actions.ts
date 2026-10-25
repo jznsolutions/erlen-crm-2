@@ -30,12 +30,12 @@ export async function saveTarget(_: ActionResult | null, fd: FormData): Promise<
   const d = parsed.data;
   const supabase = await createClient();
   const { error } = await supabase.rpc("target_upsert", {
-    p_id: d.id as string,
+    p_id: (d.id ?? null) as string,
     p_title: d.title,
     p_scope: d.scope,
-    p_user: d.user_id as string,
-    p_team: d.team_id as string,
-    p_product: d.product_id as string,
+    p_user: (d.user_id ?? null) as string,
+    p_team: (d.team_id ?? null) as string,
+    p_product: (d.product_id ?? null) as string,
     p_period: d.period,
     p_starts_on: d.starts_on,
     p_ends_on: d.ends_on,

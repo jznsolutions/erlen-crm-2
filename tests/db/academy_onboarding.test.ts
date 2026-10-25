@@ -20,8 +20,8 @@ async function scenario(fn: () => Promise<void>) {
   try {
     await fn();
   } finally {
-    await db.query("reset role");
     await db.query("rollback to savepoint sc");
+    await db.query("reset role");
   }
 }
 const progress = async (user: string, lesson: string) => {

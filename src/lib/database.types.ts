@@ -1039,6 +1039,9 @@ isOneToOne: false
               "completed_lessons": number,"course_id": string,"due_on": string,"is_mandatory": boolean,"last_activity": string,"title": string,"total_lessons": number
             }[]
                            },
+"invitation_accept":
+{ Args: { "p_invitation": string,"p_user": string }; Returns: undefined
+                           },
 "invitation_create":
 { Args: { "p_applicant"?: string,"p_email": string,"p_first_name": string,"p_last_name": string,"p_role_key": string,"p_supervisor": string,"p_team": string,"p_token_hash": string,"p_trainer": string,"p_valid_hours"?: number }; Returns: string
                            },

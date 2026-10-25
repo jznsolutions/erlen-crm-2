@@ -69,5 +69,5 @@ export const applicationSchema = z.object({
   message: optionalText(2000),
   consent: z.literal(true, { message: "Bitte stimme der Datenverarbeitung zu" }),
   source: z.string().trim().max(60).optional(),
-  website: z.string().max(0).optional(), // Honeypot – muss leer bleiben
+  website: z.string().max(500).optional(), // Honeypot – von Menschen nie ausgefüllt
 });

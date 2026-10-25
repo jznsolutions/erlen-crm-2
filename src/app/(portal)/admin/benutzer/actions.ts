@@ -20,12 +20,12 @@ export async function createInvitation(_: ActionResult | null, fd: FormData): Pr
     p_first_name: d.first_name,
     p_last_name: d.last_name,
     p_role_key: d.role,
-    p_team: d.team_id as string,
-    p_supervisor: d.supervisor_id as string,
-    p_trainer: d.trainer_id as string,
+    p_team: (d.team_id ?? null) as string,
+    p_supervisor: (d.supervisor_id ?? null) as string,
+    p_trainer: (d.trainer_id ?? null) as string,
     p_token_hash: hashToken(token),
     p_valid_hours: d.valid_hours,
-    p_applicant: d.applicant_id as string,
+    p_applicant: (d.applicant_id ?? null) as string,
   });
   if (error) return fromDbError(error);
   if (d.applicant_id) await supabase.rpc("applicant_update", { p_id: d.applicant_id, p_status: "angenommen", p_notes: "In Einladung überführt" as string });

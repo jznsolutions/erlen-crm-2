@@ -149,7 +149,56 @@ as $$
     and i.accepted_at is null and i.revoked_at is null and i.expires_at > now();
 $$;
 
--- Neuer Auth-Benutzer: Einladung einlösen (einmalig, atomar) oder deaktiviertes Profil anlegen
+-- Einladung für einen (neu angelegten) Auth-Benutzer einlösen – einmalig und atomar.
+-- Legt das Profil an bzw. aktiviert das beim Anlegen entstandene, deaktivierte Profil.
+create or replace function private.apply_invitation(p_invitation uuid, p_user uuid, p_email text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_inv public.invitations;
+begin
+  update public.invitations
+     set accepted_at = now()
+   where id = p_invitation and accepted_at is null and revoked_at is null and expires_at > now()
+     and lower(email) = lower(p_email)
+  returning * into v_inv;
+  if v_inv.id is null then
+    raise exception 'Einladung ist ungültig, abgelaufen oder wurde bereits verwendet.';
+  end if;
+
+  insert into public.profiles (id, first_name, last_name, email, role_id, status)
+  values (p_user, v_inv.first_name, v_inv.last_name, p_email, v_inv.role_id, 'aktiv')
+  on conflict (id) do update
+    set first_name = excluded.first_name, last_name = excluded.last_name, role_id = excluded.role_id,
+        status = 'aktiv', deactivated_at = null;
+  insert into public.employee_details (user_id, entry_date) values (p_user, private.today_berlin())
+  on conflict (user_id) do update set entry_date = coalesce(public.employee_details.entry_date, excluded.entry_date);
+  update public.invitations set accepted_user_id = p_user where id = v_inv.id;
+
+  if v_inv.team_id is not null then
+    insert into public.team_memberships (team_id, user_id, member_role, created_by)
+    values (v_inv.team_id, p_user, 'mitglied', v_inv.invited_by);
+  end if;
+  if v_inv.supervisor_id is not null and v_inv.supervisor_id <> p_user then
+    insert into public.reporting_relationships (employee_id, manager_id, relation_type, created_by)
+    values (p_user, v_inv.supervisor_id, 'vorgesetzter', v_inv.invited_by);
+  end if;
+  if v_inv.trainer_id is not null and v_inv.trainer_id <> p_user then
+    insert into public.reporting_relationships (employee_id, manager_id, relation_type, created_by)
+    values (p_user, v_inv.trainer_id, 'ausbilder', v_inv.invited_by);
+  end if;
+  perform private.notify(p_user, 'willkommen', 'Willkommen bei ERLEN!',
+    'Dein Konto ist eingerichtet. Ergänze bitte dein Profil und starte deine Pflichtschulungen.', '/dashboard');
+  perform private.notify(v_inv.invited_by, 'einladung_angenommen',
+    'Einladung angenommen: ' || v_inv.first_name || ' ' || v_inv.last_name, null, '/mitarbeiter/' || p_user::text);
+end;
+$$;
+
+-- Neuer Auth-Benutzer: deaktiviertes Profil anlegen bzw. Einladung direkt einlösen,
+-- falls die Einladungs-ID bereits beim Anlegen in den App-Metadaten steht.
 create or replace function private.handle_new_user()
 returns trigger
 language plpgsql
@@ -158,45 +207,12 @@ set search_path = ''
 as $$
 declare
   v_role uuid;
-  v_inv public.invitations;
   v_inv_id uuid := nullif(new.raw_app_meta_data ->> 'invitation_id', '')::uuid;
 begin
   if v_inv_id is not null then
-    update public.invitations
-       set accepted_at = now(), accepted_user_id = null
-     where id = v_inv_id and accepted_at is null and revoked_at is null and expires_at > now()
-       and lower(email) = lower(new.email)
-    returning * into v_inv;
-    if v_inv.id is null then
-      raise exception 'Einladung ist ungültig, abgelaufen oder wurde bereits verwendet.';
-    end if;
-
-    insert into public.profiles (id, first_name, last_name, email, role_id, status)
-    values (new.id, v_inv.first_name, v_inv.last_name, new.email, v_inv.role_id, 'aktiv');
-    insert into public.employee_details (user_id, entry_date)
-    values (new.id, private.today_berlin());
-    update public.invitations set accepted_user_id = new.id where id = v_inv.id;
-
-    if v_inv.team_id is not null then
-      insert into public.team_memberships (team_id, user_id, member_role, created_by)
-      values (v_inv.team_id, new.id, 'mitglied', v_inv.invited_by);
-    end if;
-    if v_inv.supervisor_id is not null and v_inv.supervisor_id <> new.id then
-      insert into public.reporting_relationships (employee_id, manager_id, relation_type, created_by)
-      values (new.id, v_inv.supervisor_id, 'vorgesetzter', v_inv.invited_by);
-    end if;
-    if v_inv.trainer_id is not null and v_inv.trainer_id <> new.id then
-      insert into public.reporting_relationships (employee_id, manager_id, relation_type, created_by)
-      values (new.id, v_inv.trainer_id, 'ausbilder', v_inv.invited_by);
-    end if;
-    perform private.notify(new.id, 'willkommen', 'Willkommen bei ERLEN!',
-      'Dein Konto ist eingerichtet. Ergänze bitte dein Profil und starte deine Pflichtschulungen.', '/dashboard');
-    perform private.notify(v_inv.invited_by, 'einladung_angenommen',
-      'Einladung angenommen: ' || v_inv.first_name || ' ' || v_inv.last_name, null,
-      '/mitarbeiter/' || new.id::text);
+    perform private.apply_invitation(v_inv_id, new.id, new.email);
     return new;
   end if;
-
   select id into v_role from public.roles where key = 'vertriebspartner';
   insert into public.profiles (id, first_name, last_name, email, role_id, status, deactivated_at)
   values (
@@ -206,6 +222,25 @@ begin
     new.email, v_role, 'deaktiviert', now());
   insert into public.employee_details (user_id) values (new.id);
   return new;
+end;
+$$;
+
+-- Nur für den Server (service_role): Einladung nach dem Anlegen des Kontos einlösen.
+create or replace function public.invitation_accept(p_invitation uuid, p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_email text;
+begin
+  select email into v_email from auth.users where id = p_user;
+  if v_email is null then raise exception 'Benutzer nicht gefunden'; end if;
+  if exists (select 1 from public.invitations where id = p_invitation and accepted_user_id = p_user) then
+    return; -- bereits durch den Trigger eingelöst
+  end if;
+  perform private.apply_invitation(p_invitation, p_user, v_email);
 end;
 $$;
 
@@ -380,6 +415,7 @@ grant execute on all functions in schema public to authenticated, service_role;
 
 -- Ausschließlich serverseitig (service_role) nutzbare Funktionen
 revoke execute on function public.invitation_lookup(text) from authenticated;
+revoke execute on function public.invitation_accept(uuid, uuid) from authenticated;
 revoke execute on function public.rate_limit_hit(text, int, int) from authenticated;
 revoke execute on function public.purge_applicants(int) from authenticated;
 revoke execute on function public.bootstrap_admin(text) from authenticated, service_role;

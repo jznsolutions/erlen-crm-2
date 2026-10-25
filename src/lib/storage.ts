@@ -17,5 +17,5 @@ export async function signedUrls(bucket: "avatars" | "documents" | "academy", pa
   if (unique.length === 0) return new Map<string, string>();
   const supabase = await createClient();
   const { data } = await supabase.storage.from(bucket).createSignedUrls(unique, seconds);
-  return new Map((data ?? []).filter((d) => d.signedUrl && d.path).map((d) => [d.path as string, d.signedUrl as string]));
+  return new Map((data ?? []).filter((d) => d.signedUrl && d.path).map((d) => [(d.path ?? null) as string, d.signedUrl as string]));
 }

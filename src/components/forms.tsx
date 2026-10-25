@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -43,22 +43,20 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   redirectTo?: string;
 }) {
-  const [state, formAction] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
-  const lastHandled = useRef<ActionResult | null>(null);
-
-  useEffect(() => {
-    if (!state || lastHandled.current === state) return;
-    lastHandled.current = state;
-    if (state.ok) {
-      toast.success(state.message ?? successMessage ?? "Gespeichert");
+  // Rückmeldung direkt nach der Server Action – auch wenn das Formular durch die
+  // anschließende Aktualisierung der Seite verschwindet (z. B. bestätigte Zeile).
+  const [state, formAction] = useActionState(async (prev: ActionResult | null, fd: FormData) => {
+    const result = await action(prev, fd);
+    if (result.ok) {
+      toast.success(result.message ?? successMessage ?? "Gespeichert");
       if (resetOnSuccess) formRef.current?.reset();
-      onSuccess?.(state);
+      onSuccess?.(result);
       if (redirectTo) router.push(redirectTo);
-      else router.refresh();
     }
-  }, [state, successMessage, resetOnSuccess, onSuccess, redirectTo, router]);
+    return result;
+  }, null);
 
   const fieldErrors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
   return (

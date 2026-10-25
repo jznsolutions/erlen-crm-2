@@ -9,6 +9,7 @@ import { publicEnv } from "@/lib/env";
 import { serverEnv } from "@/lib/env.server";
 import { email, passwordSchema } from "@/lib/validation";
 import { hashToken } from "@/lib/tokens";
+import { safeRedirectPath } from "@/lib/redirect";
 import { fromZodError, type ActionResult } from "@/lib/actions";
 
 async function clientKey(prefix: string) {
@@ -26,9 +27,6 @@ async function allowed(prefix: string, max: number, windowSeconds = 900) {
   return data !== false;
 }
 
-function safeNext(next: unknown): string {
-  return typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-}
 
 export async function signIn(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const parsed = z.object({ email, password: z.string().min(1, "Passwort fehlt") }).safeParse({
@@ -49,7 +47,7 @@ export async function signIn(_: ActionResult | null, fd: FormData): Promise<Acti
     await supabase.auth.signOut();
     return { ok: false, error: "Dein Konto ist nicht aktiv. Bitte wende dich an die Administration." };
   }
-  redirect(safeNext(fd.get("weiter")));
+  redirect(safeRedirectPath(fd.get("weiter")));
 }
 
 export async function signOut() {
@@ -101,16 +99,23 @@ export async function acceptInvitation(_: ActionResult | null, fd: FormData): Pr
   if (!invitation) return { ok: false, error: "Diese Einladung ist ungültig, abgelaufen oder wurde bereits verwendet." };
 
   // Der Datenbank-Trigger löst die Einladung atomar und einmalig ein.
-  const { error } = await admin.auth.admin.createUser({
+  const { data: created, error } = await admin.auth.admin.createUser({
     email: invitation.email,
     password: parsed.data.password,
     email_confirm: true,
     app_metadata: { invitation_id: invitation.id },
     user_metadata: { first_name: invitation.first_name, last_name: invitation.last_name },
   });
-  if (error) {
-    console.error("[einladung]", error.message);
+  if (error || !created.user) {
+    console.error("[einladung]", error?.message);
     return { ok: false, error: "Das Konto konnte nicht angelegt werden. Möglicherweise wurde die Einladung bereits verwendet." };
+  }
+  // Einladung einmalig einlösen (Rolle, Team, Vorgesetzter, Ausbilder, Aktivierung)
+  const { error: acceptError } = await admin.rpc("invitation_accept", { p_invitation: invitation.id, p_user: created.user.id });
+  if (acceptError) {
+    console.error("[einladung]", acceptError.message);
+    await admin.auth.admin.updateUserById(created.user.id, { ban_duration: "876000h" });
+    return { ok: false, error: "Diese Einladung ist ungültig, abgelaufen oder wurde bereits verwendet." };
   }
   const supabase = await createClient();
   await supabase.auth.signInWithPassword({ email: invitation.email, password: parsed.data.password });

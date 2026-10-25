@@ -32,7 +32,7 @@ export async function registerDocument(input: { title: string; description?: str
   const d = parsed.data;
   const supabase = await createClient();
   const { error } = await supabase.rpc("document_create", {
-    p_title: d.title, p_description: d.description as string, p_category: d.category_id as string, p_storage_path: d.path,
+    p_title: d.title, p_description: (d.description ?? null) as string, p_category: (d.category_id ?? null) as string, p_storage_path: d.path,
     p_file_name: d.name, p_mime_type: d.type, p_size_bytes: d.size, p_access: d.access,
   });
   if (error) {
@@ -48,7 +48,7 @@ export async function updateDocument(input: { id: string; title: string; descrip
   if (!parsed.success) return fromZodError(parsed.error);
   const d = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("document_update", { p_id: d.id, p_title: d.title, p_description: d.description as string, p_category: d.category_id as string, p_is_published: d.is_published, p_access: d.access });
+  const { error } = await supabase.rpc("document_update", { p_id: d.id, p_title: d.title, p_description: (d.description ?? null) as string, p_category: (d.category_id ?? null) as string, p_is_published: d.is_published, p_access: d.access });
   return error ? fromDbError(error) : ok("Dokument aktualisiert.");
 }
 
@@ -68,7 +68,7 @@ export async function saveCategory(_: ActionResult | null, fd: FormData): Promis
   const parsed = z.object({ id: optionalUuid, name: z.string().trim().min(2).max(80) }).safeParse(formToObject(fd));
   if (!parsed.success) return fromZodError(parsed.error);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("document_category_upsert", { p_id: parsed.data.id as string, p_name: parsed.data.name });
+  const { error } = await supabase.rpc("document_category_upsert", { p_id: (parsed.data.id ?? null) as string, p_name: parsed.data.name });
   return error ? fromDbError(error) : ok("Kategorie gespeichert.");
 }
 

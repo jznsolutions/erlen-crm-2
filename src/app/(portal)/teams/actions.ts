@@ -21,10 +21,10 @@ export async function saveTeam(_: ActionResult | null, fd: FormData): Promise<Ac
   const d = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("team_upsert", {
-    p_id: d.id as string,
+    p_id: (d.id ?? null) as string,
     p_name: d.name,
-    p_description: d.description as string,
-    p_parent_team_id: d.parent_team_id as string,
+    p_description: (d.description ?? null) as string,
+    p_parent_team_id: (d.parent_team_id ?? null) as string,
     p_is_active: d.is_active,
   });
   if (error) return fromDbError(error);
