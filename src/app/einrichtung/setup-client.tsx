@@ -6,9 +6,9 @@ import { ActionForm, SubmitButton } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/misc";
-import { createFirstAdmin, initializeDatabase } from "./actions";
+import { applyUpdates, createFirstAdmin, initializeDatabase } from "./actions";
 
-export function InitButton() {
+export function InitButton({ update = false }: { update?: boolean }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -22,14 +22,14 @@ export function InitButton() {
         onClick={() =>
           start(async () => {
             setError(null);
-            const r = await initializeDatabase();
+            const r = await (update ? applyUpdates() : initializeDatabase());
             if (!r.ok) setError(r.error);
             router.refresh();
           })
         }
       >
         {pending ? <Loader2 className="animate-spin" /> : null}
-        {pending ? "Wird eingerichtet … (bis zu 1 Minute)" : "Datenbank jetzt einrichten"}
+        {pending ? "Bitte warten … (bis zu 1 Minute)" : update ? "Update jetzt einspielen" : "Datenbank jetzt einrichten"}
       </Button>
     </div>
   );

@@ -14,17 +14,21 @@ export function PerformanceEntryForm({
   defaultUserId,
   today,
   canApproveOthers,
+  clearance,
 }: {
   employees: Option[] | null; // null = nur für sich selbst
   products: Product[];
   defaultUserId: string;
   today: string;
   canApproveOthers: boolean;
+  clearance: Record<string, string[]>; // freigeschaltete Produkte je Mitarbeiter
 }) {
-  const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [userId, setUserId] = useState(defaultUserId);
+  const allowed = products.filter((p) => clearance[userId]?.includes(p.id));
+  const [chosen, setChosen] = useState("");
+  const productId = allowed.some((p) => p.id === chosen) ? chosen : (allowed[0]?.id ?? "");
   const [key, setKey] = useState(0);
-  const product = products.find((p) => p.id === productId);
+  const product = allowed.find((p) => p.id === productId);
   const forOther = userId !== defaultUserId;
 
   return (
@@ -40,10 +44,16 @@ export function PerformanceEntryForm({
           ) : (
             <input type="hidden" name="user_id" value={defaultUserId} />
           )}
+          {allowed.length === 0 ? (
+            <Alert tone="warning" title="Kein Produkt freigeschaltet">
+              {forOther ? "Diese Person" : "Du"} {forOther ? "ist" : "bist"} noch für kein Produkt freigeschaltet. Die Freigabe erfolgt durch die Agenturleitung im Mitarbeiterprofil.
+            </Alert>
+          ) : null}
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Produkt" htmlFor="product_id" error={fieldErrors.product_id}>
-              <Select id="product_id" name="product_id" value={productId} onChange={(e) => setProductId(e.target.value)} required>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <Select id="product_id" name="product_id" value={productId} onChange={(e) => setChosen(e.target.value)} required>
+                {allowed.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {allowed.length === 0 ? <option value="">Kein Produkt freigeschaltet</option> : null}
               </Select>
             </Field>
             <Field label="Datum" htmlFor="occurred_on" error={fieldErrors.occurred_on}>

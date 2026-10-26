@@ -146,3 +146,65 @@ export async function addTrainingNote(_: ActionResult | null, fd: FormData): Pro
   const { error } = await supabase.rpc("training_note_add", { p_trainee: parsed.data.user_id, p_body: parsed.data.body, p_shared: parsed.data.shared });
   return error ? fromDbError(error) : done("Notiz gespeichert.");
 }
+
+export async function setUserProducts(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const user = uuid.safeParse(fd.get("user_id"));
+  if (!user.success) return { ok: false, error: "Ungültiger Benutzer" };
+  const products = fd.getAll("product_ids").map(String).filter((x) => uuid.safeParse(x).success);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("user_products_set", { p_user: user.data, p_products: products });
+  return error ? fromDbError(error) : done("Produktfreigaben gespeichert.");
+}
+
+export async function setCommissionLevel(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const parsed = z.object({ user_id: uuid, level_id: optionalUuid }).safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("employee_set_commission_level", {
+    p_user: parsed.data.user_id,
+    p_level: (parsed.data.level_id ?? null) as string,
+  });
+  return error ? fromDbError(error) : done("Provisionsstufe gespeichert.");
+}
+
+const billingSchema = z.object({
+  user_id: uuid,
+  street: optionalText(160),
+  postal_code: z.string().trim().regex(/^[0-9A-Za-z -]{3,10}$/, "Ungültige Postleitzahl").optional(),
+  city: optionalText(120),
+  tax_number: optionalText(40),
+  vat_id: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s/g, "").toUpperCase())
+    .pipe(z.string().regex(/^([A-Z]{2}[0-9A-Z]{2,13})?$/, "Ungültige USt-IdNr. (z. B. DE123456789)"))
+    .optional(),
+  iban: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s/g, "").toUpperCase())
+    .pipe(z.string().regex(/^([A-Z]{2}[0-9]{2}[A-Z0-9]{10,30})?$/, "Ungültige IBAN"))
+    .optional(),
+  vat_liable: checkbox,
+});
+
+export async function saveBilling(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const parsed = billingSchema.safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const d = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("employee_billing_save", {
+    p_user: d.user_id,
+    p_street: (d.street ?? null) as string,
+    p_postal_code: (d.postal_code ?? null) as string,
+    p_city: (d.city ?? null) as string,
+    p_tax_number: (d.tax_number ?? null) as string,
+    p_vat_id: (d.vat_id || null) as string,
+    p_vat_liable: d.vat_liable,
+    p_iban: (d.iban || null) as string,
+  });
+  return error ? fromDbError(error) : done("Abrechnungsdaten gespeichert.");
+}

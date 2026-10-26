@@ -1,51 +1,57 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/montserrat";
 
-/* ERLEN Design-Tokens – entsättigtes Navy, Schwarz/Weiß, dezente Grautöne */
+/* ERLEN Design-Tokens – dunkles, futuristisches Navy wie die Website */
 :root {
-  --background: #f5f6f8;
-  --foreground: #0b0f1a;
-  --card: #ffffff;
-  --card-foreground: #0b0f1a;
-  --muted: #eef0f4;
-  --muted-foreground: #5b6475;
-  --border: #e2e5eb;
-  --input: #d5d9e1;
-  --primary: #1e2a47;
-  --primary-hover: #2a3a60;
-  --primary-foreground: #ffffff;
-  --accent: #e8ecf4;
-  --accent-foreground: #1e2a47;
-  --ring: #3b5182;
-  --success: #17724f;
-  --success-soft: #e3f3ec;
-  --warning: #8a5a00;
-  --warning-soft: #fbf1db;
-  --danger: #b42318;
-  --danger-soft: #fdecea;
-  --info: #1c5cab;
-  --info-soft: #e6effb;
-  --sidebar: #0b0f1a;
-  --sidebar-foreground: #aab2c3;
-  --sidebar-active: #1e2a47;
-  --sidebar-border: #1a2133;
-  /* Diagrammfarben (validierte Kategorienreihenfolge) */
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
-  --chart-3: #1baf7a;
-  --chart-4: #eda100;
-  --chart-5: #e87ba4;
-  --chart-6: #008300;
-  --chart-7: #6250d6;
-  --chart-8: #e34948;
-  --chart-primary: #256abf;
-  --chart-pending: #9ec5f4;
-  --chart-grid: #e8eaef;
-  --radius: 0.625rem;
+  color-scheme: dark;
+  --background: #060912;
+  --foreground: #e8edf7;
+  --card: #0d1322;
+  --card-foreground: #e8edf7;
+  --popover: #10172a;
+  --muted: #141c2f;
+  --muted-foreground: #8b97b0;
+  --border: #1d2740;
+  --input: #27324d;
+  --primary: #c9d6ef;
+  --primary-hover: #e3eaf8;
+  --primary-foreground: #060912;
+  --accent: #172238;
+  --accent-foreground: #c9d6ef;
+  --ring: #8aa4c8;
+  --success: #3ddc97;
+  --success-soft: #3ddc971f;
+  --warning: #f6c445;
+  --warning-soft: #f6c4451f;
+  --danger: #ff7b72;
+  --danger-soft: #ff7b721f;
+  --info: #79b3ff;
+  --info-soft: #79b3ff1f;
+  --sidebar: #04060c;
+  --sidebar-foreground: #8b97b0;
+  --sidebar-active: #172238;
+  --sidebar-border: #121a2b;
+  /* Diagrammfarben (für dunklen Hintergrund aufgehellt) */
+  --chart-1: #5b9cf0;
+  --chart-2: #f08550;
+  --chart-3: #34c993;
+  --chart-4: #f2b630;
+  --chart-5: #ee93b7;
+  --chart-6: #4cbb4c;
+  --chart-7: #9285f2;
+  --chart-8: #f06b6a;
+  --chart-primary: #7fb0f2;
+  --chart-pending: #35557f;
+  --chart-grid: #1a2336;
+  --radius: 0.875rem;
+  --accent-gradient: linear-gradient(100deg, #c9d6ef 0%, #8aa4c8 45%, #5d7bb0 100%);
 }
 
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Montserrat Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-popover: var(--popover);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -99,6 +105,57 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+  ::selection {
+    background: #8aa4c855;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+  }
+}
+
+/* Portal-Hintergrund: leichte Lichtkegel und Raster wie auf der Website */
+.portal-bg {
+  position: relative;
+  isolation: isolate;
+}
+.portal-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 85% -10%, #1e2a4799, transparent 60%),
+    radial-gradient(50rem 35rem at -10% 110%, #16213d88, transparent 60%),
+    linear-gradient(#ffffff05 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(90deg, #ffffff05 1px, transparent 1px) 0 0 / 48px 48px,
+    var(--background);
+}
+.text-gradient {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Karten: Glas-Optik mit feinem Lichtrand */
+.glass-card {
+  background: linear-gradient(180deg, #121a2ccc, #0c1220e6);
+  box-shadow: inset 0 1px 0 #ffffff0d, 0 20px 40px -24px #000000aa;
+  backdrop-filter: blur(14px);
+}
+@keyframes portal-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-rise {
+  animation: portal-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise { animation: none; }
 }
 
 /* Markdown-Inhalte der Academy */

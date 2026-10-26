@@ -12,11 +12,14 @@
 | Passwörter | min. 10 Zeichen, Buchstaben + Ziffern; Speicherung ausschließlich bei Supabase Auth (bcrypt); Login-Ratenbegrenzung (20 Versuche / 15 Min. / IP) zusätzlich zu Supabase-Limits |
 | Sitzung | HttpOnly-Cookies, Token-Prüfung bei jeder Anfrage (Proxy + Server), automatische Erneuerung |
 | Dateien | private Buckets, Storage-RLS, Abruf nur über serverseitig geprüfte, 60 Sekunden (Dokumente) bzw. wenige Stunden (Videos) gültige signierte Links; keine erratbaren öffentlichen URLs |
+| Abrechnungen | eigener privater Bucket `statements` (nur PDF); Mitarbeitende sehen nur eigene, veröffentlichte Dokumente (RLS in Tabelle **und** Storage); Entwürfe nur für `statements.manage`; Abrechnungsdaten (Anschrift, Steuer, IBAN) getrennt in `employee_billing`, nur für die Person selbst und die Abrechnung; fortlaufende Nummern serverseitig; Storno statt Löschen veröffentlichter Dokumente |
+| Provisionen | Sätze nur für `commissions.manage`/`statements.manage`; Mitarbeitende sehen ausschließlich die eigene Stufe |
+| E-Mail-Zugangsdaten | SMTP-Passwort/Resend-Schlüssel nur als Vercel-Umgebungsvariable (serverseitig), nie im Browser oder Repository |
 | Eingaben | Zod-Validierung in allen Server Actions/APIs; Datenbank-Constraints; Markdown-Renderer ohne HTML |
 | Web-Sicherheit | Content-Security-Policy, X-Frame-Options DENY, nosniff, HSTS, Referrer-Policy; Server Actions mit Same-Origin-Prüfung (CSRF-Schutz durch Next.js); keine Open Redirects |
 | Fehlerbehandlung | Nutzer sehen verständliche Meldungen; technische Details nur im Server-Log |
 | Exporte | nur mit `reports.export`, nur im eigenen Sichtbereich, max. 20.000 Zeilen, jeder Export im Audit-Log; CSV-Formel-Injection neutralisiert |
-| Protokollierung | unveränderliches Audit-Log für Profile, Rechte, Teams, Zuordnungen, Leistungen, Ziele, Kurse, Dokumente, Einladungen, Einstellungen, Bewerber, Exporte (Token-Hashes werden nie protokolliert) |
+| Protokollierung | unveränderliches Audit-Log für Profile, Rechte, Teams, Zuordnungen, Leistungen, Produktfreigaben, Provisionen, Abrechnungsdaten, Abrechnungen, Ziele, Kurse, Dokumente, Einladungen, Einstellungen, Bewerber, Exporte (Token-Hashes werden nie protokolliert) |
 | Öffentliche API | nur Bewerbungen; Origin-Allowlist, Honeypot, Ratenbegrenzung, Größenlimit, Einwilligung Pflicht |
 | Datenminimierung | nur notwendige Felder; Rankings zeigen Vorname + Initial; Bewerberdaten getrennt und löschbar |
 

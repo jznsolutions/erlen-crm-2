@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dashboardKind } from "@/lib/permissions";
 import { addDays, isPeriodKey, PERIOD_LABELS, periodRange, startOfMonth, todayBerlin, type PeriodKey } from "@/lib/dates";
+import { getSetupStatus } from "@/lib/setup";
 import { getDaily, getProducts, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filterRows } from "@/lib/metrics";
 import { formatDate, formatRelative } from "@/lib/format";
@@ -48,6 +49,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     supabase.from("team_memberships").select("team_id").eq("user_id", user.id).eq("member_role", "teamleiter").is("ended_at", null),
   ]);
 
+  const pendingUpdates = user.permissions.has("settings.manage") ? (await getSetupStatus()).pending.length : 0;
   const ownRows = rows.filter((r) => r.user_id === user.id);
   const ownTargets = targets.filter((t) => t.scope !== "mitarbeiter" || t.user_id === user.id);
   const mandatoryOpen = training.filter((c) => c.is_mandatory && c.completed_lessons < c.total_lessons);
@@ -70,6 +72,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         actions={user.permissions.has("performance.create") ? <Button asChild><Link href="/leistungen/neu">Leistung erfassen</Link></Button> : undefined}
       />
 
+      {pendingUpdates ? (
+        <Alert tone="warning" title="Datenbank-Update verfügbar">
+          Für neue Funktionen muss die Datenbank einmalig erweitert werden. <Link className="font-medium underline" href="/einrichtung">Jetzt auf der Einrichtungsseite einspielen</Link> – bestehende Daten bleiben erhalten.
+        </Alert>
+      ) : null}
       {params.willkommen ? (
         <Alert tone="success" title="Willkommen im ERLEN-Portal!">
           Dein Konto ist eingerichtet. Ergänze dein <Link className="underline" href="/profil">Profil</Link> und starte deine Pflichtschulungen in der Academy.

@@ -78,6 +78,12 @@ for (const [name, unit, ref, order] of [
   )).id;
 }
 
+// Produktfreigaben (alle Beispielpersonen; partner4 verliert nach dem Anlegen der Leistungen „Gas“)
+await q(
+  "insert into public.user_products (user_id, product_id) select u, p from unnest($1::uuid[]) u, unnest($2::uuid[]) p on conflict do nothing",
+  [Object.values(ids), Object.values(products)],
+);
+
 // Teams
 const team = async (name, parent = null) =>
   (await one(
@@ -135,6 +141,34 @@ for (const [u, t, p, d, n, status] of rows) {
     [u, t, p, d, n, status, ids["teamleiter.nord"]],
   );
 }
+
+await q("delete from public.user_products where user_id = $1 and product_id = $2", [ids.partner4, products.Gas]);
+
+// Provisionsstufen und -sätze (Beispielwerte in Cent je Einheit)
+await q("delete from public.commission_levels");
+const levels = {};
+for (const [name, order, rates] of [
+  ["Starter", 1, [2000, 300, 1000, 1000]],
+  ["Junior", 2, [3000, 500, 1500, 1500]],
+  ["Senior", 3, [4500, 700, 2000, 2000]],
+  ["Teamleitung", 4, [6000, 900, 2500, 2500]],
+]) {
+  levels[name] = (await one("insert into public.commission_levels (name, sort_order) values ($1, $2) returning id", [name, order])).id;
+  const prods = [products.Glasfaser, products["PV-Leads"], products.Strom, products.Gas];
+  for (let i = 0; i < prods.length; i++) {
+    await q("insert into public.commission_rates (level_id, product_id, amount_cents) values ($1, $2, $3)", [levels[name], prods[i], rates[i]]);
+  }
+}
+const levelOf = { partner1: "Junior", partner2: "Starter", partner3: "Senior", partner4: "Starter", partner5: "Junior", ausbilder: "Senior", "teamleiter.nord": "Teamleitung", "teamleiter.sued": "Teamleitung" };
+for (const [who, lvl] of Object.entries(levelOf)) {
+  await q(
+    `insert into public.employee_billing (user_id, commission_level_id, street, postal_code, city, vat_liable)
+     values ($1, $2, 'Musterstraße 1', '57612', 'Helmenzen', $3)
+     on conflict (user_id) do update set commission_level_id = excluded.commission_level_id`,
+    [ids[who], levels[lvl], who === "partner3"],
+  );
+}
+await q("delete from public.statements where user_id = any($1)", [Object.values(ids)]);
 
 // Ziele
 await q("delete from public.targets");

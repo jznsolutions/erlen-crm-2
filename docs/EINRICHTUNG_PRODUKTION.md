@@ -68,8 +68,9 @@ Supabase → **Authentication**:
 | `SUPABASE_SECRET_KEY` | Secret key (**nur hier, nirgendwo sonst**) |
 | `RATE_LIMIT_SALT` | beliebige lange Zufallszeichenkette (mind. 16 Zeichen) |
 | `APPLICATION_ALLOWED_ORIGINS` | leer lassen (nur nötig, falls ein externes Formular Bewerbungen schickt) |
-| `RESEND_API_KEY` | optional |
-| `EMAIL_FROM` | optional, z. B. `ERLEN Vertriebsagentur <portal@erlen-sales.de>` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | E-Mail-Versand, siehe Abschnitt „E-Mail-Versand“ |
+| `EMAIL_FROM` | Absender, z. B. `ERLEN <portal@erlen-sales.de>` |
+| `NEXT_PUBLIC_CALENDLY_URL` | optional, Calendly-Link für die Terminbuchung, siehe „Terminbuchung mit Calendly“ |
 
 4. **Deploy** klicken. Danach unter **Settings → Functions → Region** möglichst **Frankfurt (fra1)** wählen und erneut deployen.
 5. Auftragsverarbeitungsvertrag (DPA) mit Vercel abschließen.
@@ -120,4 +121,38 @@ Supabase → **Authentication**:
 
 ## Updates einspielen
 
-Neue Code-Version → GitHub `main` → Vercel deployt automatisch. Enthält das Update neue Dateien in `supabase/migrations`, **vorher** `npx supabase db push` ausführen.
+Neue Code-Version → GitHub `main` → Vercel deployt automatisch.
+
+Bringt ein Update Erweiterungen der Datenbank mit (neue Dateien in `supabase/migrations`), zeigt das Dashboard Administratoren den Hinweis **„Datenbank-Update verfügbar“**:
+
+1. Als Administrator anmelden.
+2. `https://www.erlen-sales.de/einrichtung` öffnen (oder im Hinweis auf den Link klicken).
+3. **„Update jetzt einspielen“** klicken und ca. 1 Minute warten. Bestehende Daten bleiben erhalten; schlägt etwas fehl, wird nichts verändert.
+
+Alternativ (technisch): `npx supabase db push`.
+
+## E-Mail-Versand (Einladungen automatisch per E-Mail)
+
+Damit neue Mitarbeitende ihre Einladung automatisch per E-Mail bekommen, braucht das Portal die Zugangsdaten eines E-Mail-Postfachs. Am einfachsten ist ein eigenes Postfach wie `portal@erlen-sales.de` bei eurem E-Mail-Anbieter.
+
+1. Beim E-Mail-Anbieter (z. B. IONOS, Strato, Google Workspace, Microsoft 365) ein Postfach `portal@erlen-sales.de` anlegen und dessen **SMTP-Daten** heraussuchen (Server, Port, Benutzer, Passwort – steht meist unter „E-Mail-Programm einrichten“). Bei Google/Microsoft ein **App-Passwort** verwenden.
+2. Vercel → Projekt → **Settings → Environment Variables** → eintragen:
+   * `SMTP_HOST` – z. B. `smtp.ionos.de`
+   * `SMTP_PORT` – meist `465` (sonst `587`)
+   * `SMTP_USER` – `portal@erlen-sales.de`
+   * `SMTP_PASS` – das Passwort des Postfachs (**nur in Vercel eintragen, niemals in Chats oder Dateien**)
+   * `EMAIL_FROM` – `ERLEN <portal@erlen-sales.de>`
+3. **Deployments → … → Redeploy**.
+4. Test: Verwaltung → Benutzer & Einladungen → dich selbst mit einer privaten Adresse einladen. Der gelbe Hinweis „E-Mail-Versand noch nicht eingerichtet“ verschwindet, sobald die Werte gesetzt sind.
+
+Dieselben SMTP-Daten in **Supabase → Authentication → Emails → SMTP Settings** eintragen, damit auch „Passwort vergessen“ zuverlässig funktioniert.
+
+Alternativ kann statt SMTP der Dienst Resend genutzt werden (`RESEND_API_KEY`, Domain bei Resend bestätigen).
+
+## Terminbuchung mit Calendly
+
+1. Bei [calendly.com](https://calendly.com) einen Terminart anlegen, z. B. „Kennenlerngespräch (20 Min.)“. In Calendly unter **Benachrichtigungen** sind Bestätigungs-E-Mails für Bewerber und für euch standardmäßig aktiv – dort könnt ihr Text und Empfänger anpassen.
+2. Den Link der Terminart kopieren (z. B. `https://calendly.com/erlen-sales/kennenlernen`).
+3. Vercel → **Environment Variables** → `NEXT_PUBLIC_CALENDLY_URL` mit diesem Link anlegen → **Redeploy**.
+4. Auf der Website erscheint im Bereich „Bewerbung“ der Kasten „Lieber direkt einen Termin?“ und nach dem Absenden des Formulars die Terminauswahl (Name und E-Mail werden vorausgefüllt).
+5. Datenschutz: AV-Vertrag mit Calendly abschließen; die Datenschutzerklärung enthält bereits einen Abschnitt dazu (bitte prüfen lassen).

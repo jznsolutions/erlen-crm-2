@@ -16,7 +16,7 @@ export function UserMenu({ first, last, role, avatarUrl }: { first: string; last
         </span>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-48 rounded-lg border bg-card p-1 shadow-lg">
+        <DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-48 rounded-xl border bg-popover p-1 shadow-2xl">
           <DropdownMenu.Item asChild>
             <Link href="/profil" className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-muted">
               <UserRound className="size-4" /> Mein Profil

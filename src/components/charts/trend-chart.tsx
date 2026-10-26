@@ -9,7 +9,7 @@ function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payl
   const confirmed = payload.find((p) => p.dataKey === "value")?.value ?? 0;
   const pending = payload.find((p) => p.dataKey === "pending")?.value ?? 0;
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 text-xs shadow-md">
+    <div className="rounded-lg border bg-popover px-3 py-2 text-xs shadow-xl">
       <p className="mb-1 font-medium">{formatDate(label)}</p>
       <p className="flex items-center gap-2"><span className="size-2 rounded-full bg-[var(--chart-primary)]" />Bestätigt: <span className="font-semibold tabular">{formatNumber(confirmed)}</span> {unit}</p>
       {pending ? <p className="mt-0.5 flex items-center gap-2"><span className="size-2 rounded-full bg-[var(--chart-pending)]" />Offen: <span className="font-semibold tabular">{formatNumber(pending)}</span></p> : null}

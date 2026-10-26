@@ -14,7 +14,7 @@ export function Leaderboard({ rows, unit, limit = 10 }: { rows: LeaderRow[]; uni
     <ol className="divide-y">
       {list.map((r) => (
         <li key={r.user_id} className={cn("flex items-center gap-3 py-2.5", r.is_me && "rounded-md bg-accent/60 px-2")}>
-          <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular", r.rank === 1 ? "bg-[#f5e7c4] text-[#7a5600]" : r.rank <= 3 ? "bg-muted text-foreground" : "text-muted-foreground")}>
+          <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular", r.rank === 1 ? "bg-warning-soft text-warning ring-1 ring-warning/40" : r.rank <= 3 ? "bg-muted text-foreground" : "text-muted-foreground")}>
             {r.rank}
           </span>
           <span className="min-w-0 flex-1">

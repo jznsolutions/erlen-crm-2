@@ -51,3 +51,19 @@ export function fullName(p: { first_name: string; last_name: string } | null | u
 export function initials(first: string, last: string): string {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
 }
+
+const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+/** Cent-Betrag als Euro, z. B. 12345 -> "123,45 €". */
+export function formatCents(cents: number | bigint | null | undefined): string {
+  return eur.format(Number(cents ?? 0) / 100);
+}
+
+/** Euro-Eingabe ("12,50" oder "12.50") in Cent; null bei leerer/ungültiger Eingabe. */
+export function parseEuroToCents(v: string | null | undefined): number | null {
+  const s = String(v ?? "").trim().replace(/\s|€/g, "");
+  if (!s) return null;
+  const thousands = /^\d{1,3}(\.\d{3})+$/.test(s);
+  const norm = s.includes(",") || thousands ? s.replace(/\./g, "").replace(",", ".") : s;
+  if (!/^-?\d+(\.\d{1,2})?$/.test(norm)) return null;
+  return Math.round(Number(norm) * 100);
+}

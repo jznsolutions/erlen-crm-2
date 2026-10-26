@@ -57,6 +57,11 @@ export async function createOrg(db: Db) {
     )
   ).id;
 
+  // Produktfreigaben: alle Testpersonen dürfen beide Produkte erfassen
+  await db.query(
+    "insert into public.user_products (user_id, product_id) select p.id, pr.id from public.profiles p cross join public.products pr",
+  );
+
   return {
     admin, agenturleiter, teamleiterA, teamleiterB, ausbilder,
     partner1, partner2, partner3, partner4, inaktiv,

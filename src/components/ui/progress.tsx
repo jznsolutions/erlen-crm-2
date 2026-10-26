@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 /** Fortschrittsbalken. value 0..1 (Werte > 1 werden gekappt dargestellt). */
 export function Progress({ value, className, tone = "primary", label }: { value: number; className?: string; tone?: "primary" | "success" | "warning"; label?: string }) {
   const pct = Math.max(0, Math.min(1, value)) * 100;
-  const color = tone === "success" ? "bg-success" : tone === "warning" ? "bg-[#c98500]" : "bg-[var(--chart-primary)]";
+  const color = tone === "success" ? "bg-success" : tone === "warning" ? "bg-warning" : "bg-[image:var(--accent-gradient)]";
   return (
     <div
       className={cn("h-2 w-full overflow-hidden rounded-full bg-muted", className)}

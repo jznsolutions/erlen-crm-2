@@ -59,6 +59,52 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"commission_levels": {
+                  Row: {
+                    "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"sort_order": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"sort_order"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"sort_order"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"commission_rates": {
+                  Row: {
+                    "amount_cents": number,"level_id": string,"product_id": string,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_cents": number,"level_id": string,"product_id": string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "amount_cents"?: number,"level_id"?: string,"product_id"?: string,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "commission_rates_level_id_fkey"
+      columns: ["level_id"]
+isOneToOne: false
+      referencedRelation: "commission_levels"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "commission_rates_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "commission_rates_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"competitions": {
                   Row: {
                     "created_at": string,"created_by": string | null,"description": string | null,"ends_on": string,"id": string,"is_active": boolean,"product_id": string | null,"starts_on": string,"team_id": string | null,"title": string
@@ -279,6 +325,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"employee_billing": {
+                  Row: {
+                    "city": string | null,"commission_level_id": string | null,"iban": string | null,"postal_code": string | null,"street": string | null,"tax_number": string | null,"updated_at": string,"user_id": string,"vat_id": string | null,"vat_liable": boolean
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "city"?: string | null,"commission_level_id"?: string | null,"iban"?: string | null,"postal_code"?: string | null,"street"?: string | null,"tax_number"?: string | null,"updated_at"?: string,"user_id": string,"vat_id"?: string | null,"vat_liable"?: boolean
+                  }
+                  Update: {
+                    "city"?: string | null,"commission_level_id"?: string | null,"iban"?: string | null,"postal_code"?: string | null,"street"?: string | null,"tax_number"?: string | null,"updated_at"?: string,"user_id"?: string,"vat_id"?: string | null,"vat_liable"?: boolean
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "employee_billing_commission_level_id_fkey"
+      columns: ["commission_level_id"]
+isOneToOne: false
+      referencedRelation: "commission_levels"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "employee_billing_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"employee_details": {
                   Row: {
                     "entry_date": string | null,"partner_status": Database["public"]['Enums']["partner_status"],"phone": string | null,"sales_region": string | null,"sales_start_date": string | null,"updated_at": string,"user_id": string
@@ -301,14 +373,14 @@ isOneToOne: true
                   ]
                 },"invitations": {
                   Row: {
-                    "accepted_at": string | null,"accepted_user_id": string | null,"applicant_id": string | null,"created_at": string,"email": string,"expires_at": string,"first_name": string,"id": string,"invited_by": string | null,"last_name": string,"revoked_at": string | null,"role_id": string,"supervisor_id": string | null,"team_id": string | null,"token_hash": string,"trainer_id": string | null
+                    "accepted_at": string | null,"accepted_user_id": string | null,"applicant_id": string | null,"created_at": string,"email": string,"expires_at": string,"first_name": string,"id": string,"invited_by": string | null,"last_name": string,"product_ids": (string)[],"revoked_at": string | null,"role_id": string,"supervisor_id": string | null,"team_id": string | null,"token_hash": string,"trainer_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email": string,"expires_at": string,"first_name": string,"id"?: string,"invited_by"?: string | null,"last_name": string,"revoked_at"?: string | null,"role_id": string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash": string,"trainer_id"?: string | null
+                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email": string,"expires_at": string,"first_name": string,"id"?: string,"invited_by"?: string | null,"last_name": string,"product_ids"?: (string)[],"revoked_at"?: string | null,"role_id": string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash": string,"trainer_id"?: string | null
                   }
                   Update: {
-                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"first_name"?: string,"id"?: string,"invited_by"?: string | null,"last_name"?: string,"revoked_at"?: string | null,"role_id"?: string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash"?: string,"trainer_id"?: string | null
+                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"first_name"?: string,"id"?: string,"invited_by"?: string | null,"last_name"?: string,"product_ids"?: (string)[],"revoked_at"?: string | null,"role_id"?: string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash"?: string,"trainer_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -767,6 +839,58 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"statement_items": {
+                  Row: {
+                    "description": string,"id": string,"position": number,"product_id": string | null,"quantity": number,"statement_id": string,"total_cents": number,"unit_cents": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "description": string,"id"?: string,"position": number,"product_id"?: string | null,"quantity"?: number,"statement_id": string,"total_cents": number,"unit_cents": number
+                  }
+                  Update: {
+                    "description"?: string,"id"?: string,"position"?: number,"product_id"?: string | null,"quantity"?: number,"statement_id"?: string,"total_cents"?: number,"unit_cents"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "statement_items_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "statement_items_statement_id_fkey"
+      columns: ["statement_id"]
+isOneToOne: false
+      referencedRelation: "statements"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"statements": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"file_name": string | null,"gross_cents": number,"id": string,"is_upload": boolean,"issue_date": string,"kind": Database["public"]['Enums']["statement_kind"],"net_cents": number,"note": string | null,"number": string | null,"period_from": string | null,"period_to": string | null,"published_at": string | null,"recipient": Json | null,"status": Database["public"]['Enums']["statement_status"],"status_reason": string | null,"storage_path": string | null,"title": string,"user_id": string,"vat_cents": number,"vat_rate": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"file_name"?: string | null,"gross_cents"?: number,"id"?: string,"is_upload"?: boolean,"issue_date"?: string,"kind": Database["public"]['Enums']["statement_kind"],"net_cents"?: number,"note"?: string | null,"number"?: string | null,"period_from"?: string | null,"period_to"?: string | null,"published_at"?: string | null,"recipient"?: Json | null,"status"?: Database["public"]['Enums']["statement_status"],"status_reason"?: string | null,"storage_path"?: string | null,"title": string,"user_id": string,"vat_cents"?: number,"vat_rate"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"file_name"?: string | null,"gross_cents"?: number,"id"?: string,"is_upload"?: boolean,"issue_date"?: string,"kind"?: Database["public"]['Enums']["statement_kind"],"net_cents"?: number,"note"?: string | null,"number"?: string | null,"period_from"?: string | null,"period_to"?: string | null,"published_at"?: string | null,"recipient"?: Json | null,"status"?: Database["public"]['Enums']["statement_status"],"status_reason"?: string | null,"storage_path"?: string | null,"title"?: string,"user_id"?: string,"vat_cents"?: number,"vat_rate"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "statements_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "statements_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"target_achievements": {
                   Row: {
                     "achieved_at": string,"period_start": string,"target_id": string
@@ -935,6 +1059,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"user_products": {
+                  Row: {
+                    "granted_at": string,"granted_by": string | null,"product_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "granted_at"?: string,"granted_by"?: string | null,"product_id": string,"user_id": string
+                  }
+                  Update: {
+                    "granted_at"?: string,"granted_by"?: string | null,"product_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_products_granted_by_fkey"
+      columns: ["granted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_products_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_products_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -980,6 +1136,12 @@ isOneToOne: false
 "bootstrap_admin":
 { Args: { "p_email": string }; Returns: undefined
                            },
+"commission_level_upsert":
+{ Args: { "p_description": string,"p_id": string,"p_is_active": boolean,"p_name": string,"p_sort_order": number }; Returns: string
+                           },
+"commission_rates_save":
+{ Args: { "p_rates": Json }; Returns: undefined
+                           },
 "competition_upsert":
 { Args: { "p_description": string,"p_ends_on": string,"p_id": string,"p_is_active": boolean,"p_product": string,"p_starts_on": string,"p_team": string,"p_title": string }; Returns: string
                            },
@@ -1016,6 +1178,12 @@ isOneToOne: false
 "document_update":
 { Args: { "p_access": Json,"p_category": string,"p_description": string,"p_id": string,"p_is_published": boolean,"p_title": string }; Returns: undefined
                            },
+"employee_billing_save":
+{ Args: { "p_city": string,"p_iban": string,"p_postal_code": string,"p_street": string,"p_tax_number": string,"p_user": string,"p_vat_id": string,"p_vat_liable": boolean }; Returns: undefined
+                           },
+"employee_set_commission_level":
+{ Args: { "p_level": string,"p_user": string }; Returns: undefined
+                           },
 "get_leaderboard":
 { Args: { "p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string }; Returns: {
               "display_name": string,"is_me": boolean,"rank": number,"team_name": string,"total": number,"user_id": string
@@ -1050,8 +1218,16 @@ isOneToOne: false
               "email": string,"expires_at": string,"first_name": string,"id": string,"last_name": string,"role_name": string
             }[]
                            },
+"invitation_renew":
+{ Args: { "p_id": string,"p_token_hash": string,"p_valid_hours"?: number }; Returns: {
+              "email": string,"first_name": string
+            }[]
+                           },
 "invitation_revoke":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"invitation_set_products":
+{ Args: { "p_id": string,"p_products": (string)[] }; Returns: undefined
                            },
 "lesson_complete":
 { Args: { "p_lesson": string }; Returns: undefined
@@ -1121,6 +1297,29 @@ isOneToOne: false
 "set_reporting_relationship":
 { Args: { "p_employee": string,"p_manager": string,"p_type": Database["public"]['Enums']["relationship_type"] }; Returns: undefined
                            },
+"statement_cancel":
+{ Args: { "p_id": string,"p_reason": string }; Returns: undefined
+                           },
+"statement_create":
+{ Args: { "p_from": string,"p_issuer_vat_rate"?: number,"p_items": Json,"p_kind": Database["public"]['Enums']["statement_kind"],"p_note": string,"p_title": string,"p_to": string,"p_user": string }; Returns: string
+                           },
+"statement_delete_draft":
+{ Args: { "p_id": string }; Returns: string
+                           },
+"statement_preview":
+{ Args: { "p_from": string,"p_to": string,"p_user": string }; Returns: {
+              "has_rate": boolean,"product_id": string,"product_name": string,"quantity": number,"total_cents": number,"unit_cents": number,"unit_label": string
+            }[]
+                           },
+"statement_publish":
+{ Args: { "p_file_name": string,"p_id": string,"p_storage_path": string }; Returns: string
+                           },
+"statement_register_upload":
+{ Args: { "p_file_name": string,"p_from": string,"p_gross_cents": number,"p_kind": Database["public"]['Enums']["statement_kind"],"p_note": string,"p_storage_path": string,"p_title": string,"p_to": string,"p_user": string }; Returns: string
+                           },
+"statement_set_file":
+{ Args: { "p_file_name": string,"p_id": string,"p_storage_path": string }; Returns: undefined
+                           },
 "submit_quiz":
 { Args: { "p_answers": Json,"p_lesson": string }; Returns: Json
                            },
@@ -1147,10 +1346,13 @@ isOneToOne: false
                            },
 "update_own_profile":
 { Args: { "p_phone": string }; Returns: undefined
+                           },
+"user_products_set":
+{ Args: { "p_products": (string)[],"p_user": string }; Returns: undefined
                            }
           }
           Enums: {
-            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"angenommen"|"abgelehnt","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
+            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"angenommen"|"abgelehnt","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","statement_kind": "abrechnung"|"gutschrift","statement_status": "entwurf"|"veroeffentlicht"|"storniert","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1266,7 +1468,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "applicant_status": ["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
+            "applicant_status": ["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"statement_kind": ["abrechnung", "gutschrift"],"statement_status": ["entwurf", "veroeffentlicht", "storniert"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
           }
         }
 } as const

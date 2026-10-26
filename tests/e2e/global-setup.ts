@@ -8,5 +8,7 @@ export default async function globalSetup() {
   await db.connect();
   await db.query("delete from private.rate_limits");
   await db.query("delete from public.lesson_progress where user_id = (select id from public.profiles where email = 'partner3@erlen.local')");
+  // Abrechnungen der Beispielpersonen zurücksetzen (sonst greift beim erneuten Lauf der Doppel-Schutz)
+  await db.query("delete from public.statements where user_id in (select id from public.profiles where email like '%@erlen.local')");
   await db.end();
 }

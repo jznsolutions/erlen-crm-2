@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   BarChart3, BookOpen, CheckCheck, FileText, FolderLock, GraduationCap, Inbox, LayoutDashboard, Menu, Network,
-  Package, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
+  Package, Percent, Receipt, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
 } from "lucide-react";
 import { Sheet } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ import type { NavSection } from "./nav";
 
 const ICONS = {
   BarChart3, BookOpen, CheckCheck, FileText, FolderLock, GraduationCap, Inbox, LayoutDashboard, Network,
-  Package, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
+  Package, Percent, Receipt, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
 } as const;
 
 function NavList({ sections, onNavigate, badges }: { sections: NavSection[]; onNavigate?: () => void; badges: Record<string, number> }) {
@@ -41,12 +41,14 @@ function NavList({ sections, onNavigate, badges }: { sections: NavSection[]; onN
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                      active ? "bg-sidebar-active text-white" : "text-sidebar-foreground hover:bg-white/5 hover:text-white",
+                      "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                      active
+                        ? "bg-gradient-to-r from-[#1e2a47] to-transparent text-white shadow-[inset_2px_0_0_#8aa4c8]"
+                        : "text-sidebar-foreground hover:bg-white/5 hover:text-white",
                     )}
                   >
                     <Icon className="size-4 shrink-0" />
-                    <span className="flex-1 truncate">{item.label}</span>
+                    <span className="flex-1 leading-tight">{item.label}</span>
                     {badges[item.href] ? (
                       <span className="rounded-full bg-white/15 px-1.5 text-[11px] font-medium text-white tabular">{badges[item.href]}</span>
                     ) : null}
@@ -71,7 +73,7 @@ function Brand() {
 
 export function Sidebar({ sections, badges }: { sections: NavSection[]; badges: Record<string, number> }) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-sidebar lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar/90 backdrop-blur-xl lg:flex">
       <Brand />
       <div className="flex-1 overflow-y-auto">
         <NavList sections={sections} badges={badges} />

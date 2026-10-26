@@ -27,10 +27,10 @@ export default async function SetupPage() {
   const s = await getSetupStatus();
   const connected = s.supabase && s.secret && s.database && !s.error;
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[#0b0f1a] px-4 py-10">
+    <div className="flex min-h-dvh items-center justify-center portal-bg px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-8 flex justify-center"><Image src="/erlen-logo.png" alt="ERLEN" width={170} height={48} priority /></div>
-        <div className="rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+        <div className="glass-card rounded-3xl border border-white/10 p-6 shadow-2xl sm:p-8">
           <h1 className="text-xl font-semibold">Portal einrichten</h1>
           <p className="mt-1 mb-6 text-sm text-muted-foreground">Drei Schritte – danach kannst du dich anmelden.</p>
           <ol className="space-y-6">
@@ -59,10 +59,21 @@ export default async function SetupPage() {
               {s.initialized && !s.hasAdmin ? <AdminForm /> : null}
             </Step>
           </ol>
+          {s.initialized && s.pending.length ? (
+            <div className="mt-8 space-y-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
+              <p className="font-medium">Update für die Datenbank verfügbar</p>
+              <p className="text-sm text-muted-foreground">
+                Neue Funktionen (z. B. Provisionen, Produktfreigaben, Abrechnungen &amp; Gutschriften) brauchen eine Erweiterung der
+                Datenbank. Bestehende Daten bleiben erhalten.
+                {s.hasAdmin ? " Dafür musst du als Administrator angemeldet sein." : null}
+              </p>
+              <InitButton update />
+            </div>
+          ) : null}
           {s.hasAdmin ? (
             <div className="mt-8 space-y-3">
               <Alert tone="success" title="Fertig eingerichtet">Melde dich jetzt mit deiner E-Mail-Adresse und deinem Passwort an.</Alert>
-              <Link href="/login" className="flex h-11 w-full items-center justify-center rounded-md bg-primary font-medium text-primary-foreground">Zum Login</Link>
+              <Link href="/login" className="flex h-11 w-full items-center justify-center rounded-full bg-primary font-medium text-primary-foreground">Zum Login</Link>
             </div>
           ) : null}
         </div>

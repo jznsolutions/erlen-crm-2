@@ -16,6 +16,8 @@ import { KpiRow, ProductCard, TrainingCard, TrendCard, type TrainingRow } from "
 import { TargetList, type TargetProgress } from "@/components/dashboard/targets";
 import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
+import { BillingForm, CommissionLevelForm, ProductClearanceForm } from "./billing-forms";
+import { formatCents } from "@/lib/format";
 import {
   EditEmployeeDialog, EndMembershipButton, ManagerForm, OwnProfileForm, PermissionForm, RoleForm, StatusButtons, TeamAssignForm, TrainingNoteForm,
 } from "./admin-forms";
@@ -117,6 +119,17 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
     canRoles ? supabase.from("permissions").select("key, description").order("key").then((r) => r.data ?? []) : Promise.resolve([]),
     canRoles || isSelf ? supabase.from("user_permissions").select("permission_key, effect, reason, created_at").eq("user_id", userId).then((r) => r.data ?? []) : Promise.resolve([]),
   ]);
+  const canAssignProducts = perms.has("products.assign") && !isSelf;
+  const canCommission = perms.has("commissions.manage") && !isSelf;
+  const canBilling = isSelf || perms.has("statements.manage");
+  const [userProducts, billing, levels, rates] = await Promise.all([
+    supabase.from("user_products").select("product_id").eq("user_id", userId).then((r) => (r.data ?? []).map((x) => x.product_id)),
+    canBilling || canCommission ? supabase.from("employee_billing").select("*").eq("user_id", userId).maybeSingle().then((r) => r.data) : Promise.resolve(null),
+    supabase.from("commission_levels").select("id, name, is_active").order("sort_order").then((r) => r.data ?? []),
+    supabase.from("commission_rates").select("level_id, product_id, amount_cents").then((r) => r.data ?? []),
+  ]);
+  const level = levels.find((l) => l.id === billing?.commission_level_id);
+  const levelRates = new Map(rates.filter((r) => r.level_id === level?.id).map((r) => [r.product_id, r.amount_cents]));
   const allRoles = await getRoles();
   const roleNames = new Map(allRoles.map((r) => [r.id, r.name]));
   const teamNames = new Map((memberships ?? []).map((m) => [m.team_id, m.teams?.name ?? "Team"]));
@@ -220,6 +233,42 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
                 {notes.length === 0 ? <li className="text-sm text-muted-foreground">Noch keine Notizen.</li> : null}
               </ul>
             </CardContent>
+          </Card>
+        ) : null}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader><div><CardTitle>Produkte & Provision</CardTitle><CardDescription>Leistungen können nur für freigeschaltete Produkte erfasst werden.</CardDescription></div></CardHeader>
+          <CardContent className="space-y-5">
+            {canAssignProducts ? (
+              <ProductClearanceForm userId={userId} products={products.map((p) => ({ id: p.id, label: p.name }))} granted={userProducts} />
+            ) : (
+              <ul className="flex flex-wrap gap-2">
+                {products.filter((p) => userProducts.includes(p.id)).map((p) => <li key={p.id}><Badge variant="success">{p.name}</Badge></li>)}
+                {userProducts.length === 0 ? <li className="text-sm text-muted-foreground">Noch keine Produkte freigeschaltet.</li> : null}
+              </ul>
+            )}
+            <div className="space-y-3 border-t pt-4">
+              {canCommission ? (
+                <CommissionLevelForm userId={userId} levels={levels.filter((l) => l.is_active || l.id === level?.id).map((l) => ({ id: l.id, label: l.name }))} current={level?.id ?? null} />
+              ) : (
+                <p className="text-sm">Provisionsstufe: <span className="font-medium">{level?.name ?? "noch nicht festgelegt"}</span></p>
+              )}
+              {level ? (
+                <ul className="divide-y rounded-lg border text-sm">
+                  {products.filter((p) => userProducts.includes(p.id)).map((p) => (
+                    <li key={p.id} className="flex justify-between px-3 py-2"><span>{p.name}</span><span className="tabular font-medium">{levelRates.has(p.id) ? `${formatCents(levelRates.get(p.id)!)} je Einheit` : "–"}</span></li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+        {canBilling ? (
+          <Card>
+            <CardHeader><div><CardTitle>Abrechnungsdaten</CardTitle><CardDescription>Erscheinen auf Abrechnungen und Gutschriften. Nur für {isSelf ? "dich" : "die Person"} und die Abrechnung sichtbar.</CardDescription></div></CardHeader>
+            <CardContent><BillingForm userId={userId} billing={billing} /></CardContent>
           </Card>
         ) : null}
       </div>

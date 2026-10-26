@@ -1,6 +1,20 @@
 # Projektstatus ERLEN CRM
 
-Stand: 25.10.2026 · Branch `feature/crm-fundament`
+Stand: 26.10.2026 · Branch `feature/crm-fundament`
+
+## Erweiterung 26.10.2026
+
+| Punkt | Status |
+|---|---|
+| CRM im dunklen, futuristischen Design der Website (Glas-Karten, Montserrat, Akzentverlauf, Raster-Hintergrund, Animationen) | ✅ |
+| Calendly-Terminbuchung auf der Website (Zwei-Klick-Einbettung, Name/E-Mail vorausgefüllt; Bestätigungsmails verschickt Calendly) | ✅ – Link als `NEXT_PUBLIC_CALENDLY_URL` in Vercel eintragen |
+| Provisionen je Stufe × Produkt (Verwaltung → Provisionen, Stufe im Profil) | ✅ |
+| Einladungen automatisch per E-Mail (SMTP oder Resend, HTML-Vorlage, „Erneut senden“) | ✅ – SMTP-Daten in Vercel eintragen |
+| Produktfreigaben je Mitarbeiter (auch schon bei der Einladung; Datenbank erzwingt sie bei jeder Erfassung) | ✅ |
+| Abrechnungen & Gutschriften: Abruf/Download für Mitarbeitende, PDF-Upload, „Abrechnung erstellen“, „Gutschrift erstellen“ (PDF-Erzeugung, fortlaufende Nummern, Doppel-Schutz, Storno) | ✅ |
+| Impressum mit den Angaben der Erlen-Sales GbR; Verantwortlicher in der Datenschutzerklärung | ✅ (Datenschutzerklärung bleibt Entwurf zur Prüfung) |
+| Datenbank-Update für bestehende Installationen über `/einrichtung` („Update jetzt einspielen“, nur als Admin) | ✅ |
+
 
 ## Phasen
 
@@ -18,16 +32,18 @@ Stand: 25.10.2026 · Branch `feature/crm-fundament`
 ## Testergebnisse (letzter Lauf, lokal gegen Supabase-Stack in Docker)
 
 * `npm run typecheck` – ok · `npm run lint` – ok · `npm run build` – ok
-* `npm test` – 17/17 (Kennzahlen, Datum/Zeitzone, Open-Redirect, CSV-Injection, Validierung)
-* `npm run test:db` – 68/68 (alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy-Fortschritt, Quiz-Schutz, Einladungen)
-* `npm run test:e2e` – 14/14 (Website öffentlich/indexierbar, Portal gesperrt, Bewerbung über Website, Zugriffsschutz, Leistungs-Workflow, Einladung, Bewerber-API, Lektion/Mindestzeit, private Dokumente, Deaktivierung)
+* `npm test` – 20/20 (Kennzahlen, Datum/Zeitzone, Open-Redirect, CSV-Injection, Validierung, Euro-Beträge)
+* `npm run test:db` – 76/76 (alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy, Einladungen, Produktfreigaben, Provisions-Sichtbarkeit, Abrechnungs-Vorschau, Nummernvergabe, Doppel-Abrechnung, USt)
+* `npm run test:e2e` – 21/21 (u. a. Abrechnung erstellen → Mitarbeiter lädt PDF, fremder Mitarbeiter erhält 404; Gutschrift; Produktfreigabe in der Erfassung; Einladung per E-Mail gegen lokalen SMTP-Empfänger geprüft; Impressum)
+* Datenbank-Update einer bestehenden (alten) Datenbank über `/einrichtung` und Ersteinrichtung einer leeren Datenbank manuell im Browser geprüft
 
 ## Bekannte Einschränkungen / noch nicht umgesetzt
 
 * **Nicht produktiv geschaltet:** Supabase-Projekt, Vercel-Projekt und Domain müssen von dir angelegt werden (Anleitung vorhanden). CI-Workflow ist angelegt, aber noch nicht auf GitHub gelaufen.
 * **Rechtliches:** Datenschutzhinweise/Impressum sind Vorlagen; AV-Verträge, Verarbeitungsverzeichnis und Information der Mitarbeitenden stehen aus. Keine Aussage zur DSGVO-Konformität ohne Prüfung.
-* **E-Mail:** Nur Einladungen können per E-Mail versendet werden (optional über Resend). Alle anderen Benachrichtigungen sind In-App. „Passwort vergessen“ benötigt eigenen SMTP in Supabase.
-* **Nicht umgesetzt (bewusst als spätere Erweiterung):** Abschlusszertifikate, Leistungsabzeichen/Badges, Zwei-Faktor-Anmeldung im Portal, Dunkelmodus, Bulk-Import von Leistungen (CSV-Upload), automatische Löschjobs (Funktion `purge_applicants` vorhanden, Zeitplan fehlt).
+* **E-Mail:** Einladungen und Hinweise auf neue Abrechnungen werden per E-Mail versendet, sobald SMTP (oder Resend) in Vercel eingetragen ist. Übrige Benachrichtigungen sind In-App. „Passwort vergessen“ benötigt dieselben SMTP-Daten in Supabase.
+* **Abrechnungen:** PDFs sind eine Arbeitshilfe; steuerliche Pflichtangaben/Gutschriftverfahren mit der Steuerberatung abstimmen. Der Calendly-Kalender konnte in der Entwicklungsumgebung nicht live geladen werden (Netzwerk gesperrt).
+* **Nicht umgesetzt (bewusst als spätere Erweiterung):** Abschlusszertifikate, Leistungsabzeichen/Badges, Zwei-Faktor-Anmeldung im Portal, Bulk-Import von Leistungen (CSV-Upload), automatische Löschjobs (Funktion `purge_applicants` vorhanden, Zeitplan fehlt).
 * **Video-Fortschritt** wird vom Browser gemeldet (mit serverseitiger Plausibilitätsprüfung). Große Videos: Free-Tarif max. 50 MB/Datei; resumable Uploads (TUS) nicht umgesetzt.
 * **Teamsicht nach Teamwechsel:** Der neue Teamleiter sieht die Person inkl. Historie; der alte nicht mehr. Teamsummen der Vergangenheit basieren auf dem Team zum Erfassungszeitpunkt.
 * **Performance:** Dashboards aggregieren Tageswerte (bis 180 Tage) – ausgelegt für Agenturen bis einige hundert Mitarbeitende. Bei deutlich größerem Volumen Aggregation weiter in die Datenbank verlagern.
