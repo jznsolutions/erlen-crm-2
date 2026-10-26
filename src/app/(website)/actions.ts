@@ -23,5 +23,5 @@ export async function applyAction(_: ApplyState, fd: FormData): Promise<ApplySta
   const str = (k: string) => String(fd.get(k) ?? "").slice(0, 2000);
   // Eingaben zurückgeben, damit sie nach einer Fehlermeldung erhalten bleiben
   const values = { full_name: str("full_name"), phone: str("phone"), email: str("email"), message: str("message") };
-  return result.ok ? { ok: true } : { ok: false, error: result.error, fieldErrors: result.fieldErrors, values };
+  return result.ok ? { ok: true, values } : { ok: false, error: result.error, fieldErrors: result.fieldErrors, values };
 }

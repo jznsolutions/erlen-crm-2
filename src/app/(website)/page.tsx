@@ -4,6 +4,7 @@ import {
   ArrowRight, BarChart3, Cable, Check, ChevronDown, GraduationCap, Mail, MapPin, Phone, Plus, SunMedium, Target, UserRound, Users, Zap,
 } from "lucide-react";
 import { SITE } from "@/lib/site";
+import { CalendlyBooking } from "@/components/website/calendly";
 import { ApplyForm } from "@/components/website/apply-form";
 import { CountUp } from "@/components/website/count-up";
 import { FitQuiz } from "@/components/website/quiz";
@@ -343,6 +344,13 @@ export default function HomePage() {
                 <li key={x.t} data-reveal="left" style={{ "--d": `${k * 100}ms` } as React.CSSProperties} className="flex items-center gap-3"><span className="flex size-9 items-center justify-center rounded-full bg-white/10"><x.i className="size-4" /></span>{x.t}</li>
               ))}
             </ul>
+            {SITE.calendlyUrl ? (
+              <div data-reveal className="mt-10 rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+                <p className="font-semibold text-white">Lieber direkt einen Termin?</p>
+                <p className="mt-1 mb-4 text-sm text-white/55">Wähle einen freien Termin für dein Kennenlerngespräch – die Bestätigung kommt per E-Mail.</p>
+                <CalendlyBooking url={SITE.calendlyUrl} compact />
+              </div>
+            ) : null}
           </div>
           <div data-reveal="scale" className="glass rounded-[2rem] p-6 sm:p-10">
             <ApplyForm calendlyUrl={SITE.calendlyUrl} />

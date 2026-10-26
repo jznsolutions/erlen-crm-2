@@ -16,7 +16,8 @@ export async function connect(): Promise<Db> {
   // lokale Entwicklungsdaten bleiben also erhalten).
   await client.query("create temp table saved_settings on commit drop as select key, value, description from public.organization_settings");
   await client.query(`truncate public.profiles, public.teams, public.products, public.courses, public.documents,
-    public.document_categories, public.announcements, public.applicants, public.invitations cascade`);
+    public.document_categories, public.announcements, public.applicants, public.invitations, public.commission_levels,
+    public.statements cascade`);
   await client.query("insert into public.organization_settings (key, value, description) select * from saved_settings");
   return client;
 }

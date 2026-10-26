@@ -3,15 +3,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors cursor-pointer disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm",
-        secondary: "bg-card text-foreground border border-input hover:bg-muted shadow-sm",
-        ghost: "text-foreground hover:bg-muted",
-        danger: "bg-danger text-white hover:bg-danger/90 shadow-sm",
-        success: "bg-success text-white hover:bg-success/90 shadow-sm",
+        default: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_0_0_1px_#ffffff14,0_8px_24px_-8px_#8aa4c866] hover:shadow-[0_0_0_1px_#ffffff26,0_10px_30px_-6px_#8aa4c899]",
+        secondary: "bg-white/[0.04] text-foreground border border-input hover:bg-white/[0.08] hover:border-ring/50",
+        ghost: "text-foreground hover:bg-white/[0.06]",
+        danger: "bg-danger text-primary-foreground hover:bg-danger/90",
+        success: "bg-success text-primary-foreground hover:bg-success/90",
         link: "text-info underline-offset-4 hover:underline px-0",
       },
       size: {

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-dvh items-center justify-center bg-[#0b0f1a] px-4 py-10">
+    <div className="relative flex min-h-dvh items-center justify-center portal-bg px-4 py-10">
       <div
         aria-hidden
         className="absolute inset-0 bg-cover bg-center opacity-25"
@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="mb-8 flex justify-center">
           <Image src="/erlen-logo.png" alt="ERLEN Vertriebsagentur" width={200} height={56} priority />
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white p-6 shadow-2xl sm:p-8">{children}</div>
+        <div className="glass-card rounded-3xl border border-white/10 p-6 shadow-2xl sm:p-8">{children}</div>
         <p className="mt-6 text-center text-xs text-white/40">Internes Portal · Zugang nur für eingeladene Mitarbeiter</p>
       </div>
     </div>

@@ -1,20 +1,22 @@
 "use client";
 import { useState } from "react";
-import { Copy } from "lucide-react";
+import { Copy, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Alert } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select } from "@/components/ui/input";
+import { Checkbox, Field, Input, Select } from "@/components/ui/input";
 import { createInvitation } from "@/app/(portal)/admin/benutzer/actions";
 
 type Opt = { id: string; label: string };
 
-export function InviteForm({ roles, teams, people, canAssignRoles, prefill }: { roles: { key: string; name: string }[]; teams: Opt[]; people: Opt[]; canAssignRoles: boolean; prefill?: { first_name: string; last_name: string; email: string; applicant_id: string } }) {
-  const [link, setLink] = useState<{ link: string; sent: boolean } | null>(null);
+type Delivery = { sent: boolean; configured?: boolean; link?: string };
+
+export function InviteForm({ roles, teams, people, products, canAssignRoles, prefill }: { roles: { key: string; name: string }[]; teams: Opt[]; people: Opt[]; products: Opt[] | null; canAssignRoles: boolean; prefill?: { first_name: string; last_name: string; email: string; applicant_id: string } }) {
+  const [link, setLink] = useState<Delivery | null>(null);
   return (
     <div className="space-y-4">
-      <ActionForm action={createInvitation} resetOnSuccess onSuccess={(r) => r.ok && setLink(r.data as { link: string; sent: boolean })} className="space-y-4">
+      <ActionForm action={createInvitation} resetOnSuccess onSuccess={(r) => r.ok && setLink(r.data as Delivery)} className="space-y-4">
         {({ fieldErrors }) => (
           <>
             {prefill ? <input type="hidden" name="applicant_id" value={prefill.applicant_id} /> : null}
@@ -34,16 +36,36 @@ export function InviteForm({ roles, teams, people, canAssignRoles, prefill }: { 
                 <Select id="i-valid" name="valid_hours" defaultValue="72"><option value="24">24 Stunden</option><option value="72">3 Tage</option><option value="168">7 Tage</option><option value="336">14 Tage</option></Select>
               </Field>
             </div>
-            <div className="flex justify-end"><SubmitButton>Einladung erstellen</SubmitButton></div>
+            {products?.length ? (
+              <fieldset>
+                <legend className="mb-2 text-sm font-medium">Freigeschaltete Produkte</legend>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {products.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 text-sm"><Checkbox name="product_ids" value={p.id} defaultChecked />{p.label}</label>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Nur für freigeschaltete Produkte kann die Person Leistungen erfassen. Später im Profil änderbar.</p>
+              </fieldset>
+            ) : null}
+            <div className="flex justify-end"><SubmitButton pendingText="Wird versendet …">Einladung per E-Mail senden</SubmitButton></div>
           </>
         )}
       </ActionForm>
-      {link ? (
-        <Alert tone={link.sent ? "success" : "info"} title={link.sent ? "E-Mail versendet" : "Einladungslink (wird nur jetzt angezeigt)"}>
-          <p className="mb-2">Der Link ist einmalig verwendbar. Übermittle ihn nur direkt an die eingeladene Person.</p>
+      {link?.sent ? (
+        <Alert tone="success" title="E-Mail versendet">
+          <span className="flex items-center gap-2"><MailCheck className="size-4" />Die Person erhält eine E-Mail mit einem Button, über den sie ihr Passwort festlegt.</span>
+        </Alert>
+      ) : null}
+      {link && !link.sent && link.link ? (
+        <Alert tone="warning" title={link.configured ? "E-Mail konnte nicht versendet werden" : "E-Mail-Versand ist noch nicht eingerichtet"}>
+          <p className="mb-2">
+            {link.configured
+              ? "Bitte die E-Mail-Einstellungen in Vercel prüfen. Bis dahin kannst du den Link einmalig selbst an die Person schicken:"
+              : "Hinterlege die E-Mail-Zugangsdaten in Vercel (siehe Anleitung „E-Mail-Versand“). Bis dahin kannst du den Link einmalig selbst an die Person schicken:"}
+          </p>
           <div className="flex gap-2">
             <Input readOnly value={link.link} className="h-9 font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
-            <Button size="sm" variant="secondary" className="h-9" onClick={() => navigator.clipboard.writeText(link.link).then(() => toast.success("Link kopiert"))}><Copy />Kopieren</Button>
+            <Button size="sm" variant="secondary" className="h-9" onClick={() => navigator.clipboard.writeText(link.link!).then(() => toast.success("Link kopiert"))}><Copy />Kopieren</Button>
           </div>
         </Alert>
       ) : null}

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
+import { getProducts, getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
+import { emailProvider } from "@/lib/email";
 import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Alert, PageHeader } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { ConfirmAction } from "@/components/forms";
 import { InviteForm } from "@/components/invite-form";
-import { revokeInvitation } from "./actions";
+import { resendInvitation, revokeInvitation } from "./actions";
 
 export const metadata: Metadata = { title: "Benutzer & Einladungen" };
 
@@ -20,10 +21,11 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
   const user = await requirePermission("employees.invite", "roles.assign", "employees.deactivate");
   const supabase = await createClient();
   const canInvite = user.permissions.has("employees.invite");
-  const [roles, teams, employees, { data: invitations }] = await Promise.all([
+  const [roles, teams, employees, products, { data: invitations }] = await Promise.all([
     getRoles(),
     getVisibleTeams(),
     getVisibleEmployees(),
+    getProducts(),
     canInvite ? supabase.from("invitations").select("id, email, first_name, last_name, role_id, expires_at, accepted_at, revoked_at, created_at, accepted_user_id").order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] }),
   ]);
   let prefill: { first_name: string; last_name: string; email: string; applicant_id: string } | undefined;
@@ -40,7 +42,12 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Benutzer & Einladungen" description="Neue Mitarbeiter erhalten einen zeitlich begrenzten, einmalig verwendbaren Einladungslink. Eine offene Registrierung gibt es nicht." />
+      <PageHeader title="Benutzer & Einladungen" description="Neue Mitarbeiter erhalten automatisch eine Einladungs-E-Mail und legen darüber ihr Passwort fest. Eine offene Registrierung gibt es nicht." />
+      {canInvite && !emailProvider() ? (
+        <Alert tone="warning" title="E-Mail-Versand noch nicht eingerichtet">
+          Damit Einladungen automatisch per E-Mail verschickt werden, müssen die Zugangsdaten eures E-Mail-Postfachs (SMTP) in Vercel hinterlegt werden. Die Schritt-für-Schritt-Anleitung steht in <code>docs/EINRICHTUNG_PRODUKTION.md</code> unter „E-Mail-Versand“.
+        </Alert>
+      ) : null}
       {canInvite ? (
         <Card>
           <CardHeader><div><CardTitle>Mitarbeiter einladen</CardTitle><CardDescription>Rolle, Team, Vorgesetzter und Ausbilder werden beim Annehmen automatisch gesetzt; Pflichtschulungen werden zugewiesen.</CardDescription></div></CardHeader>
@@ -50,6 +57,7 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
               roles={roles}
               teams={teams.filter((t) => t.is_active).map((t) => ({ id: t.id, label: t.name }))}
               people={employees.filter((e) => e.status === "aktiv" && e.role_key !== "vertriebspartner").map((e) => ({ id: e.id, label: `${e.last_name}, ${e.first_name} (${e.role_name})` }))}
+              products={user.permissions.has("products.assign") ? products.filter((p) => p.is_active).map((p) => ({ id: p.id, label: p.name })) : null}
               canAssignRoles={user.permissions.has("roles.assign")}
               prefill={prefill}
             />
@@ -72,6 +80,7 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
                       <TD><Badge variant={state === "angenommen" ? "success" : state === "offen" ? "info" : "neutral"}>{state}</Badge>{state === "offen" ? <p className="mt-1 text-xs text-muted-foreground">bis {formatDateTime(i.expires_at)}</p> : null}</TD>
                       <TD className="text-xs text-muted-foreground">{formatDateTime(i.created_at)}</TD>
                       <TD className="text-right">
+                        {state === "offen" || state === "abgelaufen" ? <ConfirmAction action={resendInvitation} hidden={{ id: i.id }} title="Einladung erneut senden?" description="Die Person erhält eine neue E-Mail (3 Tage gültig). Der bisherige Link wird ungültig." confirmLabel="Erneut senden" trigger={<Button size="sm" variant="ghost">Erneut senden</Button>} /> : null}
                         {state === "offen" ? <ConfirmAction action={revokeInvitation} hidden={{ id: i.id }} title="Einladung widerrufen?" description="Der Link wird sofort ungültig." confirmLabel="Widerrufen" tone="danger" trigger={<Button size="sm" variant="ghost">Widerrufen</Button>} /> : null}
                         {i.accepted_user_id ? <Button asChild size="sm" variant="ghost"><Link href={`/mitarbeiter/${i.accepted_user_id}`}>Profil</Link></Button> : null}
                       </TD>

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0f1a",
+  themeColor: "#060912",
   width: "device-width",
   initialScale: 1,
 };
@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="de">
       <body className="min-h-dvh">
         {children}
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster position="top-right" theme="dark" richColors closeButton />
       </body>
     </html>
   );

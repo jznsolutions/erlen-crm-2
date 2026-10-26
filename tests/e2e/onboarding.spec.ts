@@ -1,5 +1,27 @@
-import { expect, test } from "@playwright/test";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { expect, test, type Page } from "@playwright/test";
 import { login } from "./helpers";
+
+/** Einladungslink ermitteln: aus der versendeten E-Mail (E2E_MAIL_DIR, lokaler SMTP-Empfänger) oder aus der Anzeige. */
+async function invitationLink(page: Page, email: string): Promise<string> {
+  const dir = process.env.E2E_MAIL_DIR;
+  if (dir) {
+    await expect(page.getByText("E-Mail versendet")).toBeVisible();
+    const mail = readdirSync(dir)
+      .filter((f) => f.endsWith(".eml"))
+      .map((f) => join(dir, f))
+      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)
+      .map((f) => readFileSync(f, "utf8").replace(/=\r?\n/g, "").replace(/=3D/g, "="))
+      .find((m) => m.includes(email));
+    const link = mail?.match(/https?:\/\/[^\s"<>]+\/einladung\/[A-Za-z0-9_-]+/)?.[0];
+    expect(link, "Einladungslink in der E-Mail").toBeTruthy();
+    return link!;
+  }
+  const linkInput = page.locator("input[readonly][value*='/einladung/']");
+  await expect(linkInput).toBeVisible();
+  return linkInput.inputValue();
+}
 
 test("Einladung erstellen, annehmen und Einmaligkeit", async ({ page, browser }) => {
   const email = `neu.${Date.now()}@erlen.local`;
@@ -9,10 +31,9 @@ test("Einladung erstellen, annehmen und Einmaligkeit", async ({ page, browser })
   await page.fill("#i-last", "Neumann");
   await page.fill("#i-email", email);
   await page.selectOption("#i-team", { label: "Team Nord" });
-  await page.getByRole("button", { name: "Einladung erstellen" }).click();
-  const linkInput = page.locator("input[readonly][value*='/einladung/']");
-  await expect(linkInput).toBeVisible();
-  const link = await linkInput.inputValue();
+  await page.getByLabel("Gas").uncheck();
+  await page.getByRole("button", { name: "Einladung per E-Mail senden" }).click();
+  const link = await invitationLink(page, email);
 
   const ctx = await browser.newContext();
   const p2 = await ctx.newPage();
@@ -25,6 +46,11 @@ test("Einladung erstellen, annehmen und Einmaligkeit", async ({ page, browser })
   await expect(p2).toHaveURL(/dashboard\?willkommen=1/);
   await expect(p2.getByText("Willkommen im ERLEN-Portal!")).toBeVisible();
   await expect(p2.getByText("offene Pflichtschulung")).toBeVisible();
+  // Bei der Einladung abgewählte Produkte sind nicht freigeschaltet
+  await p2.goto("/leistungen/neu");
+  const options = await p2.locator("#product_id option").allTextContents();
+  expect(options).toContain("Glasfaser");
+  expect(options).not.toContain("Gas");
   await ctx.close();
 
   const ctx2 = await browser.newContext();

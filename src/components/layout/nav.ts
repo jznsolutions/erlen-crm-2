@@ -12,6 +12,7 @@ export const NAV: NavSection[] = [
       { href: "/ziele", label: "Ziele & Rankings", icon: "Target", any: "all" },
       { href: "/academy", label: "ERLEN Academy", icon: "GraduationCap", any: ["training.read", "training.manage"] },
       { href: "/dokumente", label: "Dokumente", icon: "FileText", any: ["documents.read", "documents.manage"] },
+      { href: "/abrechnungen", label: "Abrechnungen & Gutschriften", icon: "Receipt", any: ["statements.read.self", "statements.manage"] },
     ],
   },
   {
@@ -29,6 +30,7 @@ export const NAV: NavSection[] = [
       { href: "/admin/benutzer", label: "Benutzer & Einladungen", icon: "UserPlus", any: ["employees.invite", "roles.assign", "employees.deactivate"] },
       { href: "/admin/rollen", label: "Rollen & Rechte", icon: "ShieldCheck", any: ["roles.assign"] },
       { href: "/admin/produkte", label: "Produkte", icon: "Package", any: ["products.manage"] },
+      { href: "/admin/provisionen", label: "Provisionen", icon: "Percent", any: ["commissions.manage"] },
       { href: "/admin/academy", label: "Academy verwalten", icon: "BookOpen", any: ["training.manage"] },
       { href: "/admin/dokumente", label: "Dokumente verwalten", icon: "FolderLock", any: ["documents.manage", "announcements.manage"] },
       { href: "/admin/wettbewerbe", label: "Wettbewerbe", icon: "Trophy", any: ["competitions.manage"] },

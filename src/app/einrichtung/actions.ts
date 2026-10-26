@@ -1,8 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { SETUP_SQL } from "@/lib/setup-sql.generated";
-import { ADMIN_SETUP_WINDOW_MINUTES, getSetupStatus, withDb } from "@/lib/setup";
+import { SETUP_MIGRATIONS } from "@/lib/setup-sql.generated";
+import { ADMIN_SETUP_WINDOW_MINUTES, appliedMigrations, getSetupStatus, runMigrations, withDb } from "@/lib/setup";
+import { getCurrentUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { email, name, passwordSchema } from "@/lib/validation";
 import { fromZodError, type ActionResult } from "@/lib/actions";
@@ -22,7 +23,7 @@ export async function initializeDatabase(): Promise<ActionResult> {
         await c.query("rollback");
         return;
       }
-      await c.query(SETUP_SQL);
+      await runMigrations(c, SETUP_MIGRATIONS.map((m) => m.name));
       await c.query(
         "insert into public.organization_settings (key, value, description) values ('setup', jsonb_build_object('initialized_at', now()), 'Zeitpunkt der Ersteinrichtung') on conflict (key) do nothing",
       );
@@ -34,6 +35,37 @@ export async function initializeDatabase(): Promise<ActionResult> {
   }
   revalidatePath("/einrichtung");
   return { ok: true, message: "Datenbank eingerichtet." };
+}
+
+/** Spielt fehlende Updates in eine bereits eingerichtete Datenbank ein. */
+export async function applyUpdates(): Promise<ActionResult> {
+  const status = await getSetupStatus();
+  if (!status.database) return { ok: false, error: "Keine Datenbankverbindung. Ist Supabase in Vercel verknüpft?" };
+  if (!status.initialized) return { ok: false, error: "Bitte zuerst die Datenbank einrichten." };
+  // Sobald ein Administrator existiert, darf nur ein angemeldeter Administrator Updates einspielen.
+  if (status.hasAdmin) {
+    const user = await getCurrentUser().catch(() => null);
+    if (!user || !user.permissions.has("settings.manage")) {
+      return { ok: false, error: "Bitte melde dich zuerst als Administrator an und öffne diese Seite danach erneut." };
+    }
+  }
+  let count = 0;
+  try {
+    await withDb(async (c) => {
+      await c.query("begin");
+      await c.query("select pg_advisory_xact_lock(424242)");
+      const applied = await appliedMigrations(c);
+      const todo = SETUP_MIGRATIONS.map((m) => m.name).filter((n) => !applied.has(n));
+      count = todo.length;
+      await runMigrations(c, todo);
+      await c.query("commit");
+    });
+  } catch (e) {
+    console.error("[einrichtung]", (e as Error).message);
+    return { ok: false, error: "Das Update ist fehlgeschlagen (es wurde nichts verändert): " + (e as Error).message.slice(0, 300) };
+  }
+  revalidatePath("/einrichtung");
+  return { ok: true, message: count ? `${count} Update(s) eingespielt.` : "Alles ist bereits aktuell." };
 }
 
 /** Legt den ersten Administrator an – nur ohne bestehenden Admin und kurz nach der Einrichtung. */

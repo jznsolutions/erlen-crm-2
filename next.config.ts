@@ -12,7 +12,7 @@ const csp = [
   `img-src 'self' data: blob: ${supabaseUrl}`,
   `media-src 'self' blob: ${supabaseUrl}`,
   `connect-src 'self' ${supabaseUrl}`,
-  `frame-src 'self' ${supabaseUrl}`,
+  `frame-src 'self' ${supabaseUrl} https://calendly.com https://*.calendly.com`,
   "font-src 'self' data:",
   "object-src 'none'",
   "base-uri 'self'",

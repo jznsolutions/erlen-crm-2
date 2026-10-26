@@ -57,3 +57,11 @@ test("Einrichtungsseite ist nach der Einrichtung wirkungslos", async ({ page }) 
   await expect(page.getByRole("button", { name: "Datenbank jetzt einrichten" })).toHaveCount(0);
   await expect(page.locator("#s-email")).toHaveCount(0);
 });
+
+test("Impressum enthält die Pflichtangaben", async ({ page }) => {
+  await page.goto("/impressum");
+  await expect(page.getByText("Erlen-Sales GbR").first()).toBeVisible();
+  await expect(page.getByText("DE463642747")).toBeVisible();
+  await expect(page.getByText("Mehmet Eren Ince")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Urheberrecht" })).toBeVisible();
+});

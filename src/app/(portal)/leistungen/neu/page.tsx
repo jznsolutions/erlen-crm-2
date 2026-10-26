@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { getProducts, getVisibleEmployees } from "@/lib/queries";
+import { createClient } from "@/lib/supabase/server";
 import { todayBerlin } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, PageHeader } from "@/components/ui/misc";
@@ -21,6 +22,11 @@ export default async function NewPerformancePage() {
     : null;
   const selfAllowed = user.permissions.has("performance.create");
   const list = employees && !selfAllowed ? employees.filter((e) => e.id !== user.id) : employees;
+  // Produktfreigaben (RLS: eigene bzw. sichtbare Mitarbeiter)
+  const supabase = await createClient();
+  const { data: grants } = await supabase.from("user_products").select("user_id, product_id");
+  const clearance: Record<string, string[]> = {};
+  for (const g of grants ?? []) (clearance[g.user_id] ??= []).push(g.product_id);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -36,6 +42,7 @@ export default async function NewPerformancePage() {
               defaultUserId={selfAllowed ? user.id : (list?.[0]?.id ?? user.id)}
               today={todayBerlin()}
               canApproveOthers={user.permissions.has("performance.approve")}
+              clearance={clearance}
             />
           </CardContent>
         </Card>

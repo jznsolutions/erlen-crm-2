@@ -2,6 +2,8 @@
 // Werte mit null werden auf der Website ausgeblendet. Bitte nur echte Angaben eintragen.
 export const SITE = {
   name: "ERLEN Vertriebsagentur",
+  legalName: "Erlen-Sales GbR",
+  vatId: "DE463642747",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.erlen-sales.de",
   claim: "Verdiene Geld im Vertrieb. Nicht mit Zeit.",
   description:
@@ -12,12 +14,14 @@ export const SITE = {
     { value: 20, suffix: "+", label: "Vertriebspartner" },
     { value: 100, suffix: "+", label: "Projekte" },
   ],
-  // TODO: echte Daten eintragen (null = ausgeblendet)
+  // Kontaktdaten (wie im Impressum). null = ausgeblendet
   whatsapp: null as string | null, // z. B. "4917612345678" (internationale Schreibweise ohne +)
-  calendlyUrl: null as string | null, // z. B. "https://calendly.com/erlen/kennenlernen"
-  email: null as string | null, // z. B. "karriere@erlen-sales.de"
-  phone: null as string | null,
-  address: null as string | null, // z. B. "Musterstraße 1, 12345 Musterstadt"
+  // Terminbuchung: Calendly-Link in Vercel als NEXT_PUBLIC_CALENDLY_URL hinterlegen,
+  // z. B. "https://calendly.com/erlen-sales/kennenlernen". Die Bestätigungs-Mails verschickt Calendly.
+  calendlyUrl: (process.env.NEXT_PUBLIC_CALENDLY_URL || null) as string | null,
+  email: "kontakt@erlen-sales.de" as string | null,
+  phone: "+49 151 44204593" as string | null,
+  address: "Kömbchesweg 26, 57612 Helmenzen" as string | null,
   instagram: null as string | null,
   linkedin: null as string | null,
 

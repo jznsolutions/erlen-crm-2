@@ -2,6 +2,7 @@ import "server-only";
 import pg from "pg";
 import { isPortalConfigured } from "@/lib/env";
 import { secretKey } from "@/lib/env.server";
+import { SETUP_MIGRATIONS } from "@/lib/setup-sql.generated";
 
 /** Direkte Datenbankverbindung (von der Vercel-Supabase-Integration automatisch gesetzt). */
 export function databaseUrl(): string | undefined {
@@ -33,8 +34,32 @@ export type SetupStatus = {
   initialized: boolean;
   initializedAt: string | null;
   hasAdmin: boolean;
+  /** Noch nicht eingespielte Updates (Migrationsdateien) einer bereits eingerichteten Datenbank. */
+  pending: string[];
   error?: string;
 };
+
+// Vor Einführung der Versionstabelle eingespielte Migrationen
+const LEGACY_MIGRATIONS = 6;
+
+/** Welche Migrationen sind in der Datenbank bereits eingespielt? */
+export async function appliedMigrations(c: pg.Client): Promise<Set<string>> {
+  const t = await c.query("select to_regclass('private.schema_migrations') is not null as ok");
+  if (!t.rows[0].ok) return new Set(SETUP_MIGRATIONS.slice(0, LEGACY_MIGRATIONS).map((m) => m.name));
+  const r = await c.query("select name from private.schema_migrations");
+  return new Set(r.rows.map((row) => row.name as string));
+}
+
+/** Spielt die angegebenen Migrationen in einer Transaktion ein (Aufrufer hält die Sperre). */
+export async function runMigrations(c: pg.Client, names: string[]) {
+  await c.query("create schema if not exists private");
+  await c.query("create table if not exists private.schema_migrations (name text primary key, applied_at timestamptz not null default now())");
+  for (const m of SETUP_MIGRATIONS.filter((x) => names.includes(x.name))) {
+    await c.query(m.sql);
+    await c.query("insert into private.schema_migrations (name) values ($1) on conflict do nothing", [m.name]);
+  }
+  await c.query("notify pgrst, 'reload schema'");
+}
 
 export async function getSetupStatus(): Promise<SetupStatus> {
   const status: SetupStatus = {
@@ -44,6 +69,7 @@ export async function getSetupStatus(): Promise<SetupStatus> {
     initialized: false,
     initializedAt: null,
     hasAdmin: false,
+    pending: [],
   };
   if (!status.database) return status;
   try {
@@ -57,6 +83,8 @@ export async function getSetupStatus(): Promise<SetupStatus> {
         "select exists (select 1 from public.profiles p join public.roles r on r.id = p.role_id where r.key = 'admin' and p.status = 'aktiv') as ok",
       );
       status.hasAdmin = a.rows[0].ok;
+      const applied = await appliedMigrations(c);
+      status.pending = SETUP_MIGRATIONS.map((m) => m.name).filter((n) => !applied.has(n));
     });
   } catch (e) {
     console.error("[einrichtung]", (e as Error).message);

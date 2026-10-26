@@ -33,16 +33,16 @@ export default async function PortalLayout({ children }: { children: React.React
   const badges: Record<string, number> = { "/leistungen/freigaben": pendingApprovals.count ?? 0 };
 
   return (
-    <div className="min-h-dvh">
+    <div className="portal-bg min-h-dvh">
       <Sidebar sections={sections} badges={badges} />
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/70 px-4 backdrop-blur-xl sm:px-6">
           <MobileNav sections={sections} badges={badges} />
           <div className="flex-1" />
-          <Link href="/benachrichtigungen" className="relative inline-flex size-10 items-center justify-center rounded-md hover:bg-muted" aria-label={`Benachrichtigungen${unread ? ` (${unread} ungelesen)` : ""}`}>
+          <Link href="/benachrichtigungen" className="relative inline-flex size-10 items-center justify-center rounded-full hover:bg-white/[0.06]" aria-label={`Benachrichtigungen${unread ? ` (${unread} ungelesen)` : ""}`}>
             <Bell className="size-5" />
             {unread ? (
-              <span className="absolute right-1.5 top-1.5 min-w-4 rounded-full bg-danger px-1 text-center text-[10px] font-semibold leading-4 text-white tabular">
+              <span className="absolute right-1.5 top-1.5 min-w-4 rounded-full bg-danger px-1 text-center text-[10px] font-semibold leading-4 text-primary-foreground tabular">
                 {unread > 99 ? "99+" : unread}
               </span>
             ) : null}

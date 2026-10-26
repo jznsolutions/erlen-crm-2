@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { applyAction, type ApplyState } from "@/app/(website)/actions";
+import { CalendlyBooking } from "./calendly";
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -34,7 +35,10 @@ export function ApplyForm({ calendlyUrl }: { calendlyUrl: string | null }) {
         <h3 className="mt-4 text-2xl font-semibold text-white">Danke für deine Bewerbung!</h3>
         <p className="mt-2 text-white/70">Wir melden uns in Kürze persönlich bei dir.</p>
         {calendlyUrl ? (
-          <a href={calendlyUrl} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex rounded-full bg-white px-6 py-3 font-semibold text-[#0b0f1a]">Direkt Termin wählen</a>
+          <>
+            <p className="mt-6 text-white/70">Noch schneller: Such dir direkt einen Termin für dein Kennenlerngespräch aus.</p>
+            <CalendlyBooking url={calendlyUrl} prefill={{ name: state.values?.full_name, email: state.values?.email }} label="Jetzt Termin auswählen" />
+          </>
         ) : null}
       </div>
     );
