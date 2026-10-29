@@ -25,7 +25,7 @@ test("Abrechnung erstellen, veröffentlichen und als Mitarbeiter herunterladen",
   await page.selectOption("#n-ma", { label: "Peters, Paul" });
   await page.getByRole("button", { name: "Berechnen" }).click();
   await expect(page.getByText("Positionen prüfen – Paul Peters")).toBeVisible();
-  await expect(page.getByLabel("Position 1 Beschreibung")).toHaveValue(/provision Glasfaser/i);
+  await expect(page.getByLabel("Position 1 Beschreibung")).toHaveValue(/Glasfaser/);
   await page.getByRole("button", { name: "Position hinzufügen" }).click();
   const last = await page.locator("input[aria-label$='Beschreibung']").count();
   await page.getByLabel(`Position ${last} Beschreibung`).fill("Bonus Teamwettbewerb");
@@ -70,7 +70,7 @@ test("Gutschrift mit Overhead und Zusatzposition (Fahrzeug) erstellen", async ({
   // Ausbilderin erhält Overhead aus den Leistungen ihrer Auszubildenden
   await expect(page.getByLabel("Position 1 Beschreibung")).toBeVisible();
   const descriptions = await page.locator("input[aria-label$='Beschreibung']").evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value));
-  expect(descriptions.some((d) => d.startsWith("Overhead Ausbilder"))).toBeTruthy();
+  expect(descriptions).toContain("Differenzprovision");
   await page.fill("#st-title", "Gutschrift Test Overhead");
   await page.getByRole("button", { name: "Gutschrift erstellen & veröffentlichen" }).click();
   await expect(page.getByText("Gutschrift erstellt und veröffentlicht.")).toBeVisible();
@@ -85,10 +85,13 @@ test("Fahrzeugrate ist bei Paul vorausgewählt und wird abgezogen", async ({ pag
   await page.waitForLoadState("networkidle");
   const car = page.getByLabel("Fahrzeugrate (Beispiel)");
   await expect(car).toBeChecked();
-  const before = await page.getByText("Gutschriftsbetrag").locator("..").textContent();
+  // Paul hat eine offene Provisionsabrechnung (aus dem Test oben) – sie wird übernommen
+  await expect(page.getByLabel("Position 1 Beschreibung")).toHaveValue(/Provisionen gem. Abrechnung/);
+  const before = await page.getByText("GESAMTSUMME").locator("..").textContent();
   await car.uncheck();
-  const after = await page.getByText("Gutschriftsbetrag").locator("..").textContent();
+  const after = await page.getByText("GESAMTSUMME").locator("..").textContent();
   expect(before).not.toBe(after);
+  await expect(page.getByText("abzgl. Stornobehalt")).toBeVisible();
 });
 
 test("Geldbeträge lassen sich verbergen", async ({ page }) => {

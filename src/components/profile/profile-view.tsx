@@ -16,7 +16,7 @@ import { KpiRow, ProductCard, TrainingCard, TrendCard, type TrainingRow } from "
 import { TargetList, type TargetProgress } from "@/components/dashboard/targets";
 import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
-import { BillingForm, CommissionLevelForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
+import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
 import { formatCents } from "@/lib/format";
 import { levelForRole } from "@/lib/commission";
 import {
@@ -255,6 +255,11 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
               </ul>
             )}
             <div className="space-y-3 border-t pt-4">
+              {canExtras ? (
+                <CustomerNumberForm userId={userId} current={billing?.customer_number ?? null} />
+              ) : billing?.customer_number ? (
+                <p className="text-sm">Kundennummer: <span className="font-mono font-medium">{billing.customer_number}</span></p>
+              ) : null}
               {canCommission ? (
                 <CommissionLevelForm userId={userId} levels={levels.map((l) => ({ id: l.id, label: l.name }))} current={manualLevel?.id ?? null} roleLevel={levels.find((l) => l.key === levelForRole(profile.roles?.key))?.name ?? null} />
               ) : (

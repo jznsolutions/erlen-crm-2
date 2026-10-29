@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, Input, Select } from "@/components/ui/input";
 import { Alert, PageHeader } from "@/components/ui/misc";
 import { StatementBuilder, type BuilderItem } from "@/components/statements/builder";
-import { ITEM_CATEGORY_LABELS, levelForRole } from "@/lib/commission";
+import { levelForRole } from "@/lib/commission";
 
 export const metadata: Metadata = { title: "Abrechnung erstellen" };
 
@@ -33,10 +33,11 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
   const from = params.von && isIsoDate(params.von) ? params.von : manual ? "" : prevStart;
   const to = params.bis && isIsoDate(params.bis) ? params.bis : manual ? "" : prevEnd;
   const validPeriod = !from || !to || to >= from;
-  const label = kind === "abrechnung" ? "Abrechnung" : "Gutschrift";
+  const label = kind === "abrechnung" ? "Provisionsabrechnung" : "Gutschrift";
 
   let items: BuilderItem[] = [];
   let missing: string[] = [];
+  let openAbrechnungen = 0;
   let extras: { id: string; description: string; amount_cents: number; recurring: boolean }[] = [];
   let billing: { vat_liable: boolean; street: string | null; city: string | null; commission_level_id: string | null } | null = null;
   let levelName: string | null = null;
@@ -50,20 +51,33 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
     billing = b;
     levelName = (levels ?? []).find((l) => l.id === b?.commission_level_id)?.name ?? (levels ?? []).find((l) => l.key === levelForRole(person.role_key))?.name ?? null;
     extras = (ex ?? []).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) }));
-    if (from && to) {
+    if (from && to && kind === "abrechnung") {
+      // Provisionsabrechnung: eigene Produkte × Satz, Stornos als Minuszeilen
       const { data: preview } = await supabase.rpc("statement_preview", { p_user: userId, p_from: from, p_to: to });
-      items = (preview ?? [])
+      const rows = (preview ?? []).filter((p) => p.kind === "vermittlung" || p.kind === "storno");
+      items = rows
         .filter((p) => p.has_rate)
         .map((p) => ({
-          description: `${ITEM_CATEGORY_LABELS[p.kind] ?? "Provision"} ${p.product_name} (${p.unit_label})`,
+          description: p.product_name,
           product_id: p.product_id,
           quantity: Number(p.quantity),
           unit: euro(Number(p.unit_cents)),
           category: p.kind as BuilderItem["category"],
         }));
-      missing = (preview ?? []).filter((p) => !p.has_rate).map((p) => p.product_name);
+      missing = rows.filter((p) => !p.has_rate).map((p) => p.product_name);
+    }
+    if (kind === "gutschrift") {
+      // Gutschrift: offene Provisionsabrechnungen, Stornoeinbehalt Vormonat, Differenzprovision
+      const { data: sug } = await supabase.rpc("gutschrift_suggestion", { p_user: userId, p_from: (from || prevStart) as string, p_to: (to || prevEnd) as string });
+      const order = { abrechnung: 1, einbehalt_freigabe: 2, overhead: 3 } as Record<string, number>;
+      items = [...(sug ?? [])]
+        .sort((a, b) => (order[a.line] ?? 9) - (order[b.line] ?? 9))
+        .map((x) => ({ description: x.description, product_id: null, quantity: 1, unit: euro(Number(x.amount_cents)), category: x.line as BuilderItem["category"], source_id: x.source_id }));
+      openAbrechnungen = (sug ?? []).filter((x) => x.line === "abrechnung").length;
     }
   }
+  const { data: defaults } = await supabase.from("organization_settings").select("value").eq("key", "statement_defaults").maybeSingle();
+  const retentionDefault = Number(((defaults?.value ?? {}) as { retention_rate?: number }).retention_rate ?? 10);
   const sameMonth = from && to && from.slice(0, 7) === to.slice(0, 7) && from.endsWith("-01") && to === addDays(startOfMonth(addDays(from, 32)), -1);
   const defaultTitle = `${label}${sameMonth ? ` ${MONTHS[Number(from.slice(5, 7)) - 1]} ${from.slice(0, 4)}` : from && to ? ` ${formatDate(from)} – ${formatDate(to)}` : ""}`;
 
@@ -71,7 +85,9 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         title={`${label} erstellen`}
-        description="Vermittlungsprovision und Overhead (Ausbilder/Teamleiter) werden automatisch aus den bestätigten Leistungen im Zeitraum berechnet. Zusatzpositionen wie Fahrzeugraten wählst du darunter aus. Alles kann vor dem Erstellen angepasst werden."
+        description={kind === "abrechnung"
+          ? "Listet die bestätigten Leistungen im Zeitraum mit dem Satz der Stufe auf; Stornos früher abgerechneter Leistungen werden abgezogen. Die Summe wird später in die Gutschrift übernommen."
+          : "Übernimmt die offenen Provisionsabrechnungen, den Stornoeinbehalt des Vormonats und die Differenzprovision (Overhead). Danach Stornobehalt, Abzüge wie KFZ und USt – wie in eurer Vorlage."}
         actions={<Button asChild variant="secondary"><Link href="/abrechnungen">Zur Übersicht</Link></Button>}
       />
       <Card>
@@ -99,7 +115,7 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
             <div>
               <CardTitle>2. Positionen prüfen – {person.first_name} {person.last_name}</CardTitle>
               <CardDescription>
-                Provisionsstufe: {levelName ?? "keine"} · {billing?.vat_liable ? "umsatzsteuerpflichtig (19 % USt)" : "Kleinunternehmer (§ 19 UStG, ohne USt)"}
+                Stufe: {levelName ?? "keine"}{kind === "gutschrift" ? ` · ${billing?.vat_liable ? "umsatzsteuerpflichtig (19 % USt)" : "Kleinunternehmer (§ 19 UStG, ohne USt)"}` : ""}
               </CardDescription>
             </div>
           </CardHeader>
@@ -109,7 +125,8 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
             ) : null}
             {!levelName ? <Alert tone="warning">Für diese Rolle gibt es keine Provisionsstufe. Stufe im Mitarbeiterprofil festlegen.</Alert> : null}
             {missing.length ? <Alert tone="warning">Kein Provisionssatz hinterlegt für: {missing.join(", ")}. Bitte unter Verwaltung → Provisionen ergänzen oder den Betrag hier eintragen.</Alert> : null}
-            {from && to && items.length === 0 ? <Alert tone="info">Im Zeitraum gibt es keine provisionspflichtigen bestätigten Leistungen. Du kannst trotzdem Positionen manuell eintragen.</Alert> : null}
+            {kind === "abrechnung" && from && to && items.length === 0 ? <Alert tone="info">Im Zeitraum gibt es keine provisionspflichtigen bestätigten Leistungen. Du kannst trotzdem Positionen manuell eintragen.</Alert> : null}
+            {kind === "gutschrift" && openAbrechnungen === 0 ? <Alert tone="info">Für diese Person gibt es keine offene Provisionsabrechnung. <Link className="underline" href={`/abrechnungen/neu?art=abrechnung&ma=${person.id}`}>Zuerst Provisionsabrechnung erstellen</Link> oder Positionen hier manuell eintragen.</Alert> : null}
             <StatementBuilder
               key={`${userId}-${from}-${to}`}
               kind={kind}
@@ -120,6 +137,7 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
               initialItems={items}
               extras={extras}
               vatRate={billing?.vat_liable ? 19 : 0}
+              retentionRate={kind === "gutschrift" ? retentionDefault : 0}
             />
           </CardContent>
         </Card>

@@ -3,7 +3,7 @@ import { ActionForm, ConfirmAction, SubmitButton } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/input";
 import { saveBilling, setCommissionLevel, setUserProducts } from "@/app/(portal)/mitarbeiter/actions";
-import { deleteExtra, saveExtra } from "@/app/(portal)/abrechnungen/actions";
+import { deleteExtra, saveExtra, setCustomerNumber } from "@/app/(portal)/abrechnungen/actions";
 
 type Opt = { id: string; label: string };
 
@@ -110,5 +110,21 @@ export function ExtrasEditor({ userId, extras }: { userId: string; extras: Extra
         )}
       </ActionForm>
     </div>
+  );
+}
+
+export function CustomerNumberForm({ userId, current }: { userId: string; current: string | null }) {
+  return (
+    <ActionForm action={setCustomerNumber} className="flex items-end gap-2">
+      {({ fieldErrors }) => (
+        <>
+          <input type="hidden" name="user_id" value={userId} />
+          <Field label="Kundennummer" htmlFor="c-nr" className="flex-1" hint="Leer lassen = wird bei der ersten Gutschrift automatisch vergeben (z. B. VPSS001)" error={fieldErrors.customer_number}>
+            <Input id="c-nr" name="customer_number" defaultValue={current ?? ""} placeholder="automatisch" className="font-mono uppercase" />
+          </Field>
+          <SubmitButton variant="secondary">Speichern</SubmitButton>
+        </>
+      )}
+    </ActionForm>
   );
 }

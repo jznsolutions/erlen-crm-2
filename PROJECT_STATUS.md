@@ -1,6 +1,6 @@
 # Projektstatus ERLEN CRM
 
-Stand: 29.10.2026 · Branch `feature/crm-fundament`
+Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 29.10.2026
 
@@ -15,7 +15,7 @@ Stand: 29.10.2026 · Branch `feature/crm-fundament`
 | Zusatzpositionen je Mitarbeiter (z. B. Fahrzeugrate) als Auswahl vor der Gutschrift | ✅ |
 | Belegnummern einstellbar und fortführbar (Standard `GS{JAHR}{NR}`) | ✅ – Format nach euren Vorlagen prüfen |
 | Geldbeträge im Portal per Augen-Symbol verbergen/anzeigen | ✅ |
-| Layout der Gutschrift nach euren Vorlagen | ⏳ Vorlagen (PDF) sind nicht angekommen |
+| Provisionsabrechnung und Gutschrift im Aufbau der Vorlagen (Logo, Stufe, Kundennummer, Stornos als Minuszeilen, Provisionen gem. Abrechnung, Stornoeinbehalt Vormonat, Differenzprovision, Stornobehalt 10 %, KFZ-Abzug, USt.) | ✅ (30.10.) |
 
 ## Erweiterung 26.10.2026
 
@@ -48,7 +48,7 @@ Stand: 29.10.2026 · Branch `feature/crm-fundament`
 
 * `npm run typecheck` – ok · `npm run lint` – ok · `npm run build` – ok
 * `npm test` – 21/21 (Kennzahlen, Datum/Zeitzone, Open-Redirect, CSV-Injection, Validierung, Euro-Beträge)
-* `npm run test:db` – 85/85 (Terminbuchung: kein Doppeltermin, Erinnerung genau einmal, Rechte; Overhead Differenz/Fest; Umsatz-Sichtbarkeit; Nummernkreis; alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy, Einladungen, Produktfreigaben, Provisions-Sichtbarkeit, Abrechnungs-Vorschau, Nummernvergabe, Doppel-Abrechnung, USt)
+* `npm run test:db` – 87/87 (Gutschrift rechnet wie die Vorlage; Übernahme/Freigabe von Abrechnung und Einbehalt; Terminbuchung: kein Doppeltermin, Erinnerung genau einmal, Rechte; Overhead Differenz/Fest; Umsatz-Sichtbarkeit; Nummernkreis; alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy, Einladungen, Produktfreigaben, Provisions-Sichtbarkeit, Abrechnungs-Vorschau, Nummernvergabe, Doppel-Abrechnung, USt)
 * `npm run test:e2e` – 26/26 (Terminbuchung mit gleichzeitigem zweiten Bewerber, Bestätigungsmails, Erinnerungs-Endpunkt gesperrt; Gutschrift mit Overhead und Fahrzeugrate; Beträge verbergen; Logo/Manifest; u. a. Abrechnung erstellen → Mitarbeiter lädt PDF, fremder Mitarbeiter erhält 404; Gutschrift; Produktfreigabe in der Erfassung; Einladung per E-Mail gegen lokalen SMTP-Empfänger geprüft; Impressum)
 * Datenbank-Update einer bestehenden (alten) Datenbank über `/einrichtung` und Ersteinrichtung einer leeren Datenbank manuell im Browser geprüft
 

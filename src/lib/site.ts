@@ -4,6 +4,12 @@ export const SITE = {
   name: "ERLEN Vertriebsagentur",
   legalName: "Erlen-Sales GbR",
   vatId: "DE463642747",
+  taxNumber: "02/076/53092",
+  // Ansprechpartner (Fußzeile der Belege)
+  contacts: [
+    { phone: "+49 151 4420 4593", name: "Eren Ince" },
+    { phone: "+49 176 8026 4767", name: "Leon Janzen" },
+  ],
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.erlen-sales.de",
   claim: "Verdiene Geld im Vertrieb. Nicht mit Zeit.",
   description:

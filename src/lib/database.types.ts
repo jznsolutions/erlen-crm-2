@@ -381,14 +381,14 @@ isOneToOne: false
                   ]
                 },"employee_billing": {
                   Row: {
-                    "city": string | null,"commission_level_id": string | null,"iban": string | null,"postal_code": string | null,"street": string | null,"tax_number": string | null,"updated_at": string,"user_id": string,"vat_id": string | null,"vat_liable": boolean
+                    "city": string | null,"commission_level_id": string | null,"customer_number": string | null,"iban": string | null,"postal_code": string | null,"street": string | null,"tax_number": string | null,"updated_at": string,"user_id": string,"vat_id": string | null,"vat_liable": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "city"?: string | null,"commission_level_id"?: string | null,"iban"?: string | null,"postal_code"?: string | null,"street"?: string | null,"tax_number"?: string | null,"updated_at"?: string,"user_id": string,"vat_id"?: string | null,"vat_liable"?: boolean
+                    "city"?: string | null,"commission_level_id"?: string | null,"customer_number"?: string | null,"iban"?: string | null,"postal_code"?: string | null,"street"?: string | null,"tax_number"?: string | null,"updated_at"?: string,"user_id": string,"vat_id"?: string | null,"vat_liable"?: boolean
                   }
                   Update: {
-                    "city"?: string | null,"commission_level_id"?: string | null,"iban"?: string | null,"postal_code"?: string | null,"street"?: string | null,"tax_number"?: string | null,"updated_at"?: string,"user_id"?: string,"vat_id"?: string | null,"vat_liable"?: boolean
+                    "city"?: string | null,"commission_level_id"?: string | null,"customer_number"?: string | null,"iban"?: string | null,"postal_code"?: string | null,"street"?: string | null,"tax_number"?: string | null,"updated_at"?: string,"user_id"?: string,"vat_id"?: string | null,"vat_liable"?: boolean
                   }
                   Relationships: [
                     {
@@ -921,14 +921,14 @@ isOneToOne: false
                   ]
                 },"statement_items": {
                   Row: {
-                    "category": string,"description": string,"id": string,"position": number,"product_id": string | null,"quantity": number,"statement_id": string,"total_cents": number,"unit_cents": number
+                    "category": string,"description": string,"id": string,"position": number,"product_id": string | null,"quantity": number,"source_statement_id": string | null,"statement_id": string,"total_cents": number,"unit_cents": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "category"?: string,"description": string,"id"?: string,"position": number,"product_id"?: string | null,"quantity"?: number,"statement_id": string,"total_cents": number,"unit_cents": number
+                    "category"?: string,"description": string,"id"?: string,"position": number,"product_id"?: string | null,"quantity"?: number,"source_statement_id"?: string | null,"statement_id": string,"total_cents": number,"unit_cents": number
                   }
                   Update: {
-                    "category"?: string,"description"?: string,"id"?: string,"position"?: number,"product_id"?: string | null,"quantity"?: number,"statement_id"?: string,"total_cents"?: number,"unit_cents"?: number
+                    "category"?: string,"description"?: string,"id"?: string,"position"?: number,"product_id"?: string | null,"quantity"?: number,"source_statement_id"?: string | null,"statement_id"?: string,"total_cents"?: number,"unit_cents"?: number
                   }
                   Relationships: [
                     {
@@ -936,6 +936,12 @@ isOneToOne: false
       columns: ["product_id"]
 isOneToOne: false
       referencedRelation: "products"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "statement_items_source_statement_id_fkey"
+      columns: ["source_statement_id"]
+isOneToOne: false
+      referencedRelation: "statements"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "statement_items_statement_id_fkey"
@@ -947,14 +953,14 @@ isOneToOne: false
                   ]
                 },"statements": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"file_name": string | null,"gross_cents": number,"id": string,"is_upload": boolean,"issue_date": string,"kind": Database["public"]['Enums']["statement_kind"],"net_cents": number,"note": string | null,"number": string | null,"period_from": string | null,"period_to": string | null,"published_at": string | null,"recipient": Json | null,"status": Database["public"]['Enums']["statement_status"],"status_reason": string | null,"storage_path": string | null,"title": string,"user_id": string,"vat_cents": number,"vat_rate": number
+                    "created_at": string,"created_by": string | null,"deductions_cents": number,"file_name": string | null,"gross_cents": number,"id": string,"is_upload": boolean,"issue_date": string,"kind": Database["public"]['Enums']["statement_kind"],"net_cents": number,"note": string | null,"number": string | null,"period_from": string | null,"period_to": string | null,"published_at": string | null,"recipient": Json | null,"retention_cents": number,"retention_rate": number,"retention_released_by": string | null,"settled_by": string | null,"status": Database["public"]['Enums']["statement_status"],"status_reason": string | null,"storage_path": string | null,"subtotal_cents": number,"title": string,"user_id": string,"vat_cents": number,"vat_rate": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"file_name"?: string | null,"gross_cents"?: number,"id"?: string,"is_upload"?: boolean,"issue_date"?: string,"kind": Database["public"]['Enums']["statement_kind"],"net_cents"?: number,"note"?: string | null,"number"?: string | null,"period_from"?: string | null,"period_to"?: string | null,"published_at"?: string | null,"recipient"?: Json | null,"status"?: Database["public"]['Enums']["statement_status"],"status_reason"?: string | null,"storage_path"?: string | null,"title": string,"user_id": string,"vat_cents"?: number,"vat_rate"?: number
+                    "created_at"?: string,"created_by"?: string | null,"deductions_cents"?: number,"file_name"?: string | null,"gross_cents"?: number,"id"?: string,"is_upload"?: boolean,"issue_date"?: string,"kind": Database["public"]['Enums']["statement_kind"],"net_cents"?: number,"note"?: string | null,"number"?: string | null,"period_from"?: string | null,"period_to"?: string | null,"published_at"?: string | null,"recipient"?: Json | null,"retention_cents"?: number,"retention_rate"?: number,"retention_released_by"?: string | null,"settled_by"?: string | null,"status"?: Database["public"]['Enums']["statement_status"],"status_reason"?: string | null,"storage_path"?: string | null,"subtotal_cents"?: number,"title": string,"user_id": string,"vat_cents"?: number,"vat_rate"?: number
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"file_name"?: string | null,"gross_cents"?: number,"id"?: string,"is_upload"?: boolean,"issue_date"?: string,"kind"?: Database["public"]['Enums']["statement_kind"],"net_cents"?: number,"note"?: string | null,"number"?: string | null,"period_from"?: string | null,"period_to"?: string | null,"published_at"?: string | null,"recipient"?: Json | null,"status"?: Database["public"]['Enums']["statement_status"],"status_reason"?: string | null,"storage_path"?: string | null,"title"?: string,"user_id"?: string,"vat_cents"?: number,"vat_rate"?: number
+                    "created_at"?: string,"created_by"?: string | null,"deductions_cents"?: number,"file_name"?: string | null,"gross_cents"?: number,"id"?: string,"is_upload"?: boolean,"issue_date"?: string,"kind"?: Database["public"]['Enums']["statement_kind"],"net_cents"?: number,"note"?: string | null,"number"?: string | null,"period_from"?: string | null,"period_to"?: string | null,"published_at"?: string | null,"recipient"?: Json | null,"retention_cents"?: number,"retention_rate"?: number,"retention_released_by"?: string | null,"settled_by"?: string | null,"status"?: Database["public"]['Enums']["statement_status"],"status_reason"?: string | null,"storage_path"?: string | null,"subtotal_cents"?: number,"title"?: string,"user_id"?: string,"vat_cents"?: number,"vat_rate"?: number
                   }
                   Relationships: [
                     {
@@ -962,6 +968,18 @@ isOneToOne: false
       columns: ["created_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "statements_retention_released_by_fkey"
+      columns: ["retention_released_by"]
+isOneToOne: false
+      referencedRelation: "statements"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "statements_settled_by_fkey"
+      columns: ["settled_by"]
+isOneToOne: false
+      referencedRelation: "statements"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "statements_user_id_fkey"
@@ -1287,6 +1305,12 @@ isOneToOne: false
 "course_upsert":
 { Args: { "p_description": string,"p_id": string,"p_sort_order"?: number,"p_status": Database["public"]['Enums']["course_status"],"p_title": string }; Returns: string
                            },
+"customer_number_next_get":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"customer_number_next_set":
+{ Args: { "p_next": number }; Returns: undefined
+                           },
 "document_category_upsert":
 { Args: { "p_id": string,"p_name": string,"p_sort_order"?: number }; Returns: string
                            },
@@ -1307,6 +1331,9 @@ isOneToOne: false
                            },
 "employee_set_commission_level":
 { Args: { "p_level": string,"p_user": string }; Returns: undefined
+                           },
+"employee_set_customer_number":
+{ Args: { "p_number": string,"p_user": string }; Returns: undefined
                            },
 "get_leaderboard":
 { Args: { "p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string }; Returns: {
@@ -1334,6 +1361,11 @@ isOneToOne: false
 "get_training_overview":
 { Args: { "p_user"?: string }; Returns: {
               "completed_lessons": number,"course_id": string,"due_on": string,"is_mandatory": boolean,"last_activity": string,"title": string,"total_lessons": number
+            }[]
+                           },
+"gutschrift_suggestion":
+{ Args: { "p_from": string,"p_to": string,"p_user": string }; Returns: {
+              "amount_cents": number,"description": string,"line": string,"source_id": string
             }[]
                            },
 "invitation_accept":
@@ -1430,7 +1462,10 @@ isOneToOne: false
 { Args: { "p_id": string,"p_reason": string }; Returns: undefined
                            },
 "statement_create":
-{ Args: { "p_from": string,"p_issuer_vat_rate"?: number,"p_items": Json,"p_kind": Database["public"]['Enums']["statement_kind"],"p_note": string,"p_title": string,"p_to": string,"p_user": string }; Returns: string
+{ Args: { "p_from": string,"p_issuer_vat_rate"?: number,"p_items": Json,"p_kind": Database["public"]['Enums']["statement_kind"],"p_note": string,"p_retention_rate"?: number,"p_title": string,"p_to": string,"p_user": string }; Returns: string
+                           },
+"statement_defaults_save":
+{ Args: { "p_retention_rate": number }; Returns: undefined
                            },
 "statement_delete_draft":
 { Args: { "p_id": string }; Returns: string

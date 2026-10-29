@@ -23,14 +23,22 @@
    Maßgeblich ist die Zuordnung (Ausbilder, Team) zum Ende des Abrechnungszeitraums.
 
 ## Abrechnungen & Gutschriften
-* Mitarbeitende finden unter **Abrechnungen & Gutschriften** alle für sie veröffentlichten Dokumente und können sie ansehen bzw. als PDF herunterladen. Bei neuen Dokumenten erhalten sie eine Benachrichtigung (und eine E-Mail, falls eingerichtet).
-* **Gutschrift erstellen:** Mitarbeiter und Zeitraum (Standard: Vormonat) wählen → **Berechnen**. Automatisch enthalten: **Vermittlungsprovision** (eigene bestätigte Leistungen) sowie **Overhead Ausbilder/Teamleiter**. Darunter die **Zusatzpositionen** des Mitarbeiters (z. B. Fahrzeugrate) an- oder abwählen. Positionen können angepasst oder ergänzt werden → **Gutschrift erstellen & veröffentlichen**. Das PDF wird mit fortlaufender Nummer erzeugt.
-* **Zusatzpositionen** (z. B. Fahrzeug über die Agentur): im **Mitarbeiterprofil → Zusatzpositionen für Gutschriften** anlegen (Abzug oder Zuschlag). „Bei jeder Gutschrift vorauswählen“ für monatliche Raten.
-* **Belegnummern:** unten auf der Seite Abrechnungen & Gutschriften. Platzhalter `{JAHR}` und `{NR}`, z. B. `GS{JAHR}{NR}` → GS202622. Mit **Nächste Nr.** führt ihr eure bisherige Nummerierung fort (letzte war 21 → 22 eintragen).
-* **Abrechnung erstellen** funktioniert genauso (eigener Nummernkreis). **PDF hochladen** für fertige Dokumente.
-* Pro Zeitraum ist nur ein veröffentlichter Beleg mit Provisionen möglich (Schutz vor Doppelzahlung). Fehler? → **Stornieren** und neu erstellen.
-* Anschrift, Steuernummer, USt-IdNr., IBAN und „umsatzsteuerpflichtig“ pflegen Mitarbeitende selbst im Profil unter **Abrechnungsdaten**.
-* **Wichtig:** Die steuerliche Gestaltung (Pflichtangaben nach § 14 UStG, Gutschriftverfahren) bitte einmal mit eurer Steuerberatung abstimmen.
+Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (Einzelaufstellung), dann die **Gutschrift** (Auszahlung):
+
+1. **Abrechnung erstellen:** Mitarbeiter und Leistungszeitraum (z. B. 03.09.–13.09.) wählen → **Berechnen**. Es erscheinen alle bestätigten Leistungen je Produkt × Provisionssatz der Stufe. Leistungen aus früheren Zeiträumen, die jetzt storniert wurden, stehen als **Minuszeile** darunter (z. B. „TNG max1000 −1 × 90 € = −90 €“). → **Abrechnung erstellen & veröffentlichen**. Das PDF heißt „Provisionsabrechnung“ und endet mit der Zwischensumme.
+2. **Gutschrift erstellen:** Mitarbeiter und Leistungszeitraum (z. B. August) wählen → **Berechnen**. Automatisch vorgeschlagen:
+   * **Provisionen gem. Abrechnung** – alle veröffentlichten, noch nicht abgerechneten Provisionsabrechnungen,
+   * **Stornoeinbehalt Vormonat** – der Einbehalt der letzten Gutschrift wird ausgezahlt,
+   * **Differenzprovision** – Overhead als Ausbilder/Teamleiter aus dem Zeitraum.
+   Darunter: **Stornobehalt** (Standard 10 %), **Abzüge** wie KFZ (aus den Zusatzpositionen im Mitarbeiterprofil oder frei eingetragen), **USt. 19 %** bei umsatzsteuerpflichtigen Partnern → **GESAMTSUMME**.
+3. Nach dem Veröffentlichen sind die übernommenen Abrechnungen und der ausgezahlte Einbehalt erledigt und werden nicht noch einmal vorgeschlagen. Wird die Gutschrift storniert, stehen sie wieder zur Verfügung.
+
+* **Gutschriftnummer:** fortlaufend, Format `GS{JAHR}{NR}` (z. B. GS202623). Unter „Belegnummern & Voreinstellungen“ die nächste Nummer eintragen, um eure bisherige Zählung fortzusetzen.
+* **Kundennummer** je Mitarbeiter (z. B. VPSS001 = Stufe + Initialen + laufende Nummer): wird bei der ersten Gutschrift automatisch vergeben oder im Mitarbeiterprofil eingetragen (z. B. eure bestehenden Nummern VPSS001, VPNC007). Die nächste laufende Nummer ist unter „Belegnummern & Voreinstellungen“ einstellbar.
+* Stufen-Kürzel: VP = Vertriebspartner, AB = Ausbilder, TL = Teamleiter, AG = Agentur.
+* Mitarbeitende sehen ihre veröffentlichten Belege unter **Abrechnungen & Gutschriften** und laden sie als PDF herunter.
+* **PDF hochladen** für fertige Dokumente; **Stornieren** statt Löschen bei Fehlern.
+* **Wichtig:** Die steuerliche Gestaltung (u. a. ob die KFZ-Rate vor der USt abgezogen werden darf, Pflichtangaben nach § 14 UStG für Gutschriften) bitte einmal mit eurer Steuerberatung abstimmen.
 
 ## Termine (Bewerbungsgespräche)
 * Bewerber buchen auf der Website selbst einen freien Termin. Vergebene Zeiten verschwinden sofort; zwei Personen können nie denselben Termin buchen.

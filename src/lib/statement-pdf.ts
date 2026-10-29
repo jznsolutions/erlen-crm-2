@@ -1,7 +1,10 @@
 import "server-only";
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 import { SITE } from "@/lib/site";
-import { formatCents, formatDate } from "@/lib/format";
+import { formatCents } from "@/lib/format";
+import { LOGO_DARK_PNG_BASE64 } from "@/lib/logo-dark.generated";
+
+// Belege im Aufbau der ERLEN-Vorlagen (Provisionsabrechnung und Gutschrift).
 
 export type StatementPdfInput = {
   kind: "abrechnung" | "gutschrift";
@@ -13,6 +16,8 @@ export type StatementPdfInput = {
   recipient: {
     name?: string | null;
     employee_number?: string | null;
+    customer_number?: string | null;
+    level?: string | null;
     street?: string | null;
     postal_code?: string | null;
     city?: string | null;
@@ -22,20 +27,38 @@ export type StatementPdfInput = {
     iban?: string | null;
   };
   items: { description: string; quantity: number; unit_cents: number; total_cents: number; category?: string }[];
+  subtotalCents: number;
+  retentionRate: number;
+  retentionCents: number;
+  deductionsCents: number;
   netCents: number;
   vatRate: number;
   vatCents: number;
   grossCents: number;
   note: string | null;
+  cancelled?: boolean;
 };
 
-const NAVY = rgb(0.043, 0.059, 0.102);
-const ACCENT = rgb(0.365, 0.482, 0.69);
-const MUTED = rgb(0.42, 0.45, 0.52);
-const LINE = rgb(0.85, 0.87, 0.9);
+const BLACK = rgb(0.07, 0.07, 0.09);
+const GRAY = rgb(0.5, 0.5, 0.52);
+const HEADER = rgb(0.66, 0.66, 0.66);
+const RED = rgb(0.86, 0.1, 0.1);
 
-// Standardschrift (WinAnsi): Zeichen außerhalb des Zeichensatzes ersetzen, damit das PDF immer erzeugt werden kann.
+const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 const clean = (s: string) => s.replace(/[^\x20-\x7E\xA0-\xFF€„“‚‘–—…•]/g, "?");
+const qty = (n: number) => new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(n);
+const shortDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(2, 4)}`;
+const longDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+
+/** „August 2026“ bei vollem Monat, sonst „03.09.2026-13.09.2026“. */
+export function periodLabel(from: string | null, to: string | null): string | null {
+  if (!from || !to) return null;
+  const lastDay = new Date(Date.UTC(+from.slice(0, 4), +from.slice(5, 7), 0)).getUTCDate();
+  if (from.slice(0, 7) === to.slice(0, 7) && from.endsWith("-01") && +to.slice(8, 10) === lastDay) {
+    return `${MONTHS[+from.slice(5, 7) - 1]} ${from.slice(0, 4)}`;
+  }
+  return `${longDate(from)}-${longDate(to)}`;
+}
 
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const out: string[] = [];
@@ -53,158 +76,157 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
   return out;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  vermittlung: "Vermittlungsprovision",
-  overhead_ausbilder: "Overhead-Provision Ausbilder",
-  overhead_teamleiter: "Overhead-Provision Teamleiter",
-  zusatz: "Zusatzpositionen / Abzüge",
-  sonstiges: "Weitere Positionen",
-};
-
-const qty = (n: number) => new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(n);
-
-/** Erzeugt das PDF einer Abrechnung bzw. Gutschrift (DIN-A4). */
 export async function renderStatementPdf(s: StatementPdfInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const docTitle = s.kind === "abrechnung" ? "Provisionsabrechnung" : "Gutschrift";
-  doc.setTitle(`${docTitle} ${s.number}`);
+  const logo = await doc.embedPng(Buffer.from(LOGO_DARK_PNG_BASE64, "base64"));
+  const gs = s.kind === "gutschrift";
+  doc.setTitle(`${gs ? "Gutschrift" : "Provisionsabrechnung"} ${s.number}`);
   doc.setAuthor(SITE.legalName);
   doc.setCreator("ERLEN Portal");
 
   const W = 595.28;
   const H = 841.89;
-  const M = 56;
+  const L = 50;
+  const R = W - 45;
   let page: PDFPage = doc.addPage([W, H]);
-  let y = H - M;
 
-  const text = (t: string, x: number, yy: number, o: { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb>; align?: "left" | "right" } = {}) => {
-    const size = o.size ?? 10;
+  const text = (t: string, x: number, y: number, o: { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb>; align?: "left" | "right"; underline?: boolean } = {}) => {
+    const size = o.size ?? 9.5;
     const font = o.font ?? regular;
     const str = clean(t);
-    const dx = o.align === "right" ? font.widthOfTextAtSize(str, size) : 0;
-    page.drawText(str, { x: x - dx, y: yy, size, font, color: o.color ?? NAVY });
+    const w = font.widthOfTextAtSize(str, size);
+    const x0 = o.align === "right" ? x - w : x;
+    page.drawText(str, { x: x0, y, size, font, color: o.color ?? BLACK });
+    if (o.underline) page.drawLine({ start: { x: x0, y: y - 2 }, end: { x: x0 + w, y: y - 2 }, thickness: 0.8, color: o.color ?? BLACK });
   };
+  const money = (cents: number) => formatCents(cents).replace(/\s/g, " ");
 
-  const footer = () => {
-    page.drawLine({ start: { x: M, y: 64 }, end: { x: W - M, y: 64 }, thickness: 0.5, color: LINE });
-    const f1 = `${SITE.legalName} · ${SITE.address ?? ""} · Gesellschafter: Leon Janzen, Mehmet Eren Ince`;
-    const f2 = `USt-IdNr. ${SITE.vatId} · ${SITE.phone ?? ""} · ${SITE.email ?? ""}`;
-    text(f1, M, 50, { size: 7.5, color: MUTED });
-    text(f2, M, 40, { size: 7.5, color: MUTED });
-  };
-  const ensure = (needed: number) => {
-    if (y - needed < 90) {
-      footer();
-      page = doc.addPage([W, H]);
-      y = H - M;
-    }
-  };
+  // Kopf: Titel links, Logo rechts
+  const title = gs ? "GUTSCHRIFT" : "P R O V I S I O N S A B R E C H N U N G";
+  text(title, L, H - 112, { size: 13 });
+  const lw = 110;
+  const lh = (logo.height / logo.width) * lw;
+  page.drawImage(logo, { x: R - lw - 40, y: H - 132, width: lw, height: lh });
+  if (s.cancelled) text("STORNIERT", R, H - 60, { size: 16, font: bold, color: RED, align: "right" });
 
-  // Kopf
-  text("ERLEN", M, y - 4, { size: 22, font: bold });
-  page.drawRectangle({ x: M, y: y - 14, width: 46, height: 2, color: ACCENT });
-  text(SITE.legalName, W - M, y, { size: 9, font: bold, align: "right" });
-  text(SITE.address ?? "", W - M, y - 12, { size: 9, color: MUTED, align: "right" });
-  text(`USt-IdNr. ${SITE.vatId}`, W - M, y - 24, { size: 9, color: MUTED, align: "right" });
-  y -= 70;
-
-  // Empfänger
-  text(`${SITE.legalName} · ${SITE.address ?? ""}`, M, y, { size: 7, color: MUTED });
-  y -= 16;
-  const r = s.recipient;
-  const recipientLines = [r.name ?? "", r.street ?? "", [r.postal_code, r.city].filter(Boolean).join(" ")].filter(Boolean);
-  recipientLines.forEach((l, i) => text(l, M, y - i * 14, { size: 11, font: i === 0 ? bold : regular }));
-
-  // Belegdaten rechts
-  const info: [string, string][] = [
-    [s.kind === "abrechnung" ? "Abrechnungs-Nr." : "Gutschrift-Nr.", s.number],
-    ["Datum", formatDate(s.issueDate)],
-  ];
-  if (s.periodFrom && s.periodTo) info.push(["Zeitraum", `${formatDate(s.periodFrom)} – ${formatDate(s.periodTo)}`]);
-  if (r.employee_number) info.push(["Mitarbeiter-Nr.", r.employee_number]);
-  if (r.tax_number) info.push(["Steuernummer", r.tax_number]);
-  if (r.vat_id) info.push(["USt-IdNr. Empfänger", r.vat_id]);
-  info.forEach(([k, v], i) => {
-    text(k, W - M - 150, y - i * 14, { size: 9, color: MUTED });
-    text(v, W - M, y - i * 14, { size: 9, font: bold, align: "right" });
-  });
-  y -= Math.max(recipientLines.length, info.length) * 14 + 30;
-
-  // Titel
-  text(docTitle, M, y, { size: 18, font: bold });
-  y -= 18;
-  text(s.title, M, y, { size: 11, color: MUTED });
+  // Linker Block: Datum, Stufe, Empfänger
+  let y = H - 205;
+  text(shortDate(s.issueDate), L, y);
+  y -= 15;
+  if (s.recipient.level) text(`Stufe: ${s.recipient.level}`, L, y);
   y -= 30;
+  const r = s.recipient;
+  for (const l of [r.name, r.street, [r.postal_code, r.city].filter(Boolean).join(" ")].filter(Boolean) as string[]) {
+    text(l, L, y);
+    y -= 15;
+  }
+
+  // Rechter Block
+  const rx = 330;
+  let ry = H - 205;
+  const period = periodLabel(s.periodFrom, s.periodTo);
+  if (period) text(`Leistungszeitraum: ${period}`, rx, ry);
+  ry -= 30;
+  if (gs) {
+    text("Gutschriftnummer:", rx, ry);
+    ry -= 15;
+    text(s.number, rx, ry);
+    ry -= 15;
+  }
+  if (r.customer_number) {
+    text(`Kundennummer: ${r.customer_number}`, rx, ry);
+    ry -= 15;
+  }
+  if (gs && (r.tax_number || r.vat_id)) {
+    text(r.vat_id ? `USt-IdNr.: ${r.vat_id}` : `Steuernr.: ${r.tax_number}`, rx, ry, { size: 8.5, color: GRAY });
+  }
 
   // Tabelle
-  const cols = { pos: M, desc: M + 30, qty: W - M - 190, unit: W - M - 90, total: W - M };
-  const header = () => {
-    page.drawRectangle({ x: M - 6, y: y - 6, width: W - 2 * M + 12, height: 20, color: rgb(0.95, 0.96, 0.98) });
-    text("Pos.", cols.pos, y, { size: 8.5, font: bold, color: MUTED });
-    text("Beschreibung", cols.desc, y, { size: 8.5, font: bold, color: MUTED });
-    text("Menge", cols.qty, y, { size: 8.5, font: bold, color: MUTED, align: "right" });
-    text("Einzelpreis", cols.unit, y, { size: 8.5, font: bold, color: MUTED, align: "right" });
-    text("Gesamt", cols.total, y, { size: 8.5, font: bold, color: MUTED, align: "right" });
-    y -= 22;
-  };
-  header();
-  let lastCat: string | undefined;
-  const subtotal = (cat: string) => s.items.filter((x) => (x.category ?? "sonstiges") === cat).reduce((a, x) => a + x.total_cents, 0);
-  const grouped = new Set(s.items.map((x) => x.category ?? "sonstiges")).size > 1;
-  s.items.forEach((it, i) => {
-    const cat = it.category ?? "sonstiges";
-    if (grouped && cat !== lastCat) {
-      ensure(40);
-      y -= 4;
-      text(CATEGORY_LABELS[cat] ?? "Weitere Positionen", cols.desc, y, { size: 9.5, font: bold, color: ACCENT });
-      text(formatCents(subtotal(cat)), cols.total, y, { size: 9.5, font: bold, color: ACCENT, align: "right" });
-      y -= 16;
-      lastCat = cat;
+  // Spalten wie in den Vorlagen (Gutschrift: durchgehende Tabelle; Abrechnung: Summe abgesetzt)
+  const c = gs ? { a: L + 8, b: L + 196, c: L + 272, u: L + 414, d: L + 414, end: R + 2 } : { a: 97, b: 232, c: 331, u: 400, d: 465, end: 536 };
+  let ty = H - 385;
+  page.drawRectangle({ x: c.a - 3, y: ty - 4, width: c.end - c.a + 3, height: 16, color: HEADER });
+  text("PRODUKT", c.a, ty, { size: 8.5 });
+  text("ANZAHL", c.b + 2, ty, { size: 8.5 });
+  text("NETTO", c.c + 2, ty, { size: 8.5 });
+  text("NETTO", c.d + 2, ty, { size: 8.5 });
+  ty -= 30;
+  const rowH = 18;
+  const border = (x: number, yy: number, w: number) =>
+    page.drawRectangle({ x, y: yy - 5, width: w, height: rowH, borderColor: BLACK, borderWidth: 0.7 });
+  const rows = s.items.filter((it) => it.category !== "abzug");
+  const drawRows = Math.max(rows.length, gs ? 4 : rows.length);
+  for (let i = 0; i < drawRows; i++) {
+    const it = rows[i];
+    if (ty < 230) {
+      page = doc.addPage([W, H]);
+      ty = H - 80;
     }
-    const lines = wrap(it.description, regular, 9.5, cols.qty - cols.desc - 50);
-    ensure(lines.length * 12 + 10);
-    text(String(i + 1), cols.pos, y, { size: 9.5 });
-    lines.forEach((l, k) => text(l, cols.desc, y - k * 12, { size: 9.5 }));
-    text(qty(it.quantity), cols.qty, y, { size: 9.5, align: "right" });
-    text(formatCents(it.unit_cents), cols.unit, y, { size: 9.5, align: "right" });
-    text(formatCents(it.total_cents), cols.total, y, { size: 9.5, align: "right" });
-    y -= lines.length * 12 + 6;
-    page.drawLine({ start: { x: M, y: y + 2 }, end: { x: W - M, y: y + 2 }, thickness: 0.4, color: LINE });
-    y -= 8;
-  });
+    border(c.a - 3, ty, c.b - c.a + 3);
+    border(c.b, ty, c.c - c.b);
+    border(c.c, ty, c.u - c.c);
+    border(c.d, ty, c.end - c.d);
+    if (it) {
+      const neg = it.total_cents < 0;
+      const desc = wrap(it.description, regular, 9, c.b - c.a - 6)[0];
+      text(desc, c.a, ty, { size: 9 });
+      text(qty(it.quantity), c.c - 4, ty, { size: 9, align: "right" });
+      text(money(it.unit_cents), c.u - 4, ty, { size: 9, align: "right" });
+      text(money(it.total_cents), c.end - 4, ty, { size: 9, align: "right", color: neg ? RED : BLACK });
+    }
+    ty -= rowH;
+  }
 
   // Summen
-  ensure(90);
-  y -= 6;
-  const sumRow = (label: string, value: string, strong = false) => {
-    text(label, cols.unit - 10, y, { size: strong ? 11 : 9.5, font: strong ? bold : regular, align: "right" });
-    text(value, cols.total, y, { size: strong ? 11 : 9.5, font: strong ? bold : regular, align: "right" });
-    y -= strong ? 18 : 14;
+  let sy = ty - 26;
+  const sx = gs ? c.c : c.c + 10;
+  const sum = (label: string, cents: number, o: { strong?: boolean; red?: boolean; underline?: boolean; minus?: boolean } = {}) => {
+    const font = o.strong ? bold : regular;
+    const size = o.strong ? 10.5 : 9.5;
+    text(label, sx, sy, { size, font, underline: o.underline });
+    text((o.minus ? "-" : "") + money(cents), c.end - 4, sy, { size, font, color: o.red ? RED : BLACK, align: "right", underline: o.underline });
+    sy -= o.strong ? 20 : 15;
   };
-  sumRow("Summe netto", formatCents(s.netCents));
-  if (s.vatRate > 0) sumRow(`zzgl. ${qty(s.vatRate)} % USt`, formatCents(s.vatCents));
-  page.drawLine({ start: { x: cols.unit - 120, y: y + 8 }, end: { x: W - M, y: y + 8 }, thickness: 0.8, color: NAVY });
-  y -= 4;
-  sumRow(s.kind === "abrechnung" ? "Auszahlungsbetrag" : "Gutschriftsbetrag", formatCents(s.grossCents), true);
-  y -= 10;
+  sum("Zwischensumme", s.subtotalCents, { strong: true, underline: true });
+  if (gs) {
+    if (s.retentionRate > 0) {
+      sum(`abzgl. Stornobehalt ${qty(s.retentionRate)}%`, s.retentionCents);
+      sum("Netto nach Einbehalt", s.subtotalCents - s.retentionCents);
+    }
+    const deductions = s.items.filter((it) => it.category === "abzug");
+    for (const d of deductions) sum(`abzgl. ${d.description}`, Math.abs(d.total_cents), { red: true, minus: true });
+    if (deductions.length) sum("Netto nach Abzügen", s.netCents);
+    if (s.vatRate > 0) sum(`zzgl. USt. ${qty(s.vatRate)}%`, s.vatCents);
+    sy -= 10;
+    sum("GESAMTSUMME", s.grossCents, { strong: true, underline: true });
+  }
 
   // Hinweise
   const notes: string[] = [];
-  if (s.vatRate === 0) {
-    notes.push("Der Leistungserbringer ist Kleinunternehmer im Sinne von § 19 UStG; es wird daher keine Umsatzsteuer ausgewiesen.");
-  }
-  if (s.kind === "gutschrift") notes.push("Abrechnung im Gutschriftverfahren.");
-  if (r.iban) notes.push(`Die Auszahlung erfolgt auf das Konto IBAN ${r.iban.replace(/(.{4})/g, "$1 ").trim()}.`);
+  if (gs && s.vatRate === 0) notes.push("Der Leistungserbringer ist Kleinunternehmer im Sinne von § 19 UStG; es wird keine Umsatzsteuer ausgewiesen.");
   if (s.note) notes.push(s.note);
   for (const n of notes) {
-    const lines = wrap(n, regular, 9, W - 2 * M);
-    ensure(lines.length * 12 + 6);
-    lines.forEach((l, k) => text(l, M, y - k * 12, { size: 9, color: MUTED }));
-    y -= lines.length * 12 + 6;
+    for (const l of wrap(n, regular, 8.5, R - sx)) {
+      text(l, sx, sy, { size: 8.5, color: GRAY });
+      sy -= 12;
+    }
   }
 
-  footer();
+  // Absender (grau, links unter der Tabelle wie in der Vorlage)
+  let fy = Math.min(ty - 150, sy - 20);
+  if (fy < 60) fy = 60 + 6 * 15;
+  const footer = [
+    "ERLEN SALES GbR",
+    `Steuernr. ${SITE.taxNumber}`,
+    "Kömbchesweg 26",
+    "57612 Helmenzen",
+    ...SITE.contacts.map((k) => `${k.phone} / ${k.name}`),
+  ];
+  for (const l of footer) {
+    text(l, gs ? L + 5 : c.a - 3, fy, { size: 8.5, color: GRAY });
+    fy -= 15;
+  }
   return doc.save();
 }
