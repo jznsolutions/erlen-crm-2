@@ -69,7 +69,7 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
     if (kind === "gutschrift") {
       // Gutschrift: offene Provisionsabrechnungen, Stornoeinbehalt Vormonat, Differenzprovision
       const { data: sug } = await supabase.rpc("gutschrift_suggestion", { p_user: userId, p_from: (from || prevStart) as string, p_to: (to || prevEnd) as string });
-      const order = { abrechnung: 1, einbehalt_freigabe: 2, overhead: 3 } as Record<string, number>;
+      const order = { abrechnung: 1, einbehalt_freigabe: 2, overhead: 3, werbung: 4 } as Record<string, number>;
       items = [...(sug ?? [])]
         .sort((a, b) => (order[a.line] ?? 9) - (order[b.line] ?? 9))
         .map((x) => ({ description: x.description, product_id: null, quantity: 1, unit: euro(Number(x.amount_cents)), category: x.line as BuilderItem["category"], source_id: x.source_id }));
@@ -87,7 +87,7 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
         title={`${label} erstellen`}
         description={kind === "abrechnung"
           ? "Listet die bestätigten Leistungen im Zeitraum mit dem Satz der Stufe auf; Stornos früher abgerechneter Leistungen werden abgezogen. Die Summe wird später in die Gutschrift übernommen."
-          : "Übernimmt die offenen Provisionsabrechnungen, den Stornoeinbehalt des Vormonats und die Differenzprovision (Overhead). Danach Stornobehalt, Abzüge wie KFZ und USt – wie in eurer Vorlage."}
+          : "Übernimmt die offenen Provisionsabrechnungen, den Stornoeinbehalt des Vormonats, die Differenzprovision (Overhead als Ausbilder/Teamleiter) und die Vermittlungsprovision (für geworbene Mitarbeiter). Danach Stornobehalt, Abzüge wie KFZ und USt – wie in eurer Vorlage."}
         actions={<Button asChild variant="secondary"><Link href="/abrechnungen">Zur Übersicht</Link></Button>}
       />
       <Card>

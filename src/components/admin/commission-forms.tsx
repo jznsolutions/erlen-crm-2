@@ -58,18 +58,24 @@ export function RateRow({ productId, productName, unit, level, cents }: { produc
   );
 }
 
-export function OverheadModeForm({ mode }: { mode: string }) {
+export function OverheadModeForm({ mode, fixed }: { mode: string; fixed: { werbung: number; ausbilder: number; teamleiter: number } }) {
   return (
-    <ActionForm action={saveOverheadMode} className="space-y-3">
+    <ActionForm action={saveOverheadMode} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Vermittlungsprovision (Werber)" htmlFor="o-w" hint="für jede Einheit eines selbst geworbenen Mitarbeiters"><Input id="o-w" name="werbung" defaultValue={euro(fixed.werbung)} inputMode="decimal" className="text-right tabular" /></Field>
+        <Field label="Overhead Ausbilder" htmlFor="o-a" hint="für jede Einheit der eigenen Azubis"><Input id="o-a" name="ausbilder" defaultValue={euro(fixed.ausbilder)} inputMode="decimal" className="text-right tabular" /></Field>
+        <Field label="Overhead Teamleiter" htmlFor="o-t" hint="für jede Einheit des eigenen Teams"><Input id="o-t" name="teamleiter" defaultValue={euro(fixed.teamleiter)} inputMode="decimal" className="text-right tabular" /></Field>
+      </div>
+      <p className="text-xs text-muted-foreground">Beträge in € je bestätigter Einheit, für alle Produkte. Agentur: kein Overhead (Agenturleiter rechnen ihre Mitarbeiter selbst bzw. individuell ab).</p>
       <label className="flex items-start gap-3 rounded-xl border p-3 text-sm">
         <input type="radio" name="mode" value="differenz" defaultChecked={mode !== "fest"} className="mt-1 accent-[var(--primary)]" />
-        <span><span className="font-medium">Differenz (Standard im Strukturvertrieb)</span><br /><span className="text-muted-foreground">Der Ausbilder erhält seinen Satz minus den Satz des Vertriebspartners, der Teamleiter seinen Satz minus den höchsten Satz darunter. Beispiel Glasfaser: VP 30 €, Ausbilder 40 €, Teamleiter 50 € → VP 30 €, Ausbilder 10 €, Teamleiter 10 € Overhead.</span></span>
+        <span><span className="font-medium">Differenz zur Stufe darunter</span><br /><span className="text-muted-foreground">Der Ausbilder erhält seinen Satz minus den Satz des Vertriebspartners, der Teamleiter seinen Satz minus den höchsten Satz darunter. Beispiel Glasfaser: VP 30 €, Ausbilder 40 €, Teamleiter 50 € → VP 30 €, Ausbilder 10 €, Teamleiter 10 € Overhead.</span></span>
       </label>
       <label className="flex items-start gap-3 rounded-xl border p-3 text-sm">
         <input type="radio" name="mode" value="fest" defaultChecked={mode === "fest"} className="mt-1 accent-[var(--primary)]" />
-        <span><span className="font-medium">Fester Overhead-Betrag</span><br /><span className="text-muted-foreground">Der eingetragene Satz der Stufe Ausbilder bzw. Teamleiter wird je Einheit seiner Struktur voll als Overhead gezahlt.</span></span>
+        <span><span className="font-medium">Feste Beträge (eure Einstellung)</span><br /><span className="text-muted-foreground">Ausbilder und Teamleiter erhalten die oben eingetragenen festen Beträge je Einheit ihrer Struktur. Ist der Ausbilder zugleich Teamleiter, erhält er den Teamleiter-Betrag.</span></span>
       </label>
-      <SubmitButton variant="secondary">Berechnungsart speichern</SubmitButton>
+      <SubmitButton variant="secondary">Overhead speichern</SubmitButton>
     </ActionForm>
   );
 }

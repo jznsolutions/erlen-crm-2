@@ -41,7 +41,7 @@ const statementSchema = z
 async function renderAndStore(supabase: Supabase, id: string, notify: boolean): Promise<string | null> {
   const { data: s } = await supabase.from("statements").select("*, statement_items!statement_items_statement_id_fkey(*)").eq("id", id).maybeSingle();
   if (!s || !s.number) return "Dokument nicht gefunden";
-  const order = ["abrechnung", "einbehalt_freigabe", "overhead", "vermittlung", "storno", "overhead_ausbilder", "overhead_teamleiter", "sonstiges", "zusatz", "abzug"];
+  const order = ["abrechnung", "einbehalt_freigabe", "overhead", "werbung", "vermittlung", "storno", "overhead_ausbilder", "overhead_teamleiter", "sonstiges", "zusatz", "abzug"];
   const items = [...(s.statement_items ?? [])].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.position - b.position);
   const pdf = await renderStatementPdf({
     kind: s.kind,

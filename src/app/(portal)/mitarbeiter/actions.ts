@@ -208,3 +208,12 @@ export async function saveBilling(_: ActionResult | null, fd: FormData): Promise
   });
   return error ? fromDbError(error) : done("Abrechnungsdaten gespeichert.");
 }
+
+export async function setRecruiter(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const parsed = z.object({ user_id: uuid, recruiter_id: optionalUuid }).safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("employee_set_recruiter", { p_user: parsed.data.user_id, p_recruiter: (parsed.data.recruiter_id ?? null) as string });
+  return error ? fromDbError(error) : done("„Geworben von“ gespeichert.");
+}

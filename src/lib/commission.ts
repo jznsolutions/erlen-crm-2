@@ -21,6 +21,7 @@ export const ITEM_CATEGORY_LABELS: Record<string, string> = {
   overhead_ausbilder: "Overhead Ausbilder",
   overhead_teamleiter: "Overhead Teamleiter",
   overhead: "Differenzprovision",
+  werbung: "Vermittlungsprovision",
   abrechnung: "Provisionen gem. Abrechnung",
   einbehalt_freigabe: "Stornoeinbehalt Vormonat",
   zusatz: "Zusatzposition",
@@ -28,7 +29,7 @@ export const ITEM_CATEGORY_LABELS: Record<string, string> = {
   sonstiges: "Sonstiges",
 };
 
-export const ITEM_CATEGORIES = ["vermittlung", "storno", "overhead_ausbilder", "overhead_teamleiter", "overhead", "abrechnung", "einbehalt_freigabe", "zusatz", "abzug", "sonstiges"] as const;
+export const ITEM_CATEGORIES = ["vermittlung", "storno", "overhead_ausbilder", "overhead_teamleiter", "overhead", "werbung", "abrechnung", "einbehalt_freigabe", "zusatz", "abzug", "sonstiges"] as const;
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 
 /** Summen wie in der Vorlage: Zwischensumme − Stornobehalt − Abzüge (+ USt). Beträge in Cent. */

@@ -28,7 +28,9 @@ export default async function CommissionsPage() {
     .map((r) => ({ ...r, level: keyOf.get(r.level_id)!, product: products.find((p) => p.id === r.product_id) }))
     .filter((r) => r.product)
     .sort((a, b) => (a.product!.sort_order - b.product!.sort_order) || a.product!.name.localeCompare(b.product!.name) || order(a.level) - order(b.level));
-  const mode = ((setting?.value ?? {}) as { overhead_mode?: string }).overhead_mode ?? "differenz";
+  const cfg = (setting?.value ?? {}) as { overhead_mode?: string; fixed?: { werbung?: number; ausbilder?: number; teamleiter?: number } };
+  const mode = cfg.overhead_mode ?? "fest";
+  const fixed = { werbung: cfg.fixed?.werbung ?? 0, ausbilder: cfg.fixed?.ausbilder ?? 0, teamleiter: cfg.fixed?.teamleiter ?? 0 };
 
   return (
     <div className="space-y-6">
@@ -61,8 +63,8 @@ export default async function CommissionsPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><div><CardTitle>Overhead für Ausbilder und Teamleiter</CardTitle><CardDescription>Wird beim Erstellen der Gutschrift automatisch aus den bestätigten Leistungen der eigenen Struktur berechnet und hinzugefügt.</CardDescription></div></CardHeader>
-            <CardContent><OverheadModeForm mode={mode} /></CardContent>
+            <CardHeader><div><CardTitle>Vermittlungsprovision & Overhead</CardTitle><CardDescription>Wird beim Erstellen der Gutschrift automatisch aus den bestätigten Leistungen berechnet: „Vermittlungsprovision“ für den Werber (Feld „Geworben von“ im Mitarbeiterprofil), „Differenzprovision“ für Ausbilder und Teamleiter.</CardDescription></div></CardHeader>
+            <CardContent><OverheadModeForm mode={mode} fixed={fixed} /></CardContent>
           </Card>
         </>
       )}

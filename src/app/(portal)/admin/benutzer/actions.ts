@@ -30,6 +30,12 @@ export async function createInvitation(_: ActionResult | null, fd: FormData): Pr
   if (error) return fromDbError(error);
   if (d.applicant_id) await supabase.rpc("applicant_update", { p_id: d.applicant_id, p_status: "angenommen", p_notes: "In Einladung überführt" as string });
 
+  const recruiter = uuid.safeParse(fd.get("recruiter_id"));
+  if (recruiter.success) {
+    const { error: re } = await supabase.rpc("invitation_set_recruiter", { p_id: invitationId as string, p_recruiter: recruiter.data });
+    if (re) console.error("[einladung] Werber", re.message);
+  }
+
   const products = fd.getAll("product_ids").map(String).filter((x) => uuid.safeParse(x).success);
   if (products.length && user.permissions.has("products.assign")) {
     const { error: pe } = await supabase.rpc("invitation_set_products", { p_id: invitationId as string, p_products: products });

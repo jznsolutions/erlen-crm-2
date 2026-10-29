@@ -20,7 +20,7 @@ import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, Pro
 import { formatCents } from "@/lib/format";
 import { levelForRole } from "@/lib/commission";
 import {
-  EditEmployeeDialog, EndMembershipButton, ManagerForm, OwnProfileForm, PermissionForm, RoleForm, StatusButtons, TeamAssignForm, TrainingNoteForm,
+  EditEmployeeDialog, EndMembershipButton, ManagerForm, OwnProfileForm, PermissionForm, RecruiterForm, RoleForm, StatusButtons, TeamAssignForm, TrainingNoteForm,
 } from "./admin-forms";
 
 const PARTNER_STATUS: Record<string, string> = { in_ausbildung: "In Ausbildung", aktiv: "Aktiv", pausiert: "Pausiert", beendet: "Beendet" };
@@ -101,7 +101,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   ]);
 
   // Namen von Vorgesetzten/Ausbildern (immer sichtbar für Betroffene)
-  const { data: contactProfiles } = await supabase.from("profiles").select("id, first_name, last_name").in("id", [...(relations ?? []).map((r) => r.manager_id), ...notes.map((n) => n.author_id)]);
+  const { data: contactProfiles } = await supabase.from("profiles").select("id, first_name, last_name").in("id", [...(relations ?? []).map((r) => r.manager_id), ...notes.map((n) => n.author_id), ...(details?.recruited_by ? [details.recruited_by] : [])]);
   const names = new Map([...employees.map((e) => [e.id, `${e.first_name} ${e.last_name}`] as const), ...(contactProfiles ?? []).map((p) => [p.id, `${p.first_name} ${p.last_name}`] as const)]);
   const supervisor = relations?.find((r) => r.relation_type === "vorgesetzter");
   const trainer = relations?.find((r) => r.relation_type === "ausbilder");
@@ -191,6 +191,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
               <Item label="Team">{currentTeam?.teams?.name ?? "–"}</Item>
               <Item label="Direkter Vorgesetzter">{supervisor ? names.get(supervisor.manager_id) ?? "–" : "–"}</Item>
               <Item label="Ausbilder">{trainer ? names.get(trainer.manager_id) ?? "–" : "–"}</Item>
+              <Item label="Geworben von">{details?.recruited_by ? names.get(details.recruited_by) ?? "–" : "–"}</Item>
               <Item label="Start im Vertrieb">{formatDate(details?.sales_start_date)}</Item>
               <Item label="Vertriebsgebiet">{details?.sales_region ?? "–"}</Item>
               <Item label="Partnerstatus">{PARTNER_STATUS[details?.partner_status ?? ""] ?? "–"}</Item>
@@ -310,6 +311,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <ManagerForm userId={userId} type="vorgesetzter" current={supervisor?.manager_id ?? null} candidates={candidates} />
                   <ManagerForm userId={userId} type="ausbilder" current={trainer?.manager_id ?? null} candidates={candidates} />
+                  <RecruiterForm userId={userId} current={details?.recruited_by ?? null} candidates={candidates} />
                 </div>
               </div>
             ) : null}

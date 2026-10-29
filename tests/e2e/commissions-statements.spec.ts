@@ -87,6 +87,9 @@ test("Fahrzeugrate ist bei Paul vorausgewählt und wird abgezogen", async ({ pag
   await expect(car).toBeChecked();
   // Paul hat eine offene Provisionsabrechnung (aus dem Test oben) – sie wird übernommen
   await expect(page.getByLabel("Position 1 Beschreibung")).toHaveValue(/Provisionen gem. Abrechnung/);
+  // Paul hat Mia geworben → Vermittlungsprovision
+  const desc = await page.locator("input[aria-label$='Beschreibung']").evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value));
+  expect(desc).toContain("Vermittlungsprovision");
   const before = await page.getByText("GESAMTSUMME").locator("..").textContent();
   await car.uncheck();
   const after = await page.getByText("GESAMTSUMME").locator("..").textContent();
@@ -104,4 +107,15 @@ test("Geldbeträge lassen sich verbergen", async ({ page }) => {
   await expect(page.locator("#portal-root")).toHaveAttribute("data-money", "hidden");
   await page.getByRole("button", { name: "Geldbeträge anzeigen" }).click();
   await expect(page.locator("#portal-root")).toHaveAttribute("data-money", "visible");
+});
+
+test("Geworben von und feste Overhead-Beträge in der Verwaltung", async ({ page }) => {
+  await login(page, "admin");
+  await page.goto("/admin/provisionen");
+  await expect(page.getByLabel("Overhead Teamleiter")).toHaveValue("30,00");
+  await expect(page.getByLabel("Overhead Ausbilder")).toHaveValue("10,00");
+  await expect(page.getByLabel("Vermittlungsprovision (Werber)")).toHaveValue("5,00");
+  await page.goto("/mitarbeiter");
+  await page.getByRole("link", { name: /Maier/ }).first().click();
+  await expect(page.getByLabel("Geworben von")).toHaveValue(/.+/);
 });

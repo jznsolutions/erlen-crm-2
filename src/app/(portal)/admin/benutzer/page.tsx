@@ -57,6 +57,7 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
               roles={roles}
               teams={teams.filter((t) => t.is_active).map((t) => ({ id: t.id, label: t.name }))}
               people={employees.filter((e) => e.status === "aktiv" && e.role_key !== "vertriebspartner").map((e) => ({ id: e.id, label: `${e.last_name}, ${e.first_name} (${e.role_name})` }))}
+              recruiters={employees.filter((e) => e.status === "aktiv").map((e) => ({ id: e.id, label: `${e.last_name}, ${e.first_name} (${e.role_name})` }))}
               products={user.permissions.has("products.assign") ? products.filter((p) => p.is_active).map((p) => ({ id: p.id, label: p.name })) : null}
               canAssignRoles={user.permissions.has("roles.assign")}
               prefill={prefill}

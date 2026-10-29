@@ -407,17 +407,23 @@ isOneToOne: true
                   ]
                 },"employee_details": {
                   Row: {
-                    "entry_date": string | null,"partner_status": Database["public"]['Enums']["partner_status"],"phone": string | null,"sales_region": string | null,"sales_start_date": string | null,"updated_at": string,"user_id": string
+                    "entry_date": string | null,"partner_status": Database["public"]['Enums']["partner_status"],"phone": string | null,"recruited_by": string | null,"sales_region": string | null,"sales_start_date": string | null,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "entry_date"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id": string
+                    "entry_date"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"recruited_by"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "entry_date"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id"?: string
+                    "entry_date"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"recruited_by"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "employee_details_recruited_by_fkey"
+      columns: ["recruited_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "employee_details_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: true
@@ -427,14 +433,14 @@ isOneToOne: true
                   ]
                 },"invitations": {
                   Row: {
-                    "accepted_at": string | null,"accepted_user_id": string | null,"applicant_id": string | null,"created_at": string,"email": string,"expires_at": string,"first_name": string,"id": string,"invited_by": string | null,"last_name": string,"product_ids": (string)[],"revoked_at": string | null,"role_id": string,"supervisor_id": string | null,"team_id": string | null,"token_hash": string,"trainer_id": string | null
+                    "accepted_at": string | null,"accepted_user_id": string | null,"applicant_id": string | null,"created_at": string,"email": string,"expires_at": string,"first_name": string,"id": string,"invited_by": string | null,"last_name": string,"product_ids": (string)[],"recruited_by": string | null,"revoked_at": string | null,"role_id": string,"supervisor_id": string | null,"team_id": string | null,"token_hash": string,"trainer_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email": string,"expires_at": string,"first_name": string,"id"?: string,"invited_by"?: string | null,"last_name": string,"product_ids"?: (string)[],"revoked_at"?: string | null,"role_id": string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash": string,"trainer_id"?: string | null
+                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email": string,"expires_at": string,"first_name": string,"id"?: string,"invited_by"?: string | null,"last_name": string,"product_ids"?: (string)[],"recruited_by"?: string | null,"revoked_at"?: string | null,"role_id": string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash": string,"trainer_id"?: string | null
                   }
                   Update: {
-                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"first_name"?: string,"id"?: string,"invited_by"?: string | null,"last_name"?: string,"product_ids"?: (string)[],"revoked_at"?: string | null,"role_id"?: string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash"?: string,"trainer_id"?: string | null
+                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"first_name"?: string,"id"?: string,"invited_by"?: string | null,"last_name"?: string,"product_ids"?: (string)[],"recruited_by"?: string | null,"revoked_at"?: string | null,"role_id"?: string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash"?: string,"trainer_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -452,6 +458,12 @@ isOneToOne: false
     },{
       foreignKeyName: "invitations_invited_by_fkey"
       columns: ["invited_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invitations_recruited_by_fkey"
+      columns: ["recruited_by"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
@@ -1282,7 +1294,7 @@ isOneToOne: false
 { Args: { "p_rates": Json }; Returns: undefined
                            },
 "commission_settings_save":
-{ Args: { "p_overhead_mode": string }; Returns: undefined
+{ Args: { "p_ausbilder_cents": number,"p_overhead_mode": string,"p_teamleiter_cents": number,"p_werbung_cents": number }; Returns: undefined
                            },
 "competition_upsert":
 { Args: { "p_description": string,"p_ends_on": string,"p_id": string,"p_is_active": boolean,"p_product": string,"p_starts_on": string,"p_team": string,"p_title": string }; Returns: string
@@ -1334,6 +1346,9 @@ isOneToOne: false
                            },
 "employee_set_customer_number":
 { Args: { "p_number": string,"p_user": string }; Returns: undefined
+                           },
+"employee_set_recruiter":
+{ Args: { "p_recruiter": string,"p_user": string }; Returns: undefined
                            },
 "get_leaderboard":
 { Args: { "p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string }; Returns: {
@@ -1389,6 +1404,9 @@ isOneToOne: false
                            },
 "invitation_set_products":
 { Args: { "p_id": string,"p_products": (string)[] }; Returns: undefined
+                           },
+"invitation_set_recruiter":
+{ Args: { "p_id": string,"p_recruiter": string }; Returns: undefined
                            },
 "lesson_complete":
 { Args: { "p_lesson": string }; Returns: undefined
