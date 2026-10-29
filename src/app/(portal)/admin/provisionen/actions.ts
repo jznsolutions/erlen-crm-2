@@ -4,56 +4,48 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formToObject, fromDbError, fromZodError, type ActionResult } from "@/lib/actions";
-import { checkbox, intRange, optionalText, optionalUuid, uuid } from "@/lib/validation";
+import { uuid } from "@/lib/validation";
 import { parseEuroToCents } from "@/lib/format";
 
-const levelSchema = z.object({
-  id: optionalUuid,
-  name: z.string().trim().min(2, "Mindestens 2 Zeichen").max(80, "Zu lang"),
-  description: optionalText(300),
-  sort_order: intRange(0, 999).default(0),
-  is_active: checkbox,
+
+const rateSchema = z.object({
+  product_id: uuid,
+  level: z.enum(["vertriebspartner", "ausbilder", "teamleiter", "agentur"], { message: "Bitte eine Stufe wählen" }),
+  amount: z.string({ message: "Bitte einen Betrag eingeben" }),
 });
 
-export async function saveCommissionLevel(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+/** Provision für Produkt + Stufe speichern (vorhandener Satz wird überschrieben). */
+export async function saveRate(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   await requireUser();
-  const parsed = levelSchema.safeParse(formToObject(fd));
+  const parsed = rateSchema.safeParse(formToObject(fd));
   if (!parsed.success) return fromZodError(parsed.error);
-  const d = parsed.data;
+  const cents = parseEuroToCents(parsed.data.amount);
+  if (cents === null || cents < 0 || cents > 10_000_000) return { ok: false, error: "Bitte einen gültigen Betrag eingeben (z. B. 25,00).", fieldErrors: { amount: "Ungültiger Betrag" } };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("commission_level_upsert", {
-    p_id: (d.id ?? null) as string,
-    p_name: d.name,
-    p_description: (d.description ?? null) as string,
-    p_sort_order: d.sort_order,
-    p_is_active: d.is_active,
-  });
+  const { error } = await supabase.rpc("commission_rate_set", { p_product: parsed.data.product_id, p_level_key: parsed.data.level, p_amount_cents: cents });
   if (error) return fromDbError(error);
   revalidatePath("/admin/provisionen");
-  return { ok: true, message: "Stufe gespeichert." };
+  return { ok: true, message: "Provision gespeichert." };
 }
 
-/** Speichert die Matrix: Felder "rate:<stufe>:<produkt>" mit Euro-Beträgen (leer = kein Satz). */
-export async function saveCommissionRates(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+export async function deleteRate(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   await requireUser();
-  const rates: { level_id: string; product_id: string; amount_cents: number | null }[] = [];
-  const fieldErrors: Record<string, string> = {};
-  for (const [key, value] of fd.entries()) {
-    if (!key.startsWith("rate:")) continue;
-    const [, level, product] = key.split(":");
-    if (!uuid.safeParse(level).success || !uuid.safeParse(product).success) continue;
-    const raw = String(value).trim();
-    const cents = parseEuroToCents(raw);
-    if (raw && (cents === null || cents < 0 || cents > 10_000_000)) {
-      fieldErrors[key] = "Ungültiger Betrag";
-      continue;
-    }
-    rates.push({ level_id: level, product_id: product, amount_cents: cents });
-  }
-  if (Object.keys(fieldErrors).length) return { ok: false, error: "Bitte gültige Euro-Beträge eingeben (z. B. 25,00).", fieldErrors };
+  const parsed = rateSchema.omit({ amount: true }).safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("commission_rates_save", { p_rates: rates });
+  const { error } = await supabase.rpc("commission_rate_set", { p_product: parsed.data.product_id, p_level_key: parsed.data.level, p_amount_cents: null as unknown as number });
   if (error) return fromDbError(error);
   revalidatePath("/admin/provisionen");
-  return { ok: true, message: "Provisionssätze gespeichert." };
+  return { ok: true, message: "Provision entfernt." };
+}
+
+export async function saveOverheadMode(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const mode = z.enum(["differenz", "fest"]).safeParse(fd.get("mode"));
+  if (!mode.success) return { ok: false, error: "Bitte eine Berechnungsart wählen" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("commission_settings_save", { p_overhead_mode: mode.data });
+  if (error) return fromDbError(error);
+  revalidatePath("/admin/provisionen");
+  return { ok: true, message: "Berechnungsart gespeichert." };
 }

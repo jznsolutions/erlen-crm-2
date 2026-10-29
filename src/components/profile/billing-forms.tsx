@@ -1,7 +1,9 @@
 "use client";
-import { ActionForm, SubmitButton } from "@/components/forms";
+import { ActionForm, ConfirmAction, SubmitButton } from "@/components/forms";
+import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/input";
 import { saveBilling, setCommissionLevel, setUserProducts } from "@/app/(portal)/mitarbeiter/actions";
+import { deleteExtra, saveExtra } from "@/app/(portal)/abrechnungen/actions";
 
 type Opt = { id: string; label: string };
 
@@ -22,13 +24,13 @@ export function ProductClearanceForm({ userId, products, granted }: { userId: st
   );
 }
 
-export function CommissionLevelForm({ userId, levels, current }: { userId: string; levels: Opt[]; current: string | null }) {
+export function CommissionLevelForm({ userId, levels, current, roleLevel }: { userId: string; levels: Opt[]; current: string | null; roleLevel: string | null }) {
   return (
     <ActionForm action={setCommissionLevel} className="flex items-end gap-2">
       <input type="hidden" name="user_id" value={userId} />
       <Field label="Provisionsstufe" htmlFor="c-level" className="flex-1">
         <Select id="c-level" name="level_id" defaultValue={current ?? ""}>
-          <option value="">– keine Stufe –</option>
+          <option value="">Automatisch nach Rolle{roleLevel ? ` (${roleLevel})` : ""}</option>
           {levels.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
         </Select>
       </Field>
@@ -69,5 +71,44 @@ export function BillingForm({ userId, billing }: { userId: string; billing: Bill
         </>
       )}
     </ActionForm>
+  );
+}
+
+export type Extra = { id: string; description: string; amount_cents: number; recurring: boolean; is_active: boolean; note: string | null };
+
+/** Zusatzpositionen (z. B. Fahrzeug über die Agentur) – stehen beim Erstellen der Gutschrift zur Auswahl. */
+export function ExtrasEditor({ userId, extras }: { userId: string; extras: Extra[] }) {
+  return (
+    <div className="space-y-4">
+      {extras.length ? (
+        <ul className="divide-y rounded-xl border text-sm">
+          {extras.map((e) => (
+            <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <span>
+                <span className="font-medium">{e.description}</span>
+                {e.recurring ? <span className="ml-2 text-xs text-muted-foreground">monatlich vorausgewählt</span> : null}
+                {!e.is_active ? <span className="ml-2 text-xs text-muted-foreground">(inaktiv)</span> : null}
+              </span>
+              <span className="flex items-center gap-2">
+                <span className={`money tabular font-medium ${e.amount_cents < 0 ? "text-danger" : "text-success"}`}>{(e.amount_cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}</span>
+                <ConfirmAction action={deleteExtra} hidden={{ id: e.id }} title="Zusatzposition entfernen?" description={e.description} confirmLabel="Entfernen" tone="danger" trigger={<Button size="sm" variant="ghost">Entfernen</Button>} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-sm text-muted-foreground">Keine Zusatzpositionen.</p>}
+      <ActionForm action={saveExtra} resetOnSuccess className="grid gap-3 sm:grid-cols-[1.5fr_0.8fr_0.8fr] sm:items-end">
+        {({ fieldErrors }) => (
+          <>
+            <input type="hidden" name="user_id" value={userId} />
+            <Field label="Bezeichnung" htmlFor="x-desc" error={fieldErrors.description}><Input id="x-desc" name="description" placeholder="z. B. Fahrzeugrate VW Golf" required /></Field>
+            <Field label="Art" htmlFor="x-kind"><Select id="x-kind" name="kind" defaultValue="abzug"><option value="abzug">Abzug</option><option value="zuschlag">Zuschlag</option></Select></Field>
+            <Field label="Betrag (€)" htmlFor="x-amount" error={fieldErrors.amount}><Input id="x-amount" name="amount" inputMode="decimal" placeholder="399,00" required className="text-right" /></Field>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox name="recurring" defaultChecked />Bei jeder Gutschrift automatisch vorauswählen (z. B. monatliche Rate)</label>
+            <SubmitButton variant="secondary">Hinzufügen</SubmitButton>
+          </>
+        )}
+      </ActionForm>
+    </div>
   );
 }

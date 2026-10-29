@@ -6,10 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { formatCents, parseEuroToCents } from "@/lib/format";
 import { createStatement } from "@/app/(portal)/abrechnungen/actions";
+import { ITEM_CATEGORY_LABELS } from "@/lib/commission";
 
-export type BuilderItem = { description: string; product_id: string | null; quantity: number; unit: string };
+export type BuilderItem = {
+  description: string;
+  product_id: string | null;
+  quantity: number;
+  unit: string;
+  category?: "vermittlung" | "overhead_ausbilder" | "overhead_teamleiter" | "zusatz" | "sonstiges";
+};
+export type BuilderExtra = { id: string; description: string; amount_cents: number; recurring: boolean };
 
-const blank = (): BuilderItem => ({ description: "", product_id: null, quantity: 1, unit: "" });
+const blank = (): BuilderItem => ({ description: "", product_id: null, quantity: 1, unit: "", category: "sonstiges" });
 
 export function StatementBuilder({
   kind,
@@ -18,6 +26,7 @@ export function StatementBuilder({
   periodTo,
   defaultTitle,
   initialItems,
+  extras = [],
   vatRate,
 }: {
   kind: "abrechnung" | "gutschrift";
@@ -26,11 +35,17 @@ export function StatementBuilder({
   periodTo: string | null;
   defaultTitle: string;
   initialItems: BuilderItem[];
+  extras?: BuilderExtra[];
   vatRate: number;
 }) {
   const [items, setItems] = useState<BuilderItem[]>(initialItems.length ? initialItems : [blank()]);
+  const [picked, setPicked] = useState<string[]>(extras.filter((e) => e.recurring).map((e) => e.id));
+  const extraItems: BuilderItem[] = extras
+    .filter((e) => picked.includes(e.id))
+    .map((e) => ({ description: e.description, product_id: null, quantity: 1, unit: (e.amount_cents / 100).toFixed(2).replace(".", ","), category: "zusatz" }));
   const update = (i: number, patch: Partial<BuilderItem>) => setItems((xs) => xs.map((x, k) => (k === i ? { ...x, ...patch } : x)));
-  const net = items.reduce((a, it) => a + Math.round((parseEuroToCents(it.unit) ?? 0) * (Number(it.quantity) || 0)), 0);
+  const all = [...items.filter((it) => it.description.trim() || it.unit.trim()), ...extraItems];
+  const net = all.reduce((a, it) => a + Math.round((parseEuroToCents(it.unit) ?? 0) * (Number(it.quantity) || 0)), 0);
   const vat = Math.round((net * vatRate) / 100);
 
   return (
@@ -39,7 +54,7 @@ export function StatementBuilder({
         <>
           <input type="hidden" name="user_id" value={userId} />
           <input type="hidden" name="kind" value={kind} />
-          <input type="hidden" name="items" value={JSON.stringify(items.filter((it) => it.description.trim() || it.unit.trim()))} />
+          <input type="hidden" name="items" value={JSON.stringify(all)} />
           {periodFrom ? <input type="hidden" name="period_from" value={periodFrom} /> : null}
           {periodTo ? <input type="hidden" name="period_to" value={periodTo} /> : null}
           <Field label="Titel" htmlFor="st-title" error={fieldErrors.title}>
@@ -54,10 +69,10 @@ export function StatementBuilder({
               const total = Math.round((parseEuroToCents(it.unit) ?? 0) * (Number(it.quantity) || 0));
               return (
                 <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border p-2 sm:grid-cols-[1fr_90px_120px_110px_36px] sm:items-center sm:border-0 sm:p-0">
-                  <Input aria-label={`Position ${i + 1} Beschreibung`} className="col-span-2 sm:col-span-1" value={it.description} onChange={(e) => update(i, { description: e.target.value })} placeholder="z. B. Bonus Oktober" maxLength={300} />
+                  <Input aria-label={`Position ${i + 1} Beschreibung`} className="col-span-2 sm:col-span-1" title={it.category ? ITEM_CATEGORY_LABELS[it.category] : undefined} value={it.description} onChange={(e) => update(i, { description: e.target.value })} placeholder="z. B. Bonus Oktober" maxLength={300} />
                   <Input aria-label={`Position ${i + 1} Menge`} className="text-right tabular" type="number" step="any" value={it.quantity} onChange={(e) => update(i, { quantity: Number(e.target.value) })} />
                   <Input aria-label={`Position ${i + 1} Einzelpreis`} className="text-right tabular" inputMode="decimal" value={it.unit} onChange={(e) => update(i, { unit: e.target.value })} placeholder="0,00" aria-invalid={it.unit.trim() !== "" && parseEuroToCents(it.unit) === null} />
-                  <span className="self-center text-right text-sm font-medium tabular">{formatCents(total)}</span>
+                  <span className="money self-center text-right text-sm font-medium tabular">{formatCents(total)}</span>
                   <Button type="button" size="icon" variant="ghost" aria-label={`Position ${i + 1} entfernen`} onClick={() => setItems((xs) => (xs.length > 1 ? xs.filter((_, k) => k !== i) : [blank()]))}><Trash2 /></Button>
                 </div>
               );
@@ -66,7 +81,25 @@ export function StatementBuilder({
             <p className="text-xs text-muted-foreground">Abzüge (z. B. Stornorückbelastung) als negativen Einzelpreis eintragen.</p>
           </div>
 
-          <div className="ml-auto w-full max-w-xs space-y-1 rounded-lg border bg-muted/40 p-4 text-sm">
+          {extras.length ? (
+            <fieldset className="rounded-xl border p-4">
+              <legend className="px-1 text-sm font-medium">Zusatzpositionen dieses Mitarbeiters</legend>
+              <div className="space-y-2">
+                {extras.map((e) => (
+                  <label key={e.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="flex items-center gap-2">
+                      <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={picked.includes(e.id)} onChange={(ev) => setPicked((xs) => (ev.target.checked ? [...xs, e.id] : xs.filter((x) => x !== e.id)))} />
+                      {e.description}
+                    </span>
+                    <span className={`money tabular font-medium ${e.amount_cents < 0 ? "text-danger" : "text-success"}`}>{formatCents(e.amount_cents)}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Zusatzpositionen pflegst du im Mitarbeiterprofil.</p>
+            </fieldset>
+          ) : null}
+
+          <div className="money ml-auto w-full max-w-xs space-y-1 rounded-lg border bg-muted/40 p-4 text-sm">
             <div className="flex justify-between"><span>Summe netto</span><span className="tabular">{formatCents(net)}</span></div>
             <div className="flex justify-between text-muted-foreground"><span>{vatRate ? `USt ${vatRate} %` : "USt (§ 19 UStG)"}</span><span className="tabular">{formatCents(vat)}</span></div>
             <div className="flex justify-between border-t pt-1 font-semibold"><span>{kind === "abrechnung" ? "Auszahlungsbetrag" : "Gutschriftsbetrag"}</span><span className="tabular">{formatCents(net + vat)}</span></div>

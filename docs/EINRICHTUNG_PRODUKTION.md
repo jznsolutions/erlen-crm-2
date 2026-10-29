@@ -68,9 +68,8 @@ Supabase → **Authentication**:
 | `SUPABASE_SECRET_KEY` | Secret key (**nur hier, nirgendwo sonst**) |
 | `RATE_LIMIT_SALT` | beliebige lange Zufallszeichenkette (mind. 16 Zeichen) |
 | `APPLICATION_ALLOWED_ORIGINS` | leer lassen (nur nötig, falls ein externes Formular Bewerbungen schickt) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | E-Mail-Versand, siehe Abschnitt „E-Mail-Versand“ |
-| `EMAIL_FROM` | Absender, z. B. `ERLEN <portal@erlen-sales.de>` |
-| `NEXT_PUBLIC_CALENDLY_URL` | optional, Calendly-Link für die Terminbuchung, siehe „Terminbuchung mit Calendly“ |
+| `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` **oder** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | E-Mail-Versand, siehe Abschnitt „E-Mail-Versand“ |
+| `EMAIL_FROM` | Absender, z. B. `ERLEN <kontakt@erlen-sales.de>` |
 
 4. **Deploy** klicken. Danach unter **Settings → Functions → Region** möglichst **Frankfurt (fra1)** wählen und erneut deployen.
 5. Auftragsverarbeitungsvertrag (DPA) mit Vercel abschließen.
@@ -131,28 +130,37 @@ Bringt ein Update Erweiterungen der Datenbank mit (neue Dateien in `supabase/mig
 
 Alternativ (technisch): `npx supabase db push`.
 
-## E-Mail-Versand (Einladungen automatisch per E-Mail)
+## E-Mail-Versand (Outlook / Microsoft 365)
 
-Damit neue Mitarbeitende ihre Einladung automatisch per E-Mail bekommen, braucht das Portal die Zugangsdaten eines E-Mail-Postfachs. Am einfachsten ist ein eigenes Postfach wie `portal@erlen-sales.de` bei eurem E-Mail-Anbieter.
+Das Portal verschickt Einladungen, Terminbestätigungen, Terminerinnerungen und Hinweise auf neue Gutschriften. Euer Postfach `kontakt@erlen-sales.de` liegt bei Outlook (Microsoft 365). Es gibt zwei Wege – **Weg A ist zu empfehlen**, weil Microsoft die Anmeldung per Passwort (SMTP) ab Dezember 2026 standardmäßig abschaltet.
 
-1. Beim E-Mail-Anbieter (z. B. IONOS, Strato, Google Workspace, Microsoft 365) ein Postfach `portal@erlen-sales.de` anlegen und dessen **SMTP-Daten** heraussuchen (Server, Port, Benutzer, Passwort – steht meist unter „E-Mail-Programm einrichten“). Bei Google/Microsoft ein **App-Passwort** verwenden.
-2. Vercel → Projekt → **Settings → Environment Variables** → eintragen:
-   * `SMTP_HOST` – z. B. `smtp.ionos.de`
-   * `SMTP_PORT` – meist `465` (sonst `587`)
-   * `SMTP_USER` – `portal@erlen-sales.de`
-   * `SMTP_PASS` – das Passwort des Postfachs (**nur in Vercel eintragen, niemals in Chats oder Dateien**)
-   * `EMAIL_FROM` – `ERLEN <portal@erlen-sales.de>`
-3. **Deployments → … → Redeploy**.
-4. Test: Verwaltung → Benutzer & Einladungen → dich selbst mit einer privaten Adresse einladen. Der gelbe Hinweis „E-Mail-Versand noch nicht eingerichtet“ verschwindet, sobald die Werte gesetzt sind.
+**Weg A – Microsoft Graph (ohne Postfach-Passwort, zukunftssicher)**
 
-Dieselben SMTP-Daten in **Supabase → Authentication → Emails → SMTP Settings** eintragen, damit auch „Passwort vergessen“ zuverlässig funktioniert.
+1. Mit dem Microsoft-365-Administratorkonto <https://entra.microsoft.com> öffnen → **Anwendungen → App-Registrierungen → Neue Registrierung**. Name: `ERLEN Portal`, „Nur Konten in diesem Organisationsverzeichnis“ → **Registrieren**.
+2. Auf der Übersichtsseite **Anwendungs-ID (Client)** und **Verzeichnis-ID (Mandant)** notieren.
+3. **API-Berechtigungen → Berechtigung hinzufügen → Microsoft Graph → Anwendungsberechtigungen → `Mail.Send`** → hinzufügen → **„Administratorzustimmung erteilen“** klicken.
+4. **Zertifikate & Geheimnisse → Neuer geheimer Clientschlüssel** (Gültigkeit z. B. 24 Monate) → den angezeigten **Wert** sofort kopieren.
+5. Vercel → **Settings → Environment Variables**:
+   * `MS_TENANT_ID` = Verzeichnis-ID
+   * `MS_CLIENT_ID` = Anwendungs-ID
+   * `MS_CLIENT_SECRET` = geheimer Clientschlüssel (**nur in Vercel eintragen**)
+   * `EMAIL_FROM` = `ERLEN <kontakt@erlen-sales.de>`
+6. **Deployments → … → Redeploy**. Vor Ablauf des Clientschlüssels einen neuen anlegen und in Vercel ersetzen.
 
-Alternativ kann statt SMTP der Dienst Resend genutzt werden (`RESEND_API_KEY`, Domain bei Resend bestätigen).
+**Weg B – SMTP mit Postfach-Passwort (übergangsweise)**
 
-## Terminbuchung mit Calendly
+1. Microsoft-365-Admin-Center → **Benutzer → aktive Benutzer → kontakt@… → E-Mail → E-Mail-Apps verwalten → „Authentifiziertes SMTP“ aktivieren**.
+2. In Vercel eintragen: `SMTP_HOST` = `smtp.office365.com`, `SMTP_PORT` = `587`, `SMTP_USER` = `kontakt@erlen-sales.de`, `SMTP_PASS` = Passwort des Postfachs (bei aktivierter Zwei-Faktor-Anmeldung ein App-Kennwort), `EMAIL_FROM` = `ERLEN <kontakt@erlen-sales.de>` → **Redeploy**.
 
-1. Bei [calendly.com](https://calendly.com) einen Terminart anlegen, z. B. „Kennenlerngespräch (20 Min.)“. In Calendly unter **Benachrichtigungen** sind Bestätigungs-E-Mails für Bewerber und für euch standardmäßig aktiv – dort könnt ihr Text und Empfänger anpassen.
-2. Den Link der Terminart kopieren (z. B. `https://calendly.com/erlen-sales/kennenlernen`).
-3. Vercel → **Environment Variables** → `NEXT_PUBLIC_CALENDLY_URL` mit diesem Link anlegen → **Redeploy**.
-4. Auf der Website erscheint im Bereich „Bewerbung“ der Kasten „Lieber direkt einen Termin?“ und nach dem Absenden des Formulars die Terminauswahl (Name und E-Mail werden vorausgefüllt).
-5. Datenschutz: AV-Vertrag mit Calendly abschließen; die Datenschutzerklärung enthält bereits einen Abschnitt dazu (bitte prüfen lassen).
+**Test:** Verwaltung → Benutzer & Einladungen → dich selbst mit einer privaten Adresse einladen. Der gelbe Hinweis „E-Mail-Versand noch nicht eingerichtet“ verschwindet, sobald die Werte gesetzt sind.
+
+Für „Passwort vergessen“ zusätzlich in **Supabase → Authentication → Emails → SMTP Settings** SMTP-Daten eintragen (Supabase unterstützt nur SMTP).
+
+## Terminbuchung für Bewerber
+
+Bewerber wählen auf der Website (Bereich „Termin“ und nach dem Absenden der Bewerbung) einen freien Termin. Ein Zeitpunkt kann nur einmal gebucht werden – das stellt die Datenbank sicher, auch wenn zwei Personen gleichzeitig buchen. Bewerber und ihr (Adresse unter **Termine → Einstellungen**) erhaltet eine Bestätigung mit Kalendereintrag, 2 Stunden vorher eine Erinnerung. Bewerber können über den Link in der Mail absagen.
+
+1. Portal → **Termine** → „Wann seid ihr erreichbar?“ Wochentage und Uhrzeiten festlegen, Dauer je Termin und Vorlaufzeit einstellen.
+2. **Einmalig:** auf der Seite **Termine** „Automatische Erinnerungen aktivieren“ klicken (nur Administrator). Das richtet in Supabase einen Zeitplaner ein, der alle 5 Minuten fällige Erinnerungen verschickt. Nach einem Domainwechsel erneut klicken („Erinnerungen neu einrichten“).
+3. Urlaub/Feiertage unter „Zeiten sperren“ eintragen.
+

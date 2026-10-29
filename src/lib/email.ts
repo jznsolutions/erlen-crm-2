@@ -5,9 +5,11 @@ import { SITE } from "@/lib/site";
 // E-Mail-Versand über einen eigenen SMTP-Server (z. B. das Postfach von erlen-sales.de)
 // oder über Resend. Zugangsdaten stehen ausschließlich in den Vercel-Umgebungsvariablen.
 
-export type EmailProvider = "smtp" | "resend" | null;
+export type EmailProvider = "graph" | "smtp" | "resend" | null;
 
 export function emailProvider(): EmailProvider {
+  // Microsoft 365 / Outlook über die Microsoft-Graph-Schnittstelle (empfohlen für Outlook-Postfächer)
+  if (process.env.MS_TENANT_ID && process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET && process.env.EMAIL_FROM) return "graph";
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return "smtp";
   if (process.env.RESEND_API_KEY) return "resend";
   return null;
@@ -17,19 +19,75 @@ function sender() {
   return process.env.EMAIL_FROM || process.env.SMTP_USER || "";
 }
 
+export type EmailAttachment = { filename: string; content: string; contentType: string };
+
 export type EmailMessage = {
   to: string;
   subject: string;
   text: string;
   html?: string;
   replyTo?: string;
+  attachments?: EmailAttachment[];
 };
+
+/** Reine Adresse aus "Name <adresse>". */
+function addressOf(from: string) {
+  return from.match(/<([^>]+)>/)?.[1] ?? from.trim();
+}
+
+let graphToken: { value: string; expires: number } | null = null;
+
+async function graphAccessToken(): Promise<string> {
+  if (graphToken && graphToken.expires > Date.now() + 60_000) return graphToken.value;
+  const res = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(process.env.MS_TENANT_ID!)}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.MS_CLIENT_ID!,
+      client_secret: process.env.MS_CLIENT_SECRET!,
+      scope: "https://graph.microsoft.com/.default",
+      grant_type: "client_credentials",
+    }),
+  });
+  if (!res.ok) throw new Error(`Microsoft-Anmeldung fehlgeschlagen (${res.status})`);
+  const data = (await res.json()) as { access_token: string; expires_in: number };
+  graphToken = { value: data.access_token, expires: Date.now() + data.expires_in * 1000 };
+  return data.access_token;
+}
+
+async function sendViaGraph(msg: EmailMessage) {
+  const from = addressOf(sender());
+  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await graphAccessToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: {
+        subject: msg.subject,
+        body: msg.html ? { contentType: "HTML", content: msg.html } : { contentType: "Text", content: msg.text },
+        toRecipients: [{ emailAddress: { address: msg.to } }],
+        replyTo: msg.replyTo ? [{ emailAddress: { address: msg.replyTo } }] : undefined,
+        attachments: msg.attachments?.map((a) => ({
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          name: a.filename,
+          contentType: a.contentType,
+          contentBytes: Buffer.from(a.content, "utf8").toString("base64"),
+        })),
+      },
+      saveToSentItems: true,
+    }),
+  });
+  if (!res.ok) throw new Error(`Microsoft Graph ${res.status}`);
+}
 
 /** Versendet eine E-Mail. Gibt false zurück, wenn kein Versand eingerichtet ist oder er fehlschlägt. */
 export async function sendEmail(msg: EmailMessage): Promise<boolean> {
   const provider = emailProvider();
   if (!provider) return false;
   try {
+    if (provider === "graph") {
+      await sendViaGraph(msg);
+      return true;
+    }
     if (provider === "smtp") {
       const port = Number(process.env.SMTP_PORT || 465);
       const transport = nodemailer.createTransport({
@@ -39,13 +97,29 @@ export async function sendEmail(msg: EmailMessage): Promise<boolean> {
         auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
         connectionTimeout: 15_000,
       });
-      await transport.sendMail({ from: sender(), to: msg.to, subject: msg.subject, text: msg.text, html: msg.html, replyTo: msg.replyTo });
+      await transport.sendMail({
+        from: sender(),
+        to: msg.to,
+        subject: msg.subject,
+        text: msg.text,
+        html: msg.html,
+        replyTo: msg.replyTo,
+        attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType })),
+      });
       return true;
     }
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: sender(), to: [msg.to], subject: msg.subject, text: msg.text, html: msg.html, reply_to: msg.replyTo }),
+      body: JSON.stringify({
+        from: sender(),
+        to: [msg.to],
+        subject: msg.subject,
+        text: msg.text,
+        html: msg.html,
+        reply_to: msg.replyTo,
+        attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content, "utf8").toString("base64") })),
+      }),
     });
     if (!res.ok) console.error("[email] Resend", res.status);
     return res.ok;
@@ -55,10 +129,10 @@ export async function sendEmail(msg: EmailMessage): Promise<boolean> {
   }
 }
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 /** Einheitliches, dunkles E-Mail-Layout im Stil der Website. */
-function layout(title: string, bodyHtml: string, button?: { label: string; href: string }) {
+export function layout(title: string, bodyHtml: string, button?: { label: string; href: string }) {
   const btn = button
     ? `<tr><td style="padding:8px 0 24px"><a href="${esc(button.href)}" style="display:inline-block;background:#ffffff;color:#0b0f1a;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:999px">${esc(button.label)}</a></td></tr>`
     : "";

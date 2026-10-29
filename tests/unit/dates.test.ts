@@ -35,3 +35,11 @@ describe("Datumslogik (Europe/Berlin)", () => {
     expect(isIsoDate("28.02.2026")).toBe(false);
   });
 });
+
+describe("berlinLocalToUtc", () => {
+  it("rechnet Sommer- und Winterzeit korrekt um", async () => {
+    const { berlinLocalToUtc } = await import("@/lib/dates");
+    expect(berlinLocalToUtc("2026-07-01T10:00")).toBe("2026-07-01T08:00:00.000Z");
+    expect(berlinLocalToUtc("2026-12-01T10:00")).toBe("2026-12-01T09:00:00.000Z");
+  });
+});

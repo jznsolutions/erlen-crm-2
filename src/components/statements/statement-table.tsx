@@ -52,7 +52,7 @@ export function StatementTable({ rows, manage }: { rows: StatementRow[]; manage:
             </TD>
             {manage ? <TD className="text-sm">{s.user_name}</TD> : null}
             <TD className="whitespace-nowrap text-sm text-muted-foreground">{s.period_from && s.period_to ? `${formatDate(s.period_from)} – ${formatDate(s.period_to)}` : "–"}</TD>
-            <TD className="text-right font-medium tabular">{s.gross_cents ? formatCents(s.gross_cents) : "–"}</TD>
+            <TD className="money text-right font-medium tabular">{s.gross_cents ? formatCents(s.gross_cents) : "–"}</TD>
             <TD>
               <Badge variant={STATUS[s.status].variant}>{STATUS[s.status].label}</Badge>
               {s.status === "storniert" && s.status_reason ? <p className="mt-1 max-w-48 text-xs text-muted-foreground">{s.status_reason}</p> : null}

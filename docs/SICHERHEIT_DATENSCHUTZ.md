@@ -14,7 +14,8 @@
 | Dateien | private Buckets, Storage-RLS, Abruf nur über serverseitig geprüfte, 60 Sekunden (Dokumente) bzw. wenige Stunden (Videos) gültige signierte Links; keine erratbaren öffentlichen URLs |
 | Abrechnungen | eigener privater Bucket `statements` (nur PDF); Mitarbeitende sehen nur eigene, veröffentlichte Dokumente (RLS in Tabelle **und** Storage); Entwürfe nur für `statements.manage`; Abrechnungsdaten (Anschrift, Steuer, IBAN) getrennt in `employee_billing`, nur für die Person selbst und die Abrechnung; fortlaufende Nummern serverseitig; Storno statt Löschen veröffentlichter Dokumente |
 | Provisionen | Sätze nur für `commissions.manage`/`statements.manage`; Mitarbeitende sehen ausschließlich die eigene Stufe |
-| E-Mail-Zugangsdaten | SMTP-Passwort/Resend-Schlüssel nur als Vercel-Umgebungsvariable (serverseitig), nie im Browser oder Repository |
+| Terminbuchung | öffentliche Buchung nur über den Server (Funktionen für Browser gesperrt), Ratenbegrenzung, Honeypot, Einwilligung; Doppelbuchung durch Datenbank-Ausschlussregel unmöglich; Absage-Link mit zufälligem Token (nur Hash gespeichert); Erinnerungs-Endpunkt nur mit geheimem Schlüssel |
+| E-Mail-Zugangsdaten | Microsoft-Graph-Clientschlüssel, SMTP-Passwort bzw. Resend-Schlüssel nur als Vercel-Umgebungsvariable (serverseitig), nie im Browser oder Repository |
 | Eingaben | Zod-Validierung in allen Server Actions/APIs; Datenbank-Constraints; Markdown-Renderer ohne HTML |
 | Web-Sicherheit | Content-Security-Policy, X-Frame-Options DENY, nosniff, HSTS, Referrer-Policy; Server Actions mit Same-Origin-Prüfung (CSRF-Schutz durch Next.js); keine Open Redirects |
 | Fehlerbehandlung | Nutzer sehen verständliche Meldungen; technische Details nur im Server-Log |

@@ -13,19 +13,33 @@
 * Neue Produkte sind zunächst für niemanden freigeschaltet.
 
 ## Provisionen
-1. **Verwaltung → Provisionen → Stufe anlegen** (z. B. Starter, Junior, Senior, Teamleitung).
-2. In der Tabelle „Provisionssätze je Stufe und Produkt“ für jede Kombination den Betrag in Euro **je bestätigter Einheit** eintragen → **Provisionssätze speichern**. Leeres Feld = keine Provision.
-3. Im **Mitarbeiterprofil → Produkte & Provision** die Stufe der Person wählen. Mitarbeitende sehen nur ihre eigene Stufe und deren Sätze.
+1. Produkte unter **Verwaltung → Produkte** anlegen – sie stehen danach bei den Provisionen zur Auswahl.
+2. **Verwaltung → Provisionen → Provision hinzufügen:** Produkt wählen, Stufe wählen (**Vertriebspartner, Ausbilder, Teamleiter, Agentur**), Provision in Euro je bestätigter Einheit eintragen → **Hinzufügen**. Beträge lassen sich in der Liste direkt ändern oder entfernen.
+3. Die Stufe eines Mitarbeiters ergibt sich aus seiner Rolle; abweichend im **Mitarbeiterprofil → Produkte & Provision** einstellbar.
+4. Die Stufe **Agentur** ist euer Erlös je Einheit – daraus berechnet das Dashboard den **Umsatz**.
+5. **Overhead:** Ausbilder erhalten automatisch Provision auf die Leistungen ihrer Auszubildenden, Teamleiter auf die Leistungen ihres Teams. Berechnungsart unten auf der Seite:
+   * **Differenz** (Standard): VP 30 €, Ausbilder 40 €, Teamleiter 50 € → VP 30 €, Ausbilder 10 €, Teamleiter 10 €.
+   * **Fester Betrag:** der Satz der Stufe Ausbilder/Teamleiter wird je Einheit der Struktur voll gezahlt.
+   Maßgeblich ist die Zuordnung (Ausbilder, Team) zum Ende des Abrechnungszeitraums.
 
 ## Abrechnungen & Gutschriften
 * Mitarbeitende finden unter **Abrechnungen & Gutschriften** alle für sie veröffentlichten Dokumente und können sie ansehen bzw. als PDF herunterladen. Bei neuen Dokumenten erhalten sie eine Benachrichtigung (und eine E-Mail, falls eingerichtet).
-* **Abrechnung erstellen:** Mitarbeiter und Zeitraum (Standard: Vormonat) wählen → **Berechnen**. Die Positionen ergeben sich aus den **bestätigten** Leistungen × Provisionssatz der Stufe. Positionen können angepasst oder ergänzt werden (Abzüge als negativer Betrag) → **Abrechnung erstellen & veröffentlichen**. Das PDF wird automatisch mit fortlaufender Nummer (A-2026-0001 …) erzeugt.
-* **Gutschrift erstellen:** wie oben, aber mit frei wählbaren Positionen (z. B. Bonus, Prämie, Korrektur); Nummern G-2026-0001 …
-* **PDF hochladen:** fertiges PDF (z. B. aus dem Buchhaltungsprogramm) für eine Person hochladen – sofort sichtbar.
-* **Als Entwurf speichern:** nur für die Verwaltung sichtbar; später „Veröffentlichen“ oder „Löschen“.
-* Für denselben Zeitraum ist nur **eine** veröffentlichte Abrechnung möglich (Schutz vor Doppelzahlung). Fehler? → **Stornieren** (mit Begründung, bleibt als „storniert“ sichtbar) und neu erstellen.
-* Anschrift, Steuernummer, USt-IdNr., IBAN und „umsatzsteuerpflichtig“ pflegen Mitarbeitende selbst im Profil unter **Abrechnungsdaten** (oder die Verwaltung im Mitarbeiterprofil). Ohne Umsatzsteuerpflicht wird der Hinweis auf § 19 UStG gedruckt, sonst 19 % USt ausgewiesen.
+* **Gutschrift erstellen:** Mitarbeiter und Zeitraum (Standard: Vormonat) wählen → **Berechnen**. Automatisch enthalten: **Vermittlungsprovision** (eigene bestätigte Leistungen) sowie **Overhead Ausbilder/Teamleiter**. Darunter die **Zusatzpositionen** des Mitarbeiters (z. B. Fahrzeugrate) an- oder abwählen. Positionen können angepasst oder ergänzt werden → **Gutschrift erstellen & veröffentlichen**. Das PDF wird mit fortlaufender Nummer erzeugt.
+* **Zusatzpositionen** (z. B. Fahrzeug über die Agentur): im **Mitarbeiterprofil → Zusatzpositionen für Gutschriften** anlegen (Abzug oder Zuschlag). „Bei jeder Gutschrift vorauswählen“ für monatliche Raten.
+* **Belegnummern:** unten auf der Seite Abrechnungen & Gutschriften. Platzhalter `{JAHR}` und `{NR}`, z. B. `GS{JAHR}{NR}` → GS202622. Mit **Nächste Nr.** führt ihr eure bisherige Nummerierung fort (letzte war 21 → 22 eintragen).
+* **Abrechnung erstellen** funktioniert genauso (eigener Nummernkreis). **PDF hochladen** für fertige Dokumente.
+* Pro Zeitraum ist nur ein veröffentlichter Beleg mit Provisionen möglich (Schutz vor Doppelzahlung). Fehler? → **Stornieren** und neu erstellen.
+* Anschrift, Steuernummer, USt-IdNr., IBAN und „umsatzsteuerpflichtig“ pflegen Mitarbeitende selbst im Profil unter **Abrechnungsdaten**.
 * **Wichtig:** Die steuerliche Gestaltung (Pflichtangaben nach § 14 UStG, Gutschriftverfahren) bitte einmal mit eurer Steuerberatung abstimmen.
+
+## Termine (Bewerbungsgespräche)
+* Bewerber buchen auf der Website selbst einen freien Termin. Vergebene Zeiten verschwinden sofort; zwei Personen können nie denselben Termin buchen.
+* Bestätigung mit Kalendereintrag an Bewerber und an eure Adresse; 2 Stunden vorher Erinnerung an beide. Bewerber können per Link absagen.
+* **Termine** im Portal: anstehende Gespräche, Absagen (Bewerber wird informiert), Erreichbarkeit je Wochentag, Dauer, Vorlaufzeit, gesperrte Zeiten (Urlaub).
+* Jede Buchung erscheint auch unter **Bewerber**.
+
+## Geldbeträge verbergen
+* Über das **Augen-Symbol** oben rechts lassen sich alle Geldbeträge (Umsatz, Provision, Gutschriften) verschwommen darstellen – praktisch, wenn jemand mitschaut. Ein weiterer Klick zeigt sie wieder an; die Einstellung bleibt im Browser gespeichert.
 
 ## Rollen und Rechte vergeben
 * **Rolle ändern:** Mitarbeiter → Person öffnen → Abschnitt **Verwaltung → Rolle & Berechtigungen** → Rolle wählen → **Ändern**.

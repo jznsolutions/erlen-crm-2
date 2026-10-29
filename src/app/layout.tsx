@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.erlen-sales.de"),
   title: { default: "ERLEN Vertriebsagentur", template: "%s · ERLEN" },
   description: "ERLEN Vertriebsagentur – Karriere im Vertrieb mit leistungsabhängigem Einkommen.",
+  applicationName: "ERLEN",
+  appleWebApp: { capable: true, title: "ERLEN", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {

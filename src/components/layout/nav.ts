@@ -22,6 +22,7 @@ export const NAV: NavSection[] = [
       { href: "/teams", label: "Teams", icon: "Network", any: ["employees.read.team", "employees.read.all", "teams.manage"] },
       { href: "/berichte", label: "Berichte", icon: "BarChart3", any: ["reports.read.team", "reports.read.all"] },
       { href: "/bewerber", label: "Bewerber", icon: "Inbox", any: ["applicants.read"] },
+      { href: "/termine", label: "Termine", icon: "CalendarClock", any: ["applicants.read"] },
     ],
   },
   {

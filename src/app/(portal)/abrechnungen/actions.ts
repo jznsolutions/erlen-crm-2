@@ -17,6 +17,7 @@ const itemSchema = z.object({
   product_id: z.uuid().nullable().optional(),
   quantity: z.coerce.number().min(-100000).max(100000),
   unit: z.string(),
+  category: z.enum(["vermittlung", "overhead_ausbilder", "overhead_teamleiter", "zusatz", "sonstiges"]).optional(),
 });
 
 const statementSchema = z
@@ -37,7 +38,8 @@ const statementSchema = z
 async function renderAndStore(supabase: Supabase, id: string, notify: boolean): Promise<string | null> {
   const { data: s } = await supabase.from("statements").select("*, statement_items(*)").eq("id", id).maybeSingle();
   if (!s || !s.number) return "Dokument nicht gefunden";
-  const items = [...(s.statement_items ?? [])].sort((a, b) => a.position - b.position);
+  const order = ["vermittlung", "overhead_ausbilder", "overhead_teamleiter", "sonstiges", "zusatz"];
+  const items = [...(s.statement_items ?? [])].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.position - b.position);
   const pdf = await renderStatementPdf({
     kind: s.kind,
     number: s.number,
@@ -46,7 +48,7 @@ async function renderAndStore(supabase: Supabase, id: string, notify: boolean): 
     periodFrom: s.period_from,
     periodTo: s.period_to,
     recipient: (s.recipient ?? {}) as Record<string, string | null>,
-    items: items.map((i) => ({ description: i.description, quantity: Number(i.quantity), unit_cents: Number(i.unit_cents), total_cents: Number(i.total_cents) })),
+    items: items.map((i) => ({ description: i.description, quantity: Number(i.quantity), unit_cents: Number(i.unit_cents), total_cents: Number(i.total_cents), category: i.category })),
     netCents: Number(s.net_cents),
     vatRate: Number(s.vat_rate),
     vatCents: Number(s.vat_cents),
@@ -88,7 +90,7 @@ export async function createStatement(_: ActionResult | null, fd: FormData): Pro
   for (const it of items.data) {
     const cents = parseEuroToCents(it.unit);
     if (cents === null) return { ok: false, error: `Ungültiger Betrag bei „${it.description}“` };
-    rows.push({ description: it.description, product_id: it.product_id ?? null, quantity: it.quantity, unit_cents: cents });
+    rows.push({ description: it.description, product_id: it.product_id ?? null, quantity: it.quantity, unit_cents: cents, category: it.category ?? "sonstiges" });
   }
   const supabase = await createClient();
   const { data: id, error } = await supabase.rpc("statement_create", {
@@ -202,3 +204,67 @@ export async function registerStatementUpload(input: Record<string, string>): Pr
   return { ok: true, message: "Hochgeladen und für den Mitarbeiter freigegeben." };
 }
 
+
+const extraSchema = z.object({
+  id: z.uuid().optional(),
+  user_id: uuid,
+  description: z.string().trim().min(2, "Bitte eine Bezeichnung angeben").max(200),
+  amount: z.string({ message: "Bitte einen Betrag angeben" }),
+  kind: z.enum(["abzug", "zuschlag"]),
+  recurring: z.preprocess((v) => v === "on", z.boolean()),
+  is_active: z.preprocess((v) => v !== "off", z.boolean()),
+  note: optionalText(500),
+});
+
+/** Zusatzposition (z. B. Fahrzeugrate als Abzug) für die Gutschriften eines Mitarbeiters. */
+export async function saveExtra(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("statements.manage");
+  const parsed = extraSchema.safeParse({ ...formToObject(fd), recurring: fd.get("recurring"), is_active: fd.get("is_active") ?? "on" });
+  if (!parsed.success) return fromZodError(parsed.error);
+  const d = parsed.data;
+  const cents = parseEuroToCents(d.amount.replace(/^-/, ""));
+  if (cents === null || cents <= 0) return { ok: false, error: "Bitte einen gültigen Betrag angeben (z. B. 399,00).", fieldErrors: { amount: "Ungültiger Betrag" } };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("statement_extra_upsert", {
+    p_id: (d.id ?? null) as string,
+    p_user: d.user_id,
+    p_description: d.description,
+    p_amount_cents: d.kind === "abzug" ? -cents : cents,
+    p_recurring: d.recurring,
+    p_is_active: d.is_active,
+    p_note: (d.note ?? null) as string,
+  });
+  if (error) return fromDbError(error);
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Zusatzposition gespeichert." };
+}
+
+export async function deleteExtra(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("statements.manage");
+  const id = uuid.safeParse(fd.get("id"));
+  if (!id.success) return { ok: false, error: "Ungültig" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("statement_extra_delete", { p_id: id.data });
+  if (error) return fromDbError(error);
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Zusatzposition entfernt." };
+}
+
+const numberingSchema = z.object({
+  kind: z.enum(["abrechnung", "gutschrift"]),
+  format: z.string().trim().min(4).max(40).refine((v) => v.includes("{NR}"), "Das Format muss {NR} enthalten"),
+  pad: z.coerce.number().int().min(1).max(8),
+  next_number: z.coerce.number().int().min(1).max(999999),
+});
+
+export async function saveNumbering(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("statements.manage");
+  const parsed = numberingSchema.safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const d = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("statement_numbering_set", { p_kind: d.kind, p_format: d.format, p_pad: d.pad, p_next_number: d.next_number });
+  if (error) return fromDbError(error);
+  revalidatePath("/abrechnungen");
+  return { ok: true, message: "Nummernkreis gespeichert." };
+}

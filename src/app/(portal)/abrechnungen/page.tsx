@@ -10,6 +10,7 @@ import { Alert, EmptyState, PageHeader } from "@/components/ui/misc";
 import { Select } from "@/components/ui/input";
 import { StatementTable, type StatementRow } from "@/components/statements/statement-table";
 import { StatementUploadDialog } from "@/components/statements/upload-dialog";
+import { NumberingForm } from "@/components/statements/numbering-form";
 
 export const metadata: Metadata = { title: "Abrechnungen & Gutschriften" };
 
@@ -26,11 +27,13 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
   const ownRows = (own.data ?? []) as StatementRow[];
 
   let allRows: StatementRow[] = [];
+  let numbering: { kind: "gutschrift" | "abrechnung"; format: string; pad: number; next_number: number; example: string }[] = [];
   let employees: { id: string; label: string }[] = [];
   if (manage) {
     let q = supabase.from("statements").select(COLUMNS).order("created_at", { ascending: false }).limit(200);
     if (filterUser) q = q.eq("user_id", filterUser);
-    const [{ data }, list] = await Promise.all([q, getVisibleEmployees()]);
+    const [{ data }, list, num] = await Promise.all([q, getVisibleEmployees(), supabase.rpc("statement_numbering_get", {})]);
+    numbering = (num.data ?? []) as typeof numbering;
     employees = list.filter((e) => e.status === "aktiv" || e.id === filterUser).map((e) => ({ id: e.id, label: `${e.last_name}, ${e.first_name}` }));
     const names = new Map(list.map((e) => [e.id, `${e.first_name} ${e.last_name}`]));
     allRows = ((data ?? []) as (StatementRow & { user_id: string })[]).map((s) => ({ ...s, user_name: names.get(s.user_id) ?? "–" }));
@@ -44,8 +47,8 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         actions={
           manage ? (
             <div className="flex flex-wrap gap-2">
-              <Button asChild><Link href="/abrechnungen/neu?art=abrechnung"><FilePlus2 />Abrechnung erstellen</Link></Button>
-              <Button asChild variant="secondary"><Link href="/abrechnungen/neu?art=gutschrift"><FilePlus2 />Gutschrift erstellen</Link></Button>
+              <Button asChild><Link href="/abrechnungen/neu?art=gutschrift"><FilePlus2 />Gutschrift erstellen</Link></Button>
+              <Button asChild variant="secondary"><Link href="/abrechnungen/neu?art=abrechnung"><FilePlus2 />Abrechnung erstellen</Link></Button>
               <StatementUploadDialog employees={employees} />
             </div>
           ) : undefined
@@ -75,6 +78,15 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
           <CardHeader><CardTitle>{manage ? "Meine eigenen Dokumente" : "Meine Dokumente"}</CardTitle></CardHeader>
           <CardContent className="px-0 pb-2">
             {ownRows.length ? <StatementTable rows={ownRows} manage={false} /> : <EmptyState icon={Receipt} title="Noch keine Dokumente" description="Sobald eine Abrechnung oder Gutschrift für dich bereitsteht, erscheint sie hier und du wirst benachrichtigt." className="mx-5 mb-3" />}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {manage && numbering.length ? (
+        <Card>
+          <CardHeader><div><CardTitle>Belegnummern</CardTitle><CardDescription>Platzhalter: {"{JAHR}"} = Jahr, {"{NR}"} = fortlaufende Nummer. Mit „Nächste Nr.“ führt ihr eure bisherige Nummerierung fort.</CardDescription></div></CardHeader>
+          <CardContent className="space-y-4">
+            {numbering.map((n) => <NumberingForm key={n.kind} kind={n.kind} format={n.format || (n.kind === "gutschrift" ? "GS{JAHR}{NR}" : "AB{JAHR}{NR}")} pad={n.pad} next={n.next_number} example={n.example} />)}
           </CardContent>
         </Card>
       ) : null}
