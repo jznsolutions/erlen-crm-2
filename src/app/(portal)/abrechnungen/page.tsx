@@ -10,7 +10,7 @@ import { Alert, EmptyState, PageHeader } from "@/components/ui/misc";
 import { Select } from "@/components/ui/input";
 import { StatementTable, type StatementRow } from "@/components/statements/statement-table";
 import { StatementUploadDialog } from "@/components/statements/upload-dialog";
-import { NumberingForm } from "@/components/statements/numbering-form";
+import { DefaultsForm, NumberingForm } from "@/components/statements/numbering-form";
 
 export const metadata: Metadata = { title: "Abrechnungen & Gutschriften" };
 
@@ -27,13 +27,23 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
   const ownRows = (own.data ?? []) as StatementRow[];
 
   let allRows: StatementRow[] = [];
+  let nextCustomer = 1;
+  let retentionDefault = 10;
   let numbering: { kind: "gutschrift" | "abrechnung"; format: string; pad: number; next_number: number; example: string }[] = [];
   let employees: { id: string; label: string }[] = [];
   if (manage) {
     let q = supabase.from("statements").select(COLUMNS).order("created_at", { ascending: false }).limit(200);
     if (filterUser) q = q.eq("user_id", filterUser);
-    const [{ data }, list, num] = await Promise.all([q, getVisibleEmployees(), supabase.rpc("statement_numbering_get", {})]);
+    const [{ data }, list, num, nextCust, defs] = await Promise.all([
+      q,
+      getVisibleEmployees(),
+      supabase.rpc("statement_numbering_get", {}),
+      supabase.rpc("customer_number_next_get", {}),
+      supabase.from("organization_settings").select("value").eq("key", "statement_defaults").maybeSingle(),
+    ]);
     numbering = (num.data ?? []) as typeof numbering;
+    nextCustomer = Number(nextCust.data ?? 1);
+    retentionDefault = Number(((defs.data?.value ?? {}) as { retention_rate?: number }).retention_rate ?? 10);
     employees = list.filter((e) => e.status === "aktiv" || e.id === filterUser).map((e) => ({ id: e.id, label: `${e.last_name}, ${e.first_name}` }));
     const names = new Map(list.map((e) => [e.id, `${e.first_name} ${e.last_name}`]));
     allRows = ((data ?? []) as (StatementRow & { user_id: string })[]).map((s) => ({ ...s, user_name: names.get(s.user_id) ?? "–" }));
@@ -84,8 +94,9 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
 
       {manage && numbering.length ? (
         <Card>
-          <CardHeader><div><CardTitle>Belegnummern</CardTitle><CardDescription>Platzhalter: {"{JAHR}"} = Jahr, {"{NR}"} = fortlaufende Nummer. Mit „Nächste Nr.“ führt ihr eure bisherige Nummerierung fort.</CardDescription></div></CardHeader>
+          <CardHeader><div><CardTitle>Belegnummern & Voreinstellungen</CardTitle><CardDescription>Platzhalter: {"{JAHR}"} = Jahr, {"{NR}"} = fortlaufende Nummer. Mit „Nächste Nr.“ führt ihr eure bisherige Nummerierung fort.</CardDescription></div></CardHeader>
           <CardContent className="space-y-4">
+            <DefaultsForm retention={retentionDefault} nextCustomer={nextCustomer} />
             {numbering.map((n) => <NumberingForm key={n.kind} kind={n.kind} format={n.format || (n.kind === "gutschrift" ? "GS{JAHR}{NR}" : "AB{JAHR}{NR}")} pad={n.pad} next={n.next_number} example={n.example} />)}
           </CardContent>
         </Card>

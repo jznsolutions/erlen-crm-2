@@ -212,7 +212,7 @@ describe("Abrechnungen & Gutschriften", () => {
       expect((await db.query("select id from public.statements")).rowCount).toBe(0);
     });
   });
-  it("Doppelte Abrechnung für denselben Zeitraum wird verhindert; USt nur bei Umsatzsteuerpflicht", async () => {
+  it("Doppelte Abrechnung für denselben Zeitraum wird verhindert; USt (nur Gutschrift) bei Umsatzsteuerpflicht", async () => {
     await scenario(async () => {
       await as(o.admin);
       await db.query("select public.employee_billing_save($1, 'Weg 1', '57612', 'Helmenzen', null, null, true, null)", [o.partner1]);
@@ -220,7 +220,7 @@ describe("Abrechnungen & Gutschriften", () => {
       const a = (
         await one<{ id: string }>(
           db,
-          "select public.statement_create($1, 'abrechnung', 'Oktober', '2026-10-01', '2026-10-31', $2::jsonb, null) id",
+          "select public.statement_create($1, 'gutschrift', 'Oktober', '2026-10-01', '2026-10-31', $2::jsonb, null) id",
           [o.partner1, items],
         )
       ).id;
@@ -233,13 +233,13 @@ describe("Abrechnungen & Gutschriften", () => {
       await db.query("select public.statement_publish($1, null, null)", [a]);
       await expectDbError(
         db,
-        "select public.statement_create($1, 'abrechnung', 'Oktober 2', '2026-10-15', '2026-11-15', $2::jsonb, null)",
+        "select public.statement_create($1, 'gutschrift', 'Oktober 2', '2026-10-15', '2026-11-15', $2::jsonb, null)",
         [o.partner1, items],
         /DOPPELTE_ABRECHNUNG/,
       );
       await db.query("select public.statement_cancel($1, 'Fehlerhaft')", [a]);
       await db.query(
-        "select public.statement_create($1, 'abrechnung', 'Oktober neu', '2026-10-01', '2026-10-31', $2::jsonb, null)",
+        "select public.statement_create($1, 'gutschrift', 'Oktober neu', '2026-10-01', '2026-10-31', $2::jsonb, null)",
         [o.partner1, items],
       );
     });
@@ -263,6 +263,44 @@ describe("Abrechnungen & Gutschriften", () => {
       );
       await as(o.partner2);
       expect((await db.query("select * from public.employee_billing")).rowCount).toBe(0);
+    });
+  });
+});
+
+describe("Vorlage Gutschrift (Stornobehalt, Abzüge, Kundennummer)", () => {
+  it("rechnet wie die Vorlage: Zwischensumme − 10 % Stornobehalt − KFZ + 19 % USt", async () => {
+    await scenario(async () => {
+      await as(o.admin);
+      await db.query("select public.employee_billing_save($1, 'Gerichtsstraße 4', '57537', 'Wissen', null, null, true, null)", [o.partner1]);
+      const items = JSON.stringify([
+        { description: "Provisionen gem. Abrechnung", quantity: 1, unit_cents: 201000, category: "abrechnung" },
+        { description: "Stornoeinbehalt Vormonat", quantity: 1, unit_cents: 7292, category: "einbehalt_freigabe" },
+        { description: "Differenzprovision", quantity: 1, unit_cents: 9000, category: "overhead" },
+        { description: "KFZ", quantity: 1, unit_cents: -140000, category: "abzug" },
+      ]);
+      const id = (await one<{ id: string }>(db, "select public.statement_create($1, 'gutschrift', 'Gutschrift August 2026', '2026-08-01', '2026-08-31', $2::jsonb, null, 10) id", [o.partner1, items])).id;
+      const s = await one<Record<string, string>>(db, "select subtotal_cents, retention_cents, deductions_cents, net_cents, vat_cents, gross_cents, recipient ->> 'customer_number' cn, recipient ->> 'level' lvl from public.statements where id = $1", [id]);
+      expect([s.subtotal_cents, s.retention_cents, s.deductions_cents, s.net_cents].map(Number)).toEqual([217292, 21729, 140000, 55563]);
+      expect(Number(s.vat_cents)).toBe(10557);
+      expect(Number(s.gross_cents)).toBe(66120);
+      expect(s.cn).toMatch(/^VPPT\d{3}$/);
+      expect(s.lvl).toBe("VP");
+    });
+  });
+  it("übernommene Abrechnungen und ausgezahlte Einbehalte werden beim Veröffentlichen markiert", async () => {
+    await scenario(async () => {
+      await as(o.admin);
+      const ab = (await one<{ id: string }>(db, "select public.statement_create($1, 'abrechnung', 'PA', '2026-09-03', '2026-09-13', $2::jsonb, null) id", [o.partner1, JSON.stringify([{ description: "Glasfaser", quantity: 15, unit_cents: 10000, category: "vermittlung" }])])).id;
+      await db.query("select public.statement_publish($1, null, null)", [ab]);
+      const sug = await db.query("select line, source_id, amount_cents from public.gutschrift_suggestion($1, '2026-09-01', '2026-09-30')", [o.partner1]);
+      expect(sug.rows).toEqual([{ line: "abrechnung", source_id: ab, amount_cents: "150000" }]);
+      const gs = (await one<{ id: string }>(db, "select public.statement_create($1, 'gutschrift', 'GS', '2026-09-01', '2026-09-30', $2::jsonb, null, 10) id", [o.partner1, JSON.stringify([{ description: "Provisionen gem. Abrechnung", quantity: 1, unit_cents: 150000, category: "abrechnung", source_id: ab }])])).id;
+      await db.query("select public.statement_publish($1, null, null)", [gs]);
+      const next = await db.query("select line, amount_cents from public.gutschrift_suggestion($1, '2026-10-01', '2026-10-31')", [o.partner1]);
+      // Abrechnung ist übernommen; Einbehalt (10 % von 1.500 €) steht für die nächste Gutschrift bereit
+      expect(next.rows).toEqual([{ line: "einbehalt_freigabe", amount_cents: "15000" }]);
+      await db.query("select public.statement_cancel($1, 'Test')", [gs]);
+      expect((await db.query("select 1 from public.gutschrift_suggestion($1, '2026-10-01', '2026-10-31') where line = 'abrechnung'", [o.partner1])).rowCount).toBe(1);
     });
   });
 });

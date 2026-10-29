@@ -7,6 +7,7 @@ import { formToObject, fromDbError, fromZodError, type ActionResult } from "@/li
 import { optionalIsoDate, optionalText, uuid } from "@/lib/validation";
 import { parseEuroToCents } from "@/lib/format";
 import { renderStatementPdf } from "@/lib/statement-pdf";
+import { ITEM_CATEGORIES } from "@/lib/commission";
 import { sendEmail, statementEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/env";
 
@@ -17,7 +18,8 @@ const itemSchema = z.object({
   product_id: z.uuid().nullable().optional(),
   quantity: z.coerce.number().min(-100000).max(100000),
   unit: z.string(),
-  category: z.enum(["vermittlung", "overhead_ausbilder", "overhead_teamleiter", "zusatz", "sonstiges"]).optional(),
+  category: z.enum(ITEM_CATEGORIES).optional(),
+  source_id: z.uuid().nullable().optional(),
 });
 
 const statementSchema = z
@@ -28,6 +30,7 @@ const statementSchema = z
     period_from: optionalIsoDate,
     period_to: optionalIsoDate,
     note: optionalText(2000),
+    retention_rate: z.coerce.number().min(0).max(100).default(0),
     items: z.string(),
     publish: z.enum(["true", "false"]).default("true"),
   })
@@ -36,9 +39,9 @@ const statementSchema = z
 
 /** Erzeugt das PDF, legt es im privaten Bucket ab und benachrichtigt den Mitarbeiter per E-Mail. */
 async function renderAndStore(supabase: Supabase, id: string, notify: boolean): Promise<string | null> {
-  const { data: s } = await supabase.from("statements").select("*, statement_items(*)").eq("id", id).maybeSingle();
+  const { data: s } = await supabase.from("statements").select("*, statement_items!statement_items_statement_id_fkey(*)").eq("id", id).maybeSingle();
   if (!s || !s.number) return "Dokument nicht gefunden";
-  const order = ["vermittlung", "overhead_ausbilder", "overhead_teamleiter", "sonstiges", "zusatz"];
+  const order = ["abrechnung", "einbehalt_freigabe", "overhead", "vermittlung", "storno", "overhead_ausbilder", "overhead_teamleiter", "sonstiges", "zusatz", "abzug"];
   const items = [...(s.statement_items ?? [])].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.position - b.position);
   const pdf = await renderStatementPdf({
     kind: s.kind,
@@ -49,6 +52,10 @@ async function renderAndStore(supabase: Supabase, id: string, notify: boolean): 
     periodTo: s.period_to,
     recipient: (s.recipient ?? {}) as Record<string, string | null>,
     items: items.map((i) => ({ description: i.description, quantity: Number(i.quantity), unit_cents: Number(i.unit_cents), total_cents: Number(i.total_cents), category: i.category })),
+    subtotalCents: Number(s.subtotal_cents),
+    retentionRate: Number(s.retention_rate),
+    retentionCents: Number(s.retention_cents),
+    deductionsCents: Number(s.deductions_cents),
     netCents: Number(s.net_cents),
     vatRate: Number(s.vat_rate),
     vatCents: Number(s.vat_cents),
@@ -56,7 +63,8 @@ async function renderAndStore(supabase: Supabase, id: string, notify: boolean): 
     note: s.note,
   });
   const path = `${s.user_id}/${s.number}.pdf`;
-  const fileName = `${s.kind === "abrechnung" ? "Abrechnung" : "Gutschrift"}_${s.number}.pdf`;
+  const person = String((s.recipient as Record<string, unknown> | null)?.name ?? "").replace(/[^\p{L}\p{N}]+/gu, "_");
+  const fileName = `${s.kind === "abrechnung" ? "Provisionsabrechnung" : "Gutschrift"}_${person}_${s.number}.pdf`;
   const { error: up } = await supabase.storage.from("statements").upload(path, pdf, { contentType: "application/pdf", upsert: true });
   if (up) {
     console.error("[abrechnung] upload", up.message);
@@ -90,7 +98,7 @@ export async function createStatement(_: ActionResult | null, fd: FormData): Pro
   for (const it of items.data) {
     const cents = parseEuroToCents(it.unit);
     if (cents === null) return { ok: false, error: `Ungültiger Betrag bei „${it.description}“` };
-    rows.push({ description: it.description, product_id: it.product_id ?? null, quantity: it.quantity, unit_cents: cents, category: it.category ?? "sonstiges" });
+    rows.push({ description: it.description, product_id: it.product_id ?? null, quantity: it.quantity, unit_cents: cents, category: it.category ?? "sonstiges", source_id: it.source_id ?? null });
   }
   const supabase = await createClient();
   const { data: id, error } = await supabase.rpc("statement_create", {
@@ -101,6 +109,7 @@ export async function createStatement(_: ActionResult | null, fd: FormData): Pro
     p_to: (d.period_to ?? null) as string,
     p_items: rows,
     p_note: (d.note ?? null) as string,
+    p_retention_rate: d.kind === "gutschrift" ? d.retention_rate : 0,
   });
   if (error) return fromDbError(error);
   if (d.publish === "true") {
@@ -267,4 +276,34 @@ export async function saveNumbering(_: ActionResult | null, fd: FormData): Promi
   if (error) return fromDbError(error);
   revalidatePath("/abrechnungen");
   return { ok: true, message: "Nummernkreis gespeichert." };
+}
+
+export async function setCustomerNumber(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("statements.manage");
+  const parsed = z
+    .object({ user_id: uuid, customer_number: z.string().trim().toUpperCase().regex(/^([A-Z0-9-]{3,20})?$/, "3–20 Zeichen: Buchstaben, Ziffern, Bindestrich").optional() })
+    .safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("employee_set_customer_number", { p_user: parsed.data.user_id, p_number: (parsed.data.customer_number ?? "") as string });
+  if (error) return fromDbError(error);
+  revalidatePath("/", "layout");
+  return { ok: true, message: parsed.data.customer_number ? "Kundennummer gespeichert." : "Kundennummer entfernt – sie wird bei der nächsten Gutschrift automatisch vergeben." };
+}
+
+export async function saveStatementDefaults(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("statements.manage");
+  const parsed = z
+    .object({ retention_rate: z.coerce.number().min(0).max(100), next_customer: z.coerce.number().int().min(1).max(99999) })
+    .safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const supabase = await createClient();
+  const [a, b] = await Promise.all([
+    supabase.rpc("statement_defaults_save", { p_retention_rate: parsed.data.retention_rate }),
+    supabase.rpc("customer_number_next_set", { p_next: parsed.data.next_customer }),
+  ]);
+  if (a.error) return fromDbError(a.error);
+  if (b.error) return fromDbError(b.error);
+  revalidatePath("/abrechnungen");
+  return { ok: true, message: "Voreinstellungen gespeichert." };
 }
