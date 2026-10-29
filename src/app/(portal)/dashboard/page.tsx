@@ -14,7 +14,7 @@ import { Alert, PageHeader } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/filters";
 import {
-  AgencyTiles, KpiRow, MemberTable, ProductCard, RankBadge, TargetsCard, TeamComparison, TrainingCard, TrendCard, type TrainingRow,
+  AgencyTiles, KpiRow, MemberTable, type MoneyKpis, ProductCard, RankBadge, TargetsCard, TeamComparison, TrainingCard, TrendCard, type TrainingRow,
 } from "@/components/dashboard/sections";
 import type { TargetProgress } from "@/components/dashboard/targets";
 
@@ -49,6 +49,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     supabase.from("team_memberships").select("team_id").eq("user_id", user.id).eq("member_role", "teamleiter").is("ended_at", null),
   ]);
 
+  const { data: moneyData } = await supabase.rpc("get_money_kpis", { p_from: startOfMonth(today), p_to: today });
+  const money: MoneyKpis = {
+    revenueCents: moneyData?.[0]?.revenue_cents === null || moneyData?.[0]?.revenue_cents === undefined ? null : Number(moneyData[0].revenue_cents),
+    ownCommissionCents: moneyData?.[0] ? Number(moneyData[0].own_commission_cents) : null,
+  };
+  const ownMoney: MoneyKpis = { revenueCents: null, ownCommissionCents: money.ownCommissionCents };
   const pendingUpdates = user.permissions.has("settings.manage") ? (await getSetupStatus()).pending.length : 0;
   const ownRows = rows.filter((r) => r.user_id === user.id);
   const ownTargets = targets.filter((t) => t.scope !== "mitarbeiter" || t.user_id === user.id);
@@ -91,9 +97,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       ) : null}
 
       {kind === "agentur" ? (
-        <AgencyDashboard rows={rows} today={today} chart={chart} products={products} employees={employees} teams={teams} targets={targets} periodFilter={periodFilter} />
+        <AgencyDashboard money={money} rows={rows} today={today} chart={chart} products={products} employees={employees} teams={teams} targets={targets} periodFilter={periodFilter} />
       ) : kind === "team" ? (
-        <TeamDashboard rows={rows} today={today} chart={chart} products={products} employees={employees} ledTeamIds={(myTeams.data ?? []).map((t) => t.team_id)} userId={user.id} targets={targets} periodFilter={periodFilter} />
+        <TeamDashboard money={ownMoney} rows={rows} today={today} chart={chart} products={products} employees={employees} ledTeamIds={(myTeams.data ?? []).map((t) => t.team_id)} userId={user.id} targets={targets} periodFilter={periodFilter} />
       ) : kind === "ausbilder" ? (
         <TrainerDashboard rows={rows} today={today} chart={chart} employees={employees} userId={user.id} />
       ) : null}
@@ -101,7 +107,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {canPerf && (kind === "partner" || ownRows.length > 0) ? (
         <section className="space-y-4" aria-labelledby="own-heading">
           <h2 id="own-heading" className="text-lg font-semibold">{kind === "partner" ? "Meine Leistung" : "Meine persönliche Leistung"}</h2>
-          <KpiRow rows={ownRows} today={today} scopeLabel="" />
+          <KpiRow rows={ownRows} today={today} scopeLabel="" money={ownMoney} />
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="space-y-4 lg:col-span-2">
               <TrendCard rows={filterRows(ownRows, chart.from, chart.to)} from={chart.from} to={chart.to} title="Mein Verlauf" action={kind === "partner" ? periodFilter : undefined} />
@@ -141,7 +147,7 @@ type Rows = Awaited<ReturnType<typeof getDaily>>;
 type Employees = Awaited<ReturnType<typeof getVisibleEmployees>>;
 type Range = { from: string; to: string };
 
-async function AgencyDashboard({ rows, today, chart, products, employees, teams, targets, periodFilter }: { rows: Rows; today: string; chart: Range; products: Awaited<ReturnType<typeof getProducts>>; employees: Employees; teams: { id: string; name: string }[]; targets: (TargetProgress & { user_id: string | null })[]; periodFilter: React.ReactNode }) {
+async function AgencyDashboard({ money, rows, today, chart, products, employees, teams, targets, periodFilter }: { rows: Rows; today: string; chart: Range; products: Awaited<ReturnType<typeof getProducts>>; employees: Employees; teams: { id: string; name: string }[]; targets: (TargetProgress & { user_id: string | null })[]; periodFilter: React.ReactNode; money: MoneyKpis }) {
   const supabase = await createClient();
   const { count } = await supabase.from("performance_records").select("id", { count: "exact", head: true }).eq("status", "eingereicht");
   const month = filterRows(rows, startOfMonth(today), today);
@@ -153,7 +159,7 @@ async function AgencyDashboard({ rows, today, chart, products, employees, teams,
         <h2 id="agency-heading" className="text-lg font-semibold">Agentur</h2>
         {periodFilter}
       </div>
-      <KpiRow rows={rows} today={today} scopeLabel="Agentur" />
+      <KpiRow rows={rows} today={today} scopeLabel="Agentur" money={money} />
       <AgencyTiles rows={rows} today={today} employees={employees} pendingApprovals={count ?? 0} />
       <TrendCard rows={filterRows(rows, chart.from, chart.to)} from={chart.from} to={chart.to} title="Agenturverlauf" />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -174,7 +180,7 @@ async function AgencyDashboard({ rows, today, chart, products, employees, teams,
   );
 }
 
-function TeamDashboard({ rows, today, chart, products, employees, ledTeamIds, userId, targets, periodFilter }: { rows: Rows; today: string; chart: Range; products: Awaited<ReturnType<typeof getProducts>>; employees: Employees; ledTeamIds: string[]; userId: string; targets: (TargetProgress & { user_id: string | null; team_id: string | null })[]; periodFilter: React.ReactNode }) {
+function TeamDashboard({ money, rows, today, chart, products, employees, ledTeamIds, userId, targets, periodFilter }: { rows: Rows; today: string; chart: Range; products: Awaited<ReturnType<typeof getProducts>>; employees: Employees; ledTeamIds: string[]; userId: string; targets: (TargetProgress & { user_id: string | null; team_id: string | null })[]; periodFilter: React.ReactNode; money: MoneyKpis }) {
   const members = employees.filter((e) => e.id !== userId && e.status === "aktiv" && (e.team_id ? ledTeamIds.includes(e.team_id) : true));
   const ids = new Set(members.map((m) => m.id));
   const teamRows = rows.filter((r) => ids.has(r.user_id));
@@ -185,7 +191,7 @@ function TeamDashboard({ rows, today, chart, products, employees, ledTeamIds, us
         <h2 id="team-heading" className="text-lg font-semibold">Mein Team <span className="text-sm font-normal text-muted-foreground">· {members.length} Mitglieder</span></h2>
         {periodFilter}
       </div>
-      <KpiRow rows={teamRows} today={today} scopeLabel="Team" />
+      <KpiRow rows={teamRows} today={today} scopeLabel="Team" money={money} />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2"><TrendCard rows={filterRows(teamRows, chart.from, chart.to)} from={chart.from} to={chart.to} title="Teamverlauf" /></div>
         <ProductCard rows={filterRows(teamRows, startOfMonth(today), today)} products={products} title="Produkte (Monat)" />

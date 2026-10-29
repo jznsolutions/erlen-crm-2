@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import {
-  ArrowRight, BarChart3, Cable, Check, ChevronDown, GraduationCap, Mail, MapPin, Phone, Plus, SunMedium, Target, UserRound, Users, Zap,
+  ArrowRight, BarChart3, Cable, CalendarDays, Check, ChevronDown, GraduationCap, Mail, MapPin, Phone, Plus, SunMedium, Target, UserRound, Users, Zap,
 } from "lucide-react";
 import { SITE } from "@/lib/site";
-import { CalendlyBooking } from "@/components/website/calendly";
+import { BookingCalendar } from "@/components/website/booking";
 import { ApplyForm } from "@/components/website/apply-form";
 import { CountUp } from "@/components/website/count-up";
 import { FitQuiz } from "@/components/website/quiz";
@@ -79,7 +79,7 @@ export default function HomePage() {
     "@type": "Organization",
     name: SITE.name,
     url: SITE.url,
-    logo: `${SITE.url}/erlen-logo.png`,
+    logo: `${SITE.url}/icon-512.png`,
     description: SITE.description,
     ...(SITE.email ? { email: SITE.email } : {}),
     ...(SITE.phone ? { telephone: SITE.phone } : {}),
@@ -344,16 +344,27 @@ export default function HomePage() {
                 <li key={x.t} data-reveal="left" style={{ "--d": `${k * 100}ms` } as React.CSSProperties} className="flex items-center gap-3"><span className="flex size-9 items-center justify-center rounded-full bg-white/10"><x.i className="size-4" /></span>{x.t}</li>
               ))}
             </ul>
-            {SITE.calendlyUrl ? (
-              <div data-reveal className="mt-10 rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-                <p className="font-semibold text-white">Lieber direkt einen Termin?</p>
-                <p className="mt-1 mb-4 text-sm text-white/55">Wähle einen freien Termin für dein Kennenlerngespräch – die Bestätigung kommt per E-Mail.</p>
-                <CalendlyBooking url={SITE.calendlyUrl} compact />
-              </div>
-            ) : null}
+            <a href="#termin" data-reveal className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/50">
+              <CalendarDays className="size-4" />Lieber direkt einen Termin für das Gespräch buchen
+            </a>
           </div>
           <div data-reveal="scale" className="glass rounded-[2rem] p-6 sm:p-10">
-            <ApplyForm calendlyUrl={SITE.calendlyUrl} />
+            <ApplyForm />
+          </div>
+        </div>
+      </section>
+
+      {/* ───────────── TERMIN BUCHEN ───────────── */}
+      <section id="termin" className="scroll-mt-24 relative isolate overflow-hidden pb-24 sm:pb-32">
+        <div className="mx-auto grid max-w-7xl items-start gap-14 px-5 sm:px-8 lg:grid-cols-2">
+          <div>
+            <Eyebrow>Termin</Eyebrow>
+            <Display className="!text-5xl sm:!text-6xl">Dein Gespräch.<br /><span className="text-accent">Dein Termin.</span></Display>
+            <p data-reveal className="mt-8 max-w-md text-lg text-white/55">Such dir direkt einen freien Termin für dein Bewerbungsgespräch aus. Du erhältst sofort eine Bestätigung per E-Mail und 2 Stunden vorher eine Erinnerung.</p>
+          </div>
+          <div data-reveal="scale" className="glass rounded-[2rem] p-6 sm:p-10">
+            <BookingCalendar />
+            <noscript><p className="text-white/60">Für die Terminbuchung wird JavaScript benötigt. Alternativ: Bewerbungsformular oben nutzen.</p></noscript>
           </div>
         </div>
       </section>

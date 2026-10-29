@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, Input, Select } from "@/components/ui/input";
 import { Alert, PageHeader } from "@/components/ui/misc";
 import { StatementBuilder, type BuilderItem } from "@/components/statements/builder";
+import { ITEM_CATEGORY_LABELS, levelForRole } from "@/lib/commission";
 
 export const metadata: Metadata = { title: "Abrechnung erstellen" };
 
@@ -28,31 +29,38 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
   const prevEnd = addDays(startOfMonth(today), -1);
   const prevStart = startOfMonth(prevEnd);
   const userId = params.ma && employees.some((e) => e.id === params.ma) ? params.ma : null;
-  const from = params.von && isIsoDate(params.von) ? params.von : kind === "abrechnung" ? prevStart : "";
-  const to = params.bis && isIsoDate(params.bis) ? params.bis : kind === "abrechnung" ? prevEnd : "";
+  const manual = params.manuell === "1";
+  const from = params.von && isIsoDate(params.von) ? params.von : manual ? "" : prevStart;
+  const to = params.bis && isIsoDate(params.bis) ? params.bis : manual ? "" : prevEnd;
   const validPeriod = !from || !to || to >= from;
   const label = kind === "abrechnung" ? "Abrechnung" : "Gutschrift";
 
   let items: BuilderItem[] = [];
   let missing: string[] = [];
+  let extras: { id: string; description: string; amount_cents: number; recurring: boolean }[] = [];
   let billing: { vat_liable: boolean; street: string | null; city: string | null; commission_level_id: string | null } | null = null;
   let levelName: string | null = null;
   const person = employees.find((e) => e.id === userId);
-  if (userId && validPeriod) {
-    const { data: b } = await supabase.from("employee_billing").select("vat_liable, street, city, commission_level_id").eq("user_id", userId).maybeSingle();
+  if (userId && validPeriod && person) {
+    const [{ data: b }, { data: levels }, { data: ex }] = await Promise.all([
+      supabase.from("employee_billing").select("vat_liable, street, city, commission_level_id").eq("user_id", userId).maybeSingle(),
+      supabase.from("commission_levels").select("id, key, name").not("key", "is", null),
+      supabase.from("statement_extras").select("id, description, amount_cents, recurring").eq("user_id", userId).eq("is_active", true).order("created_at"),
+    ]);
     billing = b;
-    if (b?.commission_level_id) {
-      const { data: l } = await supabase.from("commission_levels").select("name").eq("id", b.commission_level_id).maybeSingle();
-      levelName = l?.name ?? null;
-    }
-    if (kind === "abrechnung" && from && to) {
+    levelName = (levels ?? []).find((l) => l.id === b?.commission_level_id)?.name ?? (levels ?? []).find((l) => l.key === levelForRole(person.role_key))?.name ?? null;
+    extras = (ex ?? []).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) }));
+    if (from && to) {
       const { data: preview } = await supabase.rpc("statement_preview", { p_user: userId, p_from: from, p_to: to });
-      items = (preview ?? []).map((p) => ({
-        description: `Provision ${p.product_name} (${p.unit_label})`,
-        product_id: p.product_id,
-        quantity: Number(p.quantity),
-        unit: euro(Number(p.unit_cents)),
-      }));
+      items = (preview ?? [])
+        .filter((p) => p.has_rate)
+        .map((p) => ({
+          description: `${ITEM_CATEGORY_LABELS[p.kind] ?? "Provision"} ${p.product_name} (${p.unit_label})`,
+          product_id: p.product_id,
+          quantity: Number(p.quantity),
+          unit: euro(Number(p.unit_cents)),
+          category: p.kind as BuilderItem["category"],
+        }));
       missing = (preview ?? []).filter((p) => !p.has_rate).map((p) => p.product_name);
     }
   }
@@ -63,11 +71,11 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         title={`${label} erstellen`}
-        description={kind === "abrechnung" ? "Die Positionen werden aus den bestätigten Leistungen im Zeitraum und den Provisionssätzen der Stufe berechnet. Du kannst sie vor dem Erstellen anpassen." : "Gutschrift mit frei wählbaren Positionen, z. B. Bonus, Wettbewerbsprämie oder Korrektur."}
+        description="Vermittlungsprovision und Overhead (Ausbilder/Teamleiter) werden automatisch aus den bestätigten Leistungen im Zeitraum berechnet. Zusatzpositionen wie Fahrzeugraten wählst du darunter aus. Alles kann vor dem Erstellen angepasst werden."
         actions={<Button asChild variant="secondary"><Link href="/abrechnungen">Zur Übersicht</Link></Button>}
       />
       <Card>
-        <CardHeader><CardTitle>1. Mitarbeiter {kind === "abrechnung" ? "und Zeitraum" : ""} wählen</CardTitle></CardHeader>
+        <CardHeader><CardTitle>1. Mitarbeiter und Zeitraum wählen</CardTitle></CardHeader>
         <CardContent>
           <form className="grid gap-4 sm:grid-cols-[1fr_160px_160px_auto] sm:items-end">
             <input type="hidden" name="art" value={kind} />
@@ -77,9 +85,9 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
                 {employees.map((e) => <option key={e.id} value={e.id}>{e.last_name}, {e.first_name}</option>)}
               </Select>
             </Field>
-            <Field label={kind === "abrechnung" ? "Von" : "Zeitraum von (optional)"} htmlFor="n-von"><Input id="n-von" name="von" type="date" defaultValue={from} required={kind === "abrechnung"} /></Field>
+            <Field label="Von" htmlFor="n-von"><Input id="n-von" name="von" type="date" defaultValue={from} required={kind === "abrechnung"} /></Field>
             <Field label="Bis" htmlFor="n-bis"><Input id="n-bis" name="bis" type="date" defaultValue={to} required={kind === "abrechnung"} /></Field>
-            <Button type="submit" variant="secondary">{kind === "abrechnung" ? "Berechnen" : "Weiter"}</Button>
+            <Button type="submit" variant="secondary">Berechnen</Button>
           </form>
           {!validPeriod ? <Alert tone="danger" className="mt-4">Das Ende des Zeitraums liegt vor dem Beginn.</Alert> : null}
         </CardContent>
@@ -99,9 +107,9 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
             {!billing?.street || !billing?.city ? (
               <Alert tone="warning" title="Anschrift fehlt">Für {person.first_name} ist noch keine Anschrift hinterlegt. Bitte im <Link className="underline" href={`/mitarbeiter/${person.id}`}>Mitarbeiterprofil</Link> unter „Abrechnungsdaten“ ergänzen.</Alert>
             ) : null}
-            {kind === "abrechnung" && !levelName ? <Alert tone="warning">Keine Provisionsstufe zugewiesen – die Einzelpreise sind 0 €. Stufe im Mitarbeiterprofil festlegen.</Alert> : null}
+            {!levelName ? <Alert tone="warning">Für diese Rolle gibt es keine Provisionsstufe. Stufe im Mitarbeiterprofil festlegen.</Alert> : null}
             {missing.length ? <Alert tone="warning">Kein Provisionssatz hinterlegt für: {missing.join(", ")}. Bitte unter Verwaltung → Provisionen ergänzen oder den Betrag hier eintragen.</Alert> : null}
-            {kind === "abrechnung" && items.length === 0 ? <Alert tone="info">Im Zeitraum gibt es keine bestätigten Leistungen. Du kannst trotzdem Positionen manuell eintragen.</Alert> : null}
+            {from && to && items.length === 0 ? <Alert tone="info">Im Zeitraum gibt es keine provisionspflichtigen bestätigten Leistungen. Du kannst trotzdem Positionen manuell eintragen.</Alert> : null}
             <StatementBuilder
               key={`${userId}-${from}-${to}`}
               kind={kind}
@@ -110,6 +118,7 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
               periodTo={to || null}
               defaultTitle={defaultTitle}
               initialItems={items}
+              extras={extras}
               vatRate={billing?.vat_liable ? 19 : 0}
             />
           </CardContent>

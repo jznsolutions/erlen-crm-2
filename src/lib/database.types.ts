@@ -59,16 +59,70 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"commission_levels": {
+                },"booking_availability": {
                   Row: {
-                    "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"sort_order": number
+                    "end_time": string,"id": string,"start_time": string,"weekday": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"sort_order"?: number
+                    "end_time": string,"id"?: string,"start_time": string,"weekday": number
                   }
                   Update: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"sort_order"?: number
+                    "end_time"?: string,"id"?: string,"start_time"?: string,"weekday"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"booking_blocks": {
+                  Row: {
+                    "created_by": string | null,"ends_at": string,"id": string,"reason": string | null,"starts_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_by"?: string | null,"ends_at": string,"id"?: string,"reason"?: string | null,"starts_at": string
+                  }
+                  Update: {
+                    "created_by"?: string | null,"ends_at"?: string,"id"?: string,"reason"?: string | null,"starts_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "booking_blocks_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"bookings": {
+                  Row: {
+                    "applicant_id": string | null,"cancel_reason": string | null,"cancel_token_hash": string | null,"cancelled_at": string | null,"created_at": string,"email": string,"ends_at": string,"full_name": string,"id": string,"message": string | null,"phone": string,"reminder_sent_at": string | null,"starts_at": string,"status": Database["public"]['Enums']["booking_status"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "applicant_id"?: string | null,"cancel_reason"?: string | null,"cancel_token_hash"?: string | null,"cancelled_at"?: string | null,"created_at"?: string,"email": string,"ends_at": string,"full_name": string,"id"?: string,"message"?: string | null,"phone": string,"reminder_sent_at"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["booking_status"]
+                  }
+                  Update: {
+                    "applicant_id"?: string | null,"cancel_reason"?: string | null,"cancel_token_hash"?: string | null,"cancelled_at"?: string | null,"created_at"?: string,"email"?: string,"ends_at"?: string,"full_name"?: string,"id"?: string,"message"?: string | null,"phone"?: string,"reminder_sent_at"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["booking_status"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bookings_applicant_id_fkey"
+      columns: ["applicant_id"]
+isOneToOne: false
+      referencedRelation: "applicants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"commission_levels": {
+                  Row: {
+                    "created_at": string,"description": string | null,"id": string,"is_active": boolean,"key": string | null,"name": string,"sort_order": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"key"?: string | null,"name": string,"sort_order"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"key"?: string | null,"name"?: string,"sort_order"?: number
                   }
                   Relationships: [
                     
@@ -839,16 +893,42 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"statement_items": {
+                },"statement_extras": {
                   Row: {
-                    "description": string,"id": string,"position": number,"product_id": string | null,"quantity": number,"statement_id": string,"total_cents": number,"unit_cents": number
+                    "amount_cents": number,"created_at": string,"created_by": string | null,"description": string,"id": string,"is_active": boolean,"note": string | null,"recurring": boolean,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "description": string,"id"?: string,"position": number,"product_id"?: string | null,"quantity"?: number,"statement_id": string,"total_cents": number,"unit_cents": number
+                    "amount_cents": number,"created_at"?: string,"created_by"?: string | null,"description": string,"id"?: string,"is_active"?: boolean,"note"?: string | null,"recurring"?: boolean,"user_id": string
                   }
                   Update: {
-                    "description"?: string,"id"?: string,"position"?: number,"product_id"?: string | null,"quantity"?: number,"statement_id"?: string,"total_cents"?: number,"unit_cents"?: number
+                    "amount_cents"?: number,"created_at"?: string,"created_by"?: string | null,"description"?: string,"id"?: string,"is_active"?: boolean,"note"?: string | null,"recurring"?: boolean,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "statement_extras_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "statement_extras_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"statement_items": {
+                  Row: {
+                    "category": string,"description": string,"id": string,"position": number,"product_id": string | null,"quantity": number,"statement_id": string,"total_cents": number,"unit_cents": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category"?: string,"description": string,"id"?: string,"position": number,"product_id"?: string | null,"quantity"?: number,"statement_id": string,"total_cents": number,"unit_cents": number
+                  }
+                  Update: {
+                    "category"?: string,"description"?: string,"id"?: string,"position"?: number,"product_id"?: string | null,"quantity"?: number,"statement_id"?: string,"total_cents"?: number,"unit_cents"?: number
                   }
                   Relationships: [
                     {
@@ -1133,14 +1213,58 @@ isOneToOne: false
 "applicant_update":
 { Args: { "p_id": string,"p_notes": string,"p_status": Database["public"]['Enums']["applicant_status"] }; Returns: undefined
                            },
+"booking_availability_save":
+{ Args: { "p_rows": Json }; Returns: undefined
+                           },
+"booking_block_add":
+{ Args: { "p_ends_at": string,"p_reason": string,"p_starts_at": string }; Returns: string
+                           },
+"booking_block_delete":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"booking_cancel":
+{ Args: { "p_id": string,"p_reason": string }; Returns: undefined
+                           },
+"booking_cancel_by_token":
+{ Args: { "p_token_hash": string }; Returns: {
+              "email": string,"full_name": string,"id": string,"starts_at": string
+            }[]
+                           },
+"booking_claim_reminders":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "cancel_token_hash": string,"email": string,"ends_at": string,"full_name": string,"id": string,"phone": string,"starts_at": string
+            }[]
+                           },
+"booking_create":
+{ Args: { "p_cancel_token_hash": string,"p_email": string,"p_full_name": string,"p_message": string,"p_phone": string,"p_starts_at": string }; Returns: string
+                           },
+"booking_free_slots":
+{ Args: { "p_days"?: number }; Returns: {
+              "ends_at": string,"starts_at": string
+            }[]
+                           },
+"booking_lookup_by_token":
+{ Args: { "p_token_hash": string }; Returns: {
+              "ends_at": string,"full_name": string,"id": string,"starts_at": string,"status": Database["public"]['Enums']["booking_status"]
+            }[]
+                           },
+"booking_settings_save":
+{ Args: { "p_value": Json }; Returns: undefined
+                           },
 "bootstrap_admin":
 { Args: { "p_email": string }; Returns: undefined
                            },
 "commission_level_upsert":
 { Args: { "p_description": string,"p_id": string,"p_is_active": boolean,"p_name": string,"p_sort_order": number }; Returns: string
                            },
+"commission_rate_set":
+{ Args: { "p_amount_cents": number,"p_level_key": string,"p_product": string }; Returns: undefined
+                           },
 "commission_rates_save":
 { Args: { "p_rates": Json }; Returns: undefined
+                           },
+"commission_settings_save":
+{ Args: { "p_overhead_mode": string }; Returns: undefined
                            },
 "competition_upsert":
 { Args: { "p_description": string,"p_ends_on": string,"p_id": string,"p_is_active": boolean,"p_product": string,"p_starts_on": string,"p_team": string,"p_title": string }; Returns: string
@@ -1187,6 +1311,11 @@ isOneToOne: false
 "get_leaderboard":
 { Args: { "p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string }; Returns: {
               "display_name": string,"is_me": boolean,"rank": number,"team_name": string,"total": number,"user_id": string
+            }[]
+                           },
+"get_money_kpis":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "own_commission_cents": number,"revenue_cents": number
             }[]
                            },
 "get_profile_history":
@@ -1306,9 +1435,23 @@ isOneToOne: false
 "statement_delete_draft":
 { Args: { "p_id": string }; Returns: string
                            },
+"statement_extra_delete":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"statement_extra_upsert":
+{ Args: { "p_amount_cents": number,"p_description": string,"p_id": string,"p_is_active": boolean,"p_note": string,"p_recurring": boolean,"p_user": string }; Returns: string
+                           },
+"statement_numbering_get":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "example": string,"format": string,"kind": Database["public"]['Enums']["statement_kind"],"next_number": number,"pad": number
+            }[]
+                           },
+"statement_numbering_set":
+{ Args: { "p_format": string,"p_kind": Database["public"]['Enums']["statement_kind"],"p_next_number": number,"p_pad": number }; Returns: undefined
+                           },
 "statement_preview":
 { Args: { "p_from": string,"p_to": string,"p_user": string }; Returns: {
-              "has_rate": boolean,"product_id": string,"product_name": string,"quantity": number,"total_cents": number,"unit_cents": number,"unit_label": string
+              "has_rate": boolean,"kind": string,"product_id": string,"product_name": string,"quantity": number,"total_cents": number,"unit_cents": number,"unit_label": string
             }[]
                            },
 "statement_publish":
@@ -1352,7 +1495,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"angenommen"|"abgelehnt","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","statement_kind": "abrechnung"|"gutschrift","statement_status": "entwurf"|"veroeffentlicht"|"storniert","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
+            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"angenommen"|"abgelehnt","booking_status": "gebucht"|"storniert","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","statement_kind": "abrechnung"|"gutschrift","statement_status": "entwurf"|"veroeffentlicht"|"storniert","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1468,7 +1611,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "applicant_status": ["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"statement_kind": ["abrechnung", "gutschrift"],"statement_status": ["entwurf", "veroeffentlicht", "storniert"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
+            "applicant_status": ["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"],"booking_status": ["gebucht", "storniert"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"statement_kind": ["abrechnung", "gutschrift"],"statement_status": ["entwurf", "veroeffentlicht", "storniert"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
           }
         }
 } as const

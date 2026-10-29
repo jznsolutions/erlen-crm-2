@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { applyAction, type ApplyState } from "@/app/(website)/actions";
-import { CalendlyBooking } from "./calendly";
+import { BookingCalendar } from "./booking";
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -19,7 +19,7 @@ function Submit() {
 
 const field = "h-14 w-full rounded-2xl border border-white/15 bg-white/[0.06] px-4 text-base text-white placeholder:text-white/40 outline-none transition focus:border-white/50 focus:bg-white/[0.09] aria-[invalid=true]:border-red-400";
 
-export function ApplyForm({ calendlyUrl }: { calendlyUrl: string | null }) {
+export function ApplyForm() {
   const [state, action] = useActionState<ApplyState, FormData>(applyAction, null);
   const msgRef = useRef<HTMLTextAreaElement>(null);
   // Ergebnis des Quiz in die Nachricht übernehmen
@@ -34,12 +34,10 @@ export function ApplyForm({ calendlyUrl }: { calendlyUrl: string | null }) {
         <CheckCircle2 className="mx-auto size-12 text-emerald-400" />
         <h3 className="mt-4 text-2xl font-semibold text-white">Danke für deine Bewerbung!</h3>
         <p className="mt-2 text-white/70">Wir melden uns in Kürze persönlich bei dir.</p>
-        {calendlyUrl ? (
-          <>
-            <p className="mt-6 text-white/70">Noch schneller: Such dir direkt einen Termin für dein Kennenlerngespräch aus.</p>
-            <CalendlyBooking url={calendlyUrl} prefill={{ name: state.values?.full_name, email: state.values?.email }} label="Jetzt Termin auswählen" />
-          </>
-        ) : null}
+        <div className="mt-8 border-t border-white/10 pt-6 text-left">
+          <p className="mb-4 text-center font-semibold text-white">Noch schneller: Such dir direkt einen Termin aus</p>
+          <BookingCalendar prefill={{ full_name: state.values?.full_name, email: state.values?.email, phone: state.values?.phone }} />
+        </div>
       </div>
     );
   }

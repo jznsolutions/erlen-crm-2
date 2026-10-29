@@ -1,13 +1,28 @@
 # Projektstatus ERLEN CRM
 
-Stand: 26.10.2026 · Branch `feature/crm-fundament`
+Stand: 29.10.2026 · Branch `feature/crm-fundament`
+
+## Erweiterung 29.10.2026
+
+| Punkt | Status |
+|---|---|
+| Dashboard: Leistung diesen Monat, dieser Woche, Monatsleistung pro Kopf, Umsatz (bestätigte Leistung × Agentur-Satz; Mitarbeitende sehen ihre eigene Provision) | ✅ |
+| ERLEN-Logo als Browser-/Suchsymbol, Apple-Touch-Icon, Web-App-Manifest, Logo in den strukturierten Daten | ✅ |
+| Eigene Terminbuchung statt Calendly: kein Doppeltermin (Datenbank-Sperre), Bestätigung + Kalendereintrag an Bewerber und Agentur, Erinnerung 2 h vorher, Absage-Link, Verwaltung „Termine“ | ✅ – E-Mail-Zugang in Vercel eintragen, auf „Termine“ einmal „Automatische Erinnerungen aktivieren“ |
+| E-Mail über Microsoft 365/Outlook (Microsoft Graph oder SMTP) | ✅ – Einrichtung durch euch (Anleitung) |
+| Provisionen neu: Zeilen „Produkt · Stufe (Vertriebspartner/Ausbilder/Teamleiter/Agentur) · Provision“ | ✅ |
+| Overhead-Provision Ausbilder/Teamleiter automatisch in der Gutschrift (Differenz- oder Festbetragsmodell) | ✅ – Berechnungsart bitte bestätigen |
+| Zusatzpositionen je Mitarbeiter (z. B. Fahrzeugrate) als Auswahl vor der Gutschrift | ✅ |
+| Belegnummern einstellbar und fortführbar (Standard `GS{JAHR}{NR}`) | ✅ – Format nach euren Vorlagen prüfen |
+| Geldbeträge im Portal per Augen-Symbol verbergen/anzeigen | ✅ |
+| Layout der Gutschrift nach euren Vorlagen | ⏳ Vorlagen (PDF) sind nicht angekommen |
 
 ## Erweiterung 26.10.2026
 
 | Punkt | Status |
 |---|---|
 | CRM im dunklen, futuristischen Design der Website (Glas-Karten, Montserrat, Akzentverlauf, Raster-Hintergrund, Animationen) | ✅ |
-| Calendly-Terminbuchung auf der Website (Zwei-Klick-Einbettung, Name/E-Mail vorausgefüllt; Bestätigungsmails verschickt Calendly) | ✅ – Link als `NEXT_PUBLIC_CALENDLY_URL` in Vercel eintragen |
+| Calendly-Terminbuchung (am 29.10. durch eigene Terminbuchung ersetzt) | ✅ |
 | Provisionen je Stufe × Produkt (Verwaltung → Provisionen, Stufe im Profil) | ✅ |
 | Einladungen automatisch per E-Mail (SMTP oder Resend, HTML-Vorlage, „Erneut senden“) | ✅ – SMTP-Daten in Vercel eintragen |
 | Produktfreigaben je Mitarbeiter (auch schon bei der Einladung; Datenbank erzwingt sie bei jeder Erfassung) | ✅ |
@@ -32,9 +47,9 @@ Stand: 26.10.2026 · Branch `feature/crm-fundament`
 ## Testergebnisse (letzter Lauf, lokal gegen Supabase-Stack in Docker)
 
 * `npm run typecheck` – ok · `npm run lint` – ok · `npm run build` – ok
-* `npm test` – 20/20 (Kennzahlen, Datum/Zeitzone, Open-Redirect, CSV-Injection, Validierung, Euro-Beträge)
-* `npm run test:db` – 76/76 (alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy, Einladungen, Produktfreigaben, Provisions-Sichtbarkeit, Abrechnungs-Vorschau, Nummernvergabe, Doppel-Abrechnung, USt)
-* `npm run test:e2e` – 21/21 (u. a. Abrechnung erstellen → Mitarbeiter lädt PDF, fremder Mitarbeiter erhält 404; Gutschrift; Produktfreigabe in der Erfassung; Einladung per E-Mail gegen lokalen SMTP-Empfänger geprüft; Impressum)
+* `npm test` – 21/21 (Kennzahlen, Datum/Zeitzone, Open-Redirect, CSV-Injection, Validierung, Euro-Beträge)
+* `npm run test:db` – 85/85 (Terminbuchung: kein Doppeltermin, Erinnerung genau einmal, Rechte; Overhead Differenz/Fest; Umsatz-Sichtbarkeit; Nummernkreis; alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy, Einladungen, Produktfreigaben, Provisions-Sichtbarkeit, Abrechnungs-Vorschau, Nummernvergabe, Doppel-Abrechnung, USt)
+* `npm run test:e2e` – 26/26 (Terminbuchung mit gleichzeitigem zweiten Bewerber, Bestätigungsmails, Erinnerungs-Endpunkt gesperrt; Gutschrift mit Overhead und Fahrzeugrate; Beträge verbergen; Logo/Manifest; u. a. Abrechnung erstellen → Mitarbeiter lädt PDF, fremder Mitarbeiter erhält 404; Gutschrift; Produktfreigabe in der Erfassung; Einladung per E-Mail gegen lokalen SMTP-Empfänger geprüft; Impressum)
 * Datenbank-Update einer bestehenden (alten) Datenbank über `/einrichtung` und Ersteinrichtung einer leeren Datenbank manuell im Browser geprüft
 
 ## Bekannte Einschränkungen / noch nicht umgesetzt
@@ -42,7 +57,7 @@ Stand: 26.10.2026 · Branch `feature/crm-fundament`
 * **Nicht produktiv geschaltet:** Supabase-Projekt, Vercel-Projekt und Domain müssen von dir angelegt werden (Anleitung vorhanden). CI-Workflow ist angelegt, aber noch nicht auf GitHub gelaufen.
 * **Rechtliches:** Datenschutzhinweise/Impressum sind Vorlagen; AV-Verträge, Verarbeitungsverzeichnis und Information der Mitarbeitenden stehen aus. Keine Aussage zur DSGVO-Konformität ohne Prüfung.
 * **E-Mail:** Einladungen und Hinweise auf neue Abrechnungen werden per E-Mail versendet, sobald SMTP (oder Resend) in Vercel eingetragen ist. Übrige Benachrichtigungen sind In-App. „Passwort vergessen“ benötigt dieselben SMTP-Daten in Supabase.
-* **Abrechnungen:** PDFs sind eine Arbeitshilfe; steuerliche Pflichtangaben/Gutschriftverfahren mit der Steuerberatung abstimmen. Der Calendly-Kalender konnte in der Entwicklungsumgebung nicht live geladen werden (Netzwerk gesperrt).
+* **Abrechnungen:** PDFs sind eine Arbeitshilfe; steuerliche Pflichtangaben/Gutschriftverfahren mit der Steuerberatung abstimmen.
 * **Nicht umgesetzt (bewusst als spätere Erweiterung):** Abschlusszertifikate, Leistungsabzeichen/Badges, Zwei-Faktor-Anmeldung im Portal, Bulk-Import von Leistungen (CSV-Upload), automatische Löschjobs (Funktion `purge_applicants` vorhanden, Zeitplan fehlt).
 * **Video-Fortschritt** wird vom Browser gemeldet (mit serverseitiger Plausibilitätsprüfung). Große Videos: Free-Tarif max. 50 MB/Datei; resumable Uploads (TUS) nicht umgesetzt.
 * **Teamsicht nach Teamwechsel:** Der neue Teamleiter sieht die Person inkl. Historie; der alte nicht mehr. Teamsummen der Vergangenheit basieren auf dem Team zum Erfassungszeitpunkt.
@@ -57,6 +72,6 @@ Stand: 26.10.2026 · Branch `feature/crm-fundament`
 4. Ersten Admin per `bootstrap_admin` anlegen, Produkte/Teams/Einstellungen pflegen, Pflichtkurs anlegen (Schritte 6–7).
 5. Smoke-Test durchführen (Schritt 8); Pilotphase mit 1 Team.
 6. Datenschutz: AV-Verträge, Datenschutzhinweise prüfen lassen, Mitarbeitende informieren.
-7. Website: echte Kontaktdaten/WhatsApp/Calendly in `src/lib/site.ts`, Impressum & Datenschutz vervollständigen, Texte (insb. FAQ) prüfen; Domain `erlen-sales.de` auf Vercel umstellen.
+7. Website: WhatsApp in `src/lib/site.ts`, Impressum & Datenschutz vervollständigen, Texte (insb. FAQ) prüfen; Domain `erlen-sales.de` auf Vercel umstellen.
 7a. Das Vorbild `sales-focus.de` konnte aus der Entwicklungsumgebung nicht geladen werden (Netzwerk gesperrt) – Struktur basiert auf der bisherigen ERLEN-Seite und gängigen Karriereseiten; Feinschliff nach Screenshots des Vorbilds.
 8. Optional: SMTP/Resend einrichten, Supabase-Backups/PITR prüfen, Zwei-Faktor-Anmeldung für Admins ergänzen.

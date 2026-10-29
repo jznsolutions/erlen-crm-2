@@ -21,7 +21,7 @@ export type StatementPdfInput = {
     vat_liable?: boolean | null;
     iban?: string | null;
   };
-  items: { description: string; quantity: number; unit_cents: number; total_cents: number }[];
+  items: { description: string; quantity: number; unit_cents: number; total_cents: number; category?: string }[];
   netCents: number;
   vatRate: number;
   vatCents: number;
@@ -52,6 +52,14 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
   }
   return out;
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  vermittlung: "Vermittlungsprovision",
+  overhead_ausbilder: "Overhead-Provision Ausbilder",
+  overhead_teamleiter: "Overhead-Provision Teamleiter",
+  zusatz: "Zusatzpositionen / Abzüge",
+  sonstiges: "Weitere Positionen",
+};
 
 const qty = (n: number) => new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(n);
 
@@ -142,7 +150,19 @@ export async function renderStatementPdf(s: StatementPdfInput): Promise<Uint8Arr
     y -= 22;
   };
   header();
+  let lastCat: string | undefined;
+  const subtotal = (cat: string) => s.items.filter((x) => (x.category ?? "sonstiges") === cat).reduce((a, x) => a + x.total_cents, 0);
+  const grouped = new Set(s.items.map((x) => x.category ?? "sonstiges")).size > 1;
   s.items.forEach((it, i) => {
+    const cat = it.category ?? "sonstiges";
+    if (grouped && cat !== lastCat) {
+      ensure(40);
+      y -= 4;
+      text(CATEGORY_LABELS[cat] ?? "Weitere Positionen", cols.desc, y, { size: 9.5, font: bold, color: ACCENT });
+      text(formatCents(subtotal(cat)), cols.total, y, { size: 9.5, font: bold, color: ACCENT, align: "right" });
+      y -= 16;
+      lastCat = cat;
+    }
     const lines = wrap(it.description, regular, 9.5, cols.qty - cols.desc - 50);
     ensure(lines.length * 12 + 10);
     text(String(i + 1), cols.pos, y, { size: 9.5 });

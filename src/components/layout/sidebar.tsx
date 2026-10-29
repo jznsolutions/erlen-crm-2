@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  BarChart3, BookOpen, CheckCheck, FileText, FolderLock, GraduationCap, Inbox, LayoutDashboard, Menu, Network,
+  BarChart3, BookOpen, CalendarClock, CheckCheck, FileText, FolderLock, GraduationCap, Inbox, LayoutDashboard, Menu, Network,
   Package, Percent, Receipt, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
 } from "lucide-react";
 import { Sheet } from "@/components/ui/dialog";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import type { NavSection } from "./nav";
 
 const ICONS = {
-  BarChart3, BookOpen, CheckCheck, FileText, FolderLock, GraduationCap, Inbox, LayoutDashboard, Network,
+  BarChart3, BookOpen, CalendarClock, CheckCheck, FileText, FolderLock, GraduationCap, Inbox, LayoutDashboard, Network,
   Package, Percent, Receipt, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
 } as const;
 

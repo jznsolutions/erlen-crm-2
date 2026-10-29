@@ -102,3 +102,21 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 export function isIsoDate(v: unknown): v is string {
   return typeof v === "string" && ISO_RE.test(v) && !Number.isNaN(parse(v).getTime()) && fmt(parse(v)) === v;
 }
+
+/** Ortszeit Berlin ("JJJJ-MM-TTTHH:MM") → ISO-Zeitpunkt in UTC (berücksichtigt Sommer-/Winterzeit). */
+export function berlinLocalToUtc(local: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+  if (!m) throw new Error("Ungültige Zeitangabe");
+  const asUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  const offsetAt = (t: number) => {
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+        .formatToParts(new Date(t))
+        .map((x) => [x.type, x.value]),
+    );
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - t;
+  };
+  let t = asUtc - offsetAt(asUtc);
+  t = asUtc - offsetAt(t);
+  return new Date(t).toISOString();
+}

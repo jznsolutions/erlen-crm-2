@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CircleDashed, Clock, Gauge, TrendingUp, Trophy, UserCheck, UserPlus, Users, Ban } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleDashed, Clock, Gauge, TrendingUp, Trophy, UserCheck, UserPlus, Users, Euro } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,29 +11,45 @@ import { BarList, colorForIndex } from "@/components/charts/bar-list";
 import { StatTile } from "@/components/dashboard/stat";
 import { TargetList, type TargetProgress } from "@/components/dashboard/targets";
 import { addDays, periodRange, startOfMonth, startOfWeek } from "@/lib/dates";
-import { formatDecimal, formatNumber, formatPercent, formatPercent1 } from "@/lib/format";
+import { formatCents, formatDecimal, formatNumber, formatPercent, formatPercent1 } from "@/lib/format";
 import { confirmedBy, dailySeries, filterRows, rank, summarize, type DailyRow } from "@/lib/metrics";
 import type { EmployeeRow } from "@/lib/queries";
 
 type Product = { id: string; name: string; unit_label: string };
 
-export function KpiRow({ rows, today, scopeLabel }: { rows: DailyRow[]; today: string; scopeLabel: string }) {
+export type MoneyKpis = { revenueCents: number | null; ownCommissionCents: number | null };
+
+/** Kopfzeile: Leistung Monat, Leistung Woche, Monatsleistung pro Kopf, Umsatz (bzw. eigene Provision). */
+export function KpiRow({ rows, today, scopeLabel, money }: { rows: DailyRow[]; today: string; scopeLabel: string; money?: MoneyKpis }) {
   const day = summarize(filterRows(rows, today, today));
-  const week = summarize(filterRows(rows, startOfWeek(today), today));
-  const month = summarize(filterRows(rows, startOfMonth(today), today));
+  const weekRows = filterRows(rows, startOfWeek(today), today);
+  const week = summarize(weekRows);
+  const monthRows = filterRows(rows, startOfMonth(today), today);
+  const month = summarize(monthRows);
   const last90 = summarize(filterRows(rows, addDays(today, -89), today));
+  const sellers = new Set(monthRows.filter((r) => r.status === "bestaetigt").map((r) => r.user_id)).size;
+  const single = sellers <= 1 && !scopeLabel;
+  const showRevenue = money?.revenueCents !== null && money?.revenueCents !== undefined;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <StatTile label={scopeLabel ? `${scopeLabel} heute` : "Heute"} value={formatNumber(day.confirmed)} sub={day.pending ? `+ ${formatNumber(day.pending)} offen` : "bestätigt"} icon={CalendarDays} />
-      <StatTile label="Diese Woche" value={formatNumber(week.confirmed)} sub={week.pending ? `+ ${formatNumber(week.pending)} offen` : "bestätigt"} icon={TrendingUp} />
-      <StatTile label="Dieser Monat" value={formatNumber(month.confirmed)} sub={`Ø ${formatDecimal(month.avgPerActiveDay)} pro aktivem Tag`} icon={Gauge} />
-      <StatTile
-        label="Stornoquote (90 Tage)"
-        value={last90.cancellationRate === null ? "–" : formatPercent1(last90.cancellationRate)}
-        sub={`${formatNumber(last90.cancelled)} storniert`}
-        icon={Ban}
-        tone={last90.cancellationRate !== null && last90.cancellationRate > 0.1 ? "warning" : "default"}
-      />
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatTile label="Leistung diesen Monat" value={formatNumber(month.confirmed)} sub={month.pending ? `+ ${formatNumber(month.pending)} offen` : "bestätigt"} icon={CalendarDays} />
+        <StatTile label="Leistung dieser Woche" value={formatNumber(week.confirmed)} sub={week.pending ? `+ ${formatNumber(week.pending)} offen` : "bestätigt"} icon={TrendingUp} />
+        {single ? (
+          <StatTile label="Ø pro aktivem Tag" value={formatDecimal(month.avgPerActiveDay)} sub={`${formatNumber(month.activeDays)} aktive Tage im Monat`} icon={Gauge} />
+        ) : (
+          <StatTile label="Monatsleistung pro Kopf" value={formatDecimal(sellers ? month.confirmed / sellers : 0)} sub={`${formatNumber(sellers)} aktive Verkäufer`} icon={Gauge} />
+        )}
+        {showRevenue ? (
+          <StatTile label="Umsatz diesen Monat" value={<span className="money">{formatCents(money!.revenueCents!)}</span>} sub="bestätigte Leistung × Agentur-Satz" icon={Euro} />
+        ) : (
+          <StatTile label="Meine Provision (Monat)" value={<span className="money">{formatCents(money?.ownCommissionCents ?? 0)}</span>} sub="inkl. Overhead, vor Abzügen" icon={Euro} />
+        )}
+      </div>
+      <p className="px-1 text-xs text-muted-foreground">
+        {scopeLabel ? `${scopeLabel} heute` : "Heute"}: {formatNumber(day.confirmed)} bestätigt{day.pending ? ` (+ ${formatNumber(day.pending)} offen)` : ""}
+        {" · "}Stornoquote 90 Tage: {last90.cancellationRate === null ? "–" : formatPercent1(last90.cancellationRate)}
+      </p>
     </div>
   );
 }
@@ -155,7 +171,7 @@ export function AgencyTiles({ rows, today, employees, pendingApprovals }: { rows
       <StatTile label="Aktive Mitarbeiter" value={formatNumber(active.length)} sub={`${formatNumber(sellersMonth.size)} mit Leistung im Monat`} icon={UserCheck} />
       <StatTile label="Neue Mitarbeiter" value={formatNumber(newOnes.length)} sub="in den letzten 30 Tagen" icon={UserPlus} />
       <StatTile label="Offene Freigaben" value={formatNumber(pendingApprovals)} sub={<Link className="hover:underline" href="/leistungen/freigaben">Zur Freigabe →</Link>} icon={Clock} tone={pendingApprovals > 0 ? "warning" : "default"} />
-      <StatTile label="Monatsleistung Ø/Kopf" value={formatDecimal(sellersMonth.size ? summarize(filterRows(rows, startOfMonth(today), today)).confirmed / sellersMonth.size : 0)} sub="je aktivem Verkäufer" icon={Gauge} />
+      <StatTile label="Agentur heute" value={formatNumber(summarize(filterRows(rows, today, today)).confirmed)} sub="bestätigt" icon={CalendarDays} />
     </div>
   );
 }

@@ -27,15 +27,12 @@ async function as(user: string) {
   await db.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: user, role: "authenticated" })]);
 }
 
-/** Legt als Admin eine Stufe mit Satz für das Standardprodukt an und weist sie partner1 zu. */
-async function setupLevel(cents = 2500) {
+/** Setzt als Admin Provisionssätze je Stufe für das Standardprodukt. */
+async function setRates(rates: Record<string, number>) {
   await as(o.admin);
-  const level = (await one<{ id: string }>(db, "select public.commission_level_upsert(null, 'Junior', null, 1, true) id")).id;
-  await db.query("select public.commission_rates_save($1::jsonb)", [
-    JSON.stringify([{ level_id: level, product_id: o.product, amount_cents: cents }]),
-  ]);
-  await db.query("select public.employee_set_commission_level($1, $2)", [o.partner1, level]);
-  return level;
+  for (const [level, cents] of Object.entries(rates)) {
+    await db.query("select public.commission_rate_set($1, $2, $3)", [o.product, level, cents]);
+  }
 }
 
 describe("Produktfreigaben", () => {
@@ -100,20 +97,49 @@ describe("Einladung mit Produktfreigaben", () => {
 });
 
 describe("Provisionen", () => {
-  it("Vertriebspartner sieht nur die eigene Stufe und deren Sätze, nicht die anderer", async () => {
+  it("Mitarbeiter sehen nur die Sätze ihrer eigenen Stufe", async () => {
     await scenario(async () => {
-      const level = await setupLevel();
-      const other = (await one<{ id: string }>(db, "select public.commission_level_upsert(null, 'Senior', null, 2, true) id")).id;
-      await db.query("select public.commission_rates_save($1::jsonb)", [
-        JSON.stringify([{ level_id: other, product_id: o.product, amount_cents: 9000 }]),
-      ]);
+      await setRates({ vertriebspartner: 2500, ausbilder: 3500, teamleiter: 5000, agentur: 8000 });
       await as(o.partner1);
-      expect(await ids(db, "select id from public.commission_levels")).toEqual([level]);
-      const rates = await db.query("select amount_cents from public.commission_rates");
-      expect(rates.rows).toEqual([{ amount_cents: 2500 }]);
-      await as(o.partner2);
-      expect((await db.query("select * from public.commission_rates")).rowCount).toBe(0);
-      await expectDbError(db, "select public.commission_level_upsert(null, 'Hack', null, 1, true)", [], /Berechtigung/i);
+      expect((await db.query("select amount_cents from public.commission_rates")).rows).toEqual([{ amount_cents: 2500 }]);
+      await as(o.ausbilder);
+      expect((await db.query("select amount_cents from public.commission_rates")).rows).toEqual([{ amount_cents: 3500 }]);
+      await expectDbError(db, "select public.commission_rate_set($1, 'agentur', 1)", [o.product], /Berechtigung/i);
+    });
+  });
+  it("Overhead: Ausbilder und Teamleiter erhalten automatisch die Differenz zur Stufe darunter", async () => {
+    await scenario(async () => {
+      await db.query("reset role");
+      // partner1 (Team Alpha, Ausbilder: ausbilder, Teamleiter: teamleiterA) verkauft 3 Einheiten
+      await insertRecord(db, o.partner1, o.product, { quantity: 3, team: o.alpha });
+      // partner2 (Team Alpha, ohne Ausbilder) verkauft 2 Einheiten
+      await insertRecord(db, o.partner2, o.product, { quantity: 2, team: o.alpha });
+      await setRates({ vertriebspartner: 2500, ausbilder: 3500, teamleiter: 5000, agentur: 8000 });
+      const total = async (user: string) =>
+        (await db.query("select kind, sum(total_cents)::int t from public.statement_preview($1, current_date - 30, current_date) group by kind order by kind", [user])).rows;
+      expect(await total(o.partner1)).toEqual([{ kind: "vermittlung", t: 7500 }]);
+      expect(await total(o.ausbilder)).toEqual([{ kind: "overhead_ausbilder", t: 3 * 1000 }]);
+      // Teamleiter: 3 × (5000 − 3500) für partner1 + 2 × (5000 − 2500) für partner2
+      expect(await total(o.teamleiterA)).toEqual([{ kind: "overhead_teamleiter", t: 3 * 1500 + 2 * 2500 }]);
+
+      await db.query("reset role");
+      await db.query("update public.organization_settings set value = '{\"overhead_mode\": \"fest\"}' where key = 'commission'");
+      await as(o.admin);
+      expect(await total(o.ausbilder)).toEqual([{ kind: "overhead_ausbilder", t: 3 * 3500 }]);
+    });
+  });
+  it("Umsatz (Agentur-Sätze) sieht nur die Gesamtsicht, die eigene Provision jeder", async () => {
+    await scenario(async () => {
+      await db.query("reset role");
+      await insertRecord(db, o.partner1, o.product, { quantity: 2, team: o.alpha });
+      await setRates({ vertriebspartner: 2500, agentur: 8000 });
+      await as(o.agenturleiter);
+      const a = await one<{ revenue_cents: string | null }>(db, "select * from public.get_money_kpis(current_date - 30, current_date)");
+      expect(Number(a.revenue_cents)).toBe(16000);
+      await as(o.partner1);
+      const p = await one<{ revenue_cents: string | null; own_commission_cents: string }>(db, "select * from public.get_money_kpis(current_date - 30, current_date)");
+      expect(p.revenue_cents).toBeNull();
+      expect(Number(p.own_commission_cents)).toBe(5000);
     });
   });
 });
@@ -124,7 +150,7 @@ describe("Abrechnungen & Gutschriften", () => {
       await db.query("reset role");
       await insertRecord(db, o.partner1, o.product, { quantity: 3 });
       await insertRecord(db, o.partner1, o.product, { quantity: 5, status: "eingereicht" });
-      await setupLevel(2500);
+      await setRates({ vertriebspartner: 2500 });
       const r = await one<{ quantity: string; total_cents: string }>(
         db,
         "select quantity, total_cents from public.statement_preview($1, current_date - 30, current_date)",
@@ -132,6 +158,17 @@ describe("Abrechnungen & Gutschriften", () => {
       );
       expect(Number(r.quantity)).toBe(3);
       expect(Number(r.total_cents)).toBe(7500);
+    });
+  });
+  it("Nummernkreis lässt sich fortführen (z. B. GS202622 nach GS202621)", async () => {
+    await scenario(async () => {
+      await as(o.admin);
+      await db.query("select public.statement_numbering_set('gutschrift', 'GS{JAHR}{NR}', 2, 22)");
+      const year = new Date().getFullYear();
+      const items = JSON.stringify([{ description: "Bonus", quantity: 1, unit_cents: 1000 }]);
+      const g = (await one<{ id: string }>(db, "select public.statement_create($1, 'gutschrift', 'Bonus', null, null, $2::jsonb, null) id", [o.partner1, items])).id;
+      expect((await one<{ n: string }>(db, "select public.statement_publish($1, null, null) n", [g])).n).toBe(`GS${year}22`);
+      await expectDbError(db, "select public.statement_numbering_set('gutschrift', 'GS{JAHR}{NR}', 2, 22)", [], /bereits vergeben/);
     });
   });
   it("Entwürfe sind für den Mitarbeiter unsichtbar; Veröffentlichen vergibt fortlaufende Nummern", async () => {
@@ -156,7 +193,7 @@ describe("Abrechnungen & Gutschriften", () => {
 
       await as(o.admin);
       const n1 = (await one<{ n: string }>(db, "select public.statement_publish($1, null, null) n", [a])).n;
-      expect(n1).toMatch(/^A-\d{4}-\d{4}$/);
+      expect(n1).toMatch(/^AB\d{4}\d{2,}$/);
       const g = (
         await one<{ id: string }>(
           db,
@@ -165,7 +202,7 @@ describe("Abrechnungen & Gutschriften", () => {
         )
       ).id;
       const n2 = (await one<{ n: string }>(db, "select public.statement_publish($1, null, null) n", [g])).n;
-      expect(n2).toMatch(/^G-\d{4}-\d{4}$/);
+      expect(n2).toMatch(/^GS\d{4}\d{2,}$/);
 
       await as(o.partner1);
       expect(await ids(db, "select id from public.statements")).toEqual([a, g].sort());
@@ -179,7 +216,7 @@ describe("Abrechnungen & Gutschriften", () => {
     await scenario(async () => {
       await as(o.admin);
       await db.query("select public.employee_billing_save($1, 'Weg 1', '57612', 'Helmenzen', null, null, true, null)", [o.partner1]);
-      const items = JSON.stringify([{ description: "Provision", quantity: 1, unit_cents: 10000 }]);
+      const items = JSON.stringify([{ description: "Provision", quantity: 1, unit_cents: 10000, category: "vermittlung" }]);
       const a = (
         await one<{ id: string }>(
           db,

@@ -16,9 +16,6 @@ export const SITE = {
   ],
   // Kontaktdaten (wie im Impressum). null = ausgeblendet
   whatsapp: null as string | null, // z. B. "4917612345678" (internationale Schreibweise ohne +)
-  // Terminbuchung: Calendly-Link in Vercel als NEXT_PUBLIC_CALENDLY_URL hinterlegen,
-  // z. B. "https://calendly.com/erlen-sales/kennenlernen". Die Bestätigungs-Mails verschickt Calendly.
-  calendlyUrl: (process.env.NEXT_PUBLIC_CALENDLY_URL || null) as string | null,
   email: "kontakt@erlen-sales.de" as string | null,
   phone: "+49 151 44204593" as string | null,
   address: "Kömbchesweg 26, 57612 Helmenzen" as string | null,

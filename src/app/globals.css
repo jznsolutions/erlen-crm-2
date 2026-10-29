@@ -158,6 +158,15 @@
   .animate-rise { animation: none; }
 }
 
+/* Geldbeträge verbergen (Augen-Symbol im Kopfbereich) */
+.money {
+  transition: filter 0.2s ease;
+}
+[data-money="hidden"] .money {
+  filter: blur(7px);
+  user-select: none;
+}
+
 /* Markdown-Inhalte der Academy */
 .prose-erlen h1 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
 .prose-erlen h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }

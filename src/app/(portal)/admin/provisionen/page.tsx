@@ -1,70 +1,71 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Pencil, Percent, Plus } from "lucide-react";
+import { Percent } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts } from "@/lib/queries";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { LevelDialog, RateMatrix } from "@/components/admin/commission-forms";
+import { AddRateForm, OverheadModeForm, RateRow } from "@/components/admin/commission-forms";
+import { LEVELS } from "@/lib/commission";
 
 export const metadata: Metadata = { title: "Provisionen" };
 
 export default async function CommissionsPage() {
   await requirePermission("commissions.manage");
   const supabase = await createClient();
-  const [{ data: levels }, { data: rates }, { data: billing }, products] = await Promise.all([
-    supabase.from("commission_levels").select("id, name, description, sort_order, is_active").order("sort_order").order("name"),
+  const [{ data: rates }, { data: levels }, { data: setting }, products] = await Promise.all([
     supabase.from("commission_rates").select("level_id, product_id, amount_cents"),
-    supabase.from("employee_billing").select("user_id, commission_level_id"),
-    getProducts(),
+    supabase.from("commission_levels").select("id, key").not("key", "is", null),
+    supabase.from("organization_settings").select("value").eq("key", "commission").maybeSingle(),
+    getProducts(true),
   ]);
-  const all = levels ?? [];
-  const active = all.filter((l) => l.is_active);
-  const count = new Map<string, number>();
-  for (const b of billing ?? []) if (b.commission_level_id) count.set(b.commission_level_id, (count.get(b.commission_level_id) ?? 0) + 1);
-  const rateMap = Object.fromEntries((rates ?? []).map((r) => [`${r.level_id}:${r.product_id}`, r.amount_cents]));
+  const keyOf = new Map((levels ?? []).map((l) => [l.id, l.key as string]));
+  const order = (k: string) => LEVELS.findIndex((l) => l.key === k);
+  const rows = (rates ?? [])
+    .filter((r) => keyOf.has(r.level_id))
+    .map((r) => ({ ...r, level: keyOf.get(r.level_id)!, product: products.find((p) => p.id === r.product_id) }))
+    .filter((r) => r.product)
+    .sort((a, b) => (a.product!.sort_order - b.product!.sort_order) || a.product!.name.localeCompare(b.product!.name) || order(a.level) - order(b.level));
+  const mode = ((setting?.value ?? {}) as { overhead_mode?: string }).overhead_mode ?? "differenz";
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Provisionen"
-        description="Lege Provisionsstufen an und bestimme für jede Stufe und jedes Produkt die Provision je bestätigter Einheit. Die Stufe weist du im Mitarbeiterprofil zu."
-        actions={<LevelDialog trigger={<Button><Plus />Stufe anlegen</Button>} />}
+        description="Wählt ein Produkt und eine Stufe und tragt die Provision je bestätigter Einheit ein. Die Stufe eines Mitarbeiters ergibt sich aus seiner Rolle (im Profil änderbar)."
+        actions={<Button asChild variant="secondary"><Link href="/admin/produkte">Produkte verwalten</Link></Button>}
       />
-      <Card>
-        <CardHeader><div><CardTitle>Stufen</CardTitle><CardDescription>Inaktive Stufen bleiben bei bestehenden Zuordnungen erhalten.</CardDescription></div></CardHeader>
-        <CardContent className="px-0 pb-2">
-          {all.length === 0 ? (
-            <EmptyState icon={Percent} title="Noch keine Stufen" description="Lege zuerst eine Stufe an, z. B. „Starter“." className="mx-5 mb-3" />
-          ) : (
-            <Table>
-              <THead><tr><TH>Stufe</TH><TH>Mitarbeiter</TH><TH>Status</TH><TH /></tr></THead>
-              <TBody>
-                {all.map((l) => (
-                  <TR key={l.id}>
-                    <TD><p className="font-medium">{l.name}</p>{l.description ? <p className="text-xs text-muted-foreground">{l.description}</p> : null}</TD>
-                    <TD className="tabular">{count.get(l.id) ?? 0}</TD>
-                    <TD><Badge variant={l.is_active ? "success" : "neutral"}>{l.is_active ? "Aktiv" : "Inaktiv"}</Badge></TD>
-                    <TD className="text-right"><LevelDialog level={l} trigger={<Button size="sm" variant="ghost" aria-label={`${l.name} bearbeiten`}><Pencil /></Button>} /></TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-      {active.length && products.length ? (
-        <Card>
-          <CardHeader><div><CardTitle>Provisionssätze je Stufe und Produkt</CardTitle><CardDescription>Beträge in Euro je bestätigter Einheit. Grundlage für „Abrechnung erstellen“.</CardDescription></div></CardHeader>
-          <CardContent><RateMatrix levels={active} products={products} rates={rateMap} /></CardContent>
-        </Card>
-      ) : products.length === 0 ? (
-        <EmptyState title="Keine Produkte" description="Lege zuerst Produkte an." action={<Button asChild variant="secondary"><Link href="/admin/produkte">Zu den Produkten</Link></Button>} />
-      ) : null}
+      {products.length === 0 ? (
+        <EmptyState icon={Percent} title="Noch keine Produkte" description="Legt zuerst unter „Produkte“ eure Produkte an – sie stehen dann hier zur Auswahl." />
+      ) : (
+        <>
+          <Card>
+            <CardHeader><div><CardTitle>Provision hinzufügen</CardTitle><CardDescription>Ist für Produkt und Stufe schon ein Betrag hinterlegt, wird er ersetzt.</CardDescription></div></CardHeader>
+            <CardContent><AddRateForm products={products.filter((p) => p.is_active).map((p) => ({ id: p.id, name: p.name }))} /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader><div><CardTitle>Hinterlegte Provisionen</CardTitle><CardDescription>{rows.length} Einträge · Die Stufe „Agentur“ ist euer Erlös je Einheit und dient als Grundlage für den Umsatz im Dashboard.</CardDescription></div></CardHeader>
+            <CardContent className="px-0 pb-2">
+              <div className="hidden grid-cols-[1.4fr_1fr_1fr_auto] gap-3 border-b px-4 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid">
+                <span>Produkt</span><span>Stufe</span><span>Provision</span><span className="w-8" />
+              </div>
+              {rows.length ? (
+                <div className="divide-y">
+                  {rows.map((r) => <RateRow key={`${r.product_id}:${r.level}`} productId={r.product_id} productName={r.product!.name} unit={r.product!.unit_label} level={r.level} cents={r.amount_cents} />)}
+                </div>
+              ) : (
+                <EmptyState title="Noch keine Provisionen hinterlegt" className="mx-5 my-3" />
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><div><CardTitle>Overhead für Ausbilder und Teamleiter</CardTitle><CardDescription>Wird beim Erstellen der Gutschrift automatisch aus den bestätigten Leistungen der eigenen Struktur berechnet und hinzugefügt.</CardDescription></div></CardHeader>
+            <CardContent><OverheadModeForm mode={mode} /></CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

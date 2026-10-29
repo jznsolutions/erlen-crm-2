@@ -16,8 +16,9 @@ import { KpiRow, ProductCard, TrainingCard, TrendCard, type TrainingRow } from "
 import { TargetList, type TargetProgress } from "@/components/dashboard/targets";
 import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
-import { BillingForm, CommissionLevelForm, ProductClearanceForm } from "./billing-forms";
+import { BillingForm, CommissionLevelForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
 import { formatCents } from "@/lib/format";
+import { levelForRole } from "@/lib/commission";
 import {
   EditEmployeeDialog, EndMembershipButton, ManagerForm, OwnProfileForm, PermissionForm, RoleForm, StatusButtons, TeamAssignForm, TrainingNoteForm,
 } from "./admin-forms";
@@ -122,13 +123,17 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   const canAssignProducts = perms.has("products.assign") && !isSelf;
   const canCommission = perms.has("commissions.manage") && !isSelf;
   const canBilling = isSelf || perms.has("statements.manage");
-  const [userProducts, billing, levels, rates] = await Promise.all([
+  const canExtras = perms.has("statements.manage") && !isSelf;
+  const [userProducts, billing, levels, rates, extras] = await Promise.all([
     supabase.from("user_products").select("product_id").eq("user_id", userId).then((r) => (r.data ?? []).map((x) => x.product_id)),
     canBilling || canCommission ? supabase.from("employee_billing").select("*").eq("user_id", userId).maybeSingle().then((r) => r.data) : Promise.resolve(null),
-    supabase.from("commission_levels").select("id, name, is_active").order("sort_order").then((r) => r.data ?? []),
+    supabase.from("commission_levels").select("id, key, name, is_active").not("key", "is", null).order("sort_order").then((r) => r.data ?? []),
     supabase.from("commission_rates").select("level_id, product_id, amount_cents").then((r) => r.data ?? []),
+    canExtras ? supabase.from("statement_extras").select("id, description, amount_cents, recurring, is_active, note").eq("user_id", userId).order("created_at").then((r) => (r.data ?? []).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) }))) : Promise.resolve([]),
   ]);
-  const level = levels.find((l) => l.id === billing?.commission_level_id);
+  // Stufe: individuelle Zuordnung, sonst aus der Rolle
+  const manualLevel = levels.find((l) => l.id === billing?.commission_level_id);
+  const level = manualLevel ?? levels.find((l) => l.key === levelForRole(profile.roles?.key));
   const levelRates = new Map(rates.filter((r) => r.level_id === level?.id).map((r) => [r.product_id, r.amount_cents]));
   const allRoles = await getRoles();
   const roleNames = new Map(allRoles.map((r) => [r.id, r.name]));
@@ -251,20 +256,26 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
             )}
             <div className="space-y-3 border-t pt-4">
               {canCommission ? (
-                <CommissionLevelForm userId={userId} levels={levels.filter((l) => l.is_active || l.id === level?.id).map((l) => ({ id: l.id, label: l.name }))} current={level?.id ?? null} />
+                <CommissionLevelForm userId={userId} levels={levels.map((l) => ({ id: l.id, label: l.name }))} current={manualLevel?.id ?? null} roleLevel={levels.find((l) => l.key === levelForRole(profile.roles?.key))?.name ?? null} />
               ) : (
                 <p className="text-sm">Provisionsstufe: <span className="font-medium">{level?.name ?? "noch nicht festgelegt"}</span></p>
               )}
               {level ? (
                 <ul className="divide-y rounded-lg border text-sm">
                   {products.filter((p) => userProducts.includes(p.id)).map((p) => (
-                    <li key={p.id} className="flex justify-between px-3 py-2"><span>{p.name}</span><span className="tabular font-medium">{levelRates.has(p.id) ? `${formatCents(levelRates.get(p.id)!)} je Einheit` : "–"}</span></li>
+                    <li key={p.id} className="flex justify-between px-3 py-2"><span>{p.name}</span><span className="money tabular font-medium">{levelRates.has(p.id) ? `${formatCents(levelRates.get(p.id)!)} je Einheit` : "–"}</span></li>
                   ))}
                 </ul>
               ) : null}
             </div>
           </CardContent>
         </Card>
+        {canExtras ? (
+          <Card className="lg:order-last lg:col-span-2">
+            <CardHeader><div><CardTitle>Zusatzpositionen für Gutschriften</CardTitle><CardDescription>z. B. Fahrzeug über die Agentur, Tankkarte, Telefon – stehen vor dem Erstellen der Gutschrift zur Auswahl.</CardDescription></div></CardHeader>
+            <CardContent><ExtrasEditor userId={userId} extras={extras} /></CardContent>
+          </Card>
+        ) : null}
         {canBilling ? (
           <Card>
             <CardHeader><div><CardTitle>Abrechnungsdaten</CardTitle><CardDescription>Erscheinen auf Abrechnungen und Gutschriften. Nur für {isSelf ? "dich" : "die Person"} und die Abrechnung sichtbar.</CardDescription></div></CardHeader>
