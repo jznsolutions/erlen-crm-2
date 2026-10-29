@@ -7,16 +7,19 @@ import { SITE } from "@/lib/site";
 
 export type EmailProvider = "graph" | "smtp" | "resend" | null;
 
+// Umgebungsvariable ohne versehentlich mitkopierte Leerzeichen, Zeilenumbrüche oder Anführungszeichen
+const env = (name: string) => process.env[name]?.trim().replace(/^["']|["']$/g, "").trim() || undefined;
+
 export function emailProvider(): EmailProvider {
   // Microsoft 365 / Outlook über die Microsoft-Graph-Schnittstelle (empfohlen für Outlook-Postfächer)
-  if (process.env.MS_TENANT_ID && process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET && process.env.EMAIL_FROM) return "graph";
+  if (env("MS_TENANT_ID") && env("MS_CLIENT_ID") && env("MS_CLIENT_SECRET") && env("EMAIL_FROM")) return "graph";
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return "smtp";
   if (process.env.RESEND_API_KEY) return "resend";
   return null;
 }
 
 function sender() {
-  return process.env.EMAIL_FROM || process.env.SMTP_USER || "";
+  return env("EMAIL_FROM") || env("SMTP_USER") || "";
 }
 
 export type EmailAttachment = { filename: string; content: string; contentType: string };
@@ -39,12 +42,12 @@ let graphToken: { value: string; expires: number } | null = null;
 
 async function graphAccessToken(): Promise<string> {
   if (graphToken && graphToken.expires > Date.now() + 60_000) return graphToken.value;
-  const res = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(process.env.MS_TENANT_ID!)}/oauth2/v2.0/token`, {
+  const res = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(env("MS_TENANT_ID")!)}/oauth2/v2.0/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.MS_CLIENT_ID!,
-      client_secret: process.env.MS_CLIENT_SECRET!,
+      client_id: env("MS_CLIENT_ID")!,
+      client_secret: env("MS_CLIENT_SECRET")!,
       scope: "https://graph.microsoft.com/.default",
       grant_type: "client_credentials",
     }),
