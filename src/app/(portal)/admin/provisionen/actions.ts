@@ -43,8 +43,16 @@ export async function saveOverheadMode(_: ActionResult | null, fd: FormData): Pr
   await requireUser();
   const mode = z.enum(["differenz", "fest"]).safeParse(fd.get("mode"));
   if (!mode.success) return { ok: false, error: "Bitte eine Berechnungsart wählen" };
+  const cents = (k: string) => parseEuroToCents(String(fd.get(k) ?? "0") || "0");
+  const [werbung, ausbilder, teamleiter] = [cents("werbung"), cents("ausbilder"), cents("teamleiter")];
+  if ([werbung, ausbilder, teamleiter].some((c) => c === null || c < 0)) return { ok: false, error: "Bitte gültige Beträge eingeben (z. B. 10,00)." };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("commission_settings_save", { p_overhead_mode: mode.data });
+  const { error } = await supabase.rpc("commission_settings_save", {
+    p_overhead_mode: mode.data,
+    p_werbung_cents: werbung!,
+    p_ausbilder_cents: ausbilder!,
+    p_teamleiter_cents: teamleiter!,
+  });
   if (error) return fromDbError(error);
   revalidatePath("/admin/provisionen");
   return { ok: true, message: "Berechnungsart gespeichert." };

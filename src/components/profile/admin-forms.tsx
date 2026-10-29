@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
 import {
-  addTrainingNote, anonymizeUser, assignTeam, endMembership, setManager, setRole, setStatus, setUserPermission, updateEmployee, updateOwnProfile,
+  addTrainingNote, anonymizeUser, assignTeam, endMembership, setManager, setRecruiter, setRole, setStatus, setUserPermission, updateEmployee, updateOwnProfile,
 } from "@/app/(portal)/mitarbeiter/actions";
 
 type Opt = { id: string; label: string };
@@ -147,6 +147,21 @@ export function TrainingNoteForm({ userId }: { userId: string }) {
           </div>
         </>
       )}
+    </ActionForm>
+  );
+}
+
+export function RecruiterForm({ userId, current, candidates }: { userId: string; current: string | null; candidates: Opt[] }) {
+  return (
+    <ActionForm action={setRecruiter} className="flex items-end gap-2">
+      <input type="hidden" name="user_id" value={userId} />
+      <Field label="Geworben von" htmlFor="m-werber" className="flex-1" hint="Erhält die Vermittlungsprovision für jede bestätigte Einheit dieser Person">
+        <Select id="m-werber" name="recruiter_id" defaultValue={current ?? ""}>
+          <option value="">– niemand –</option>
+          {candidates.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </Select>
+      </Field>
+      <SubmitButton variant="secondary">Speichern</SubmitButton>
     </ActionForm>
   );
 }

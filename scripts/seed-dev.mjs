@@ -167,6 +167,9 @@ for (const who of ["partner1", "partner2", "partner3", "partner4", "partner5", "
     [ids[who], who === "partner3"],
   );
 }
+// Beispiel: partner2 wurde von partner1 geworben (Vermittlungsprovision)
+await q("update public.employee_details set recruited_by = null where user_id = any($1)", [Object.values(ids)]);
+await q("update public.employee_details set recruited_by = $1 where user_id = $2", [ids.partner1, ids.partner2]);
 // Beispiel-Zusatzposition: Fahrzeug über die Agentur
 await q("delete from public.statement_extras where user_id = any($1)", [Object.values(ids)]);
 await q("insert into public.statement_extras (user_id, description, amount_cents, recurring) values ($1, 'Fahrzeugrate (Beispiel)', -39900, true)", [ids.partner1]);

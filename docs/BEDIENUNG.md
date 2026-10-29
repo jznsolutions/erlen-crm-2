@@ -17,10 +17,13 @@
 2. **Verwaltung → Provisionen → Provision hinzufügen:** Produkt wählen, Stufe wählen (**Vertriebspartner, Ausbilder, Teamleiter, Agentur**), Provision in Euro je bestätigter Einheit eintragen → **Hinzufügen**. Beträge lassen sich in der Liste direkt ändern oder entfernen.
 3. Die Stufe eines Mitarbeiters ergibt sich aus seiner Rolle; abweichend im **Mitarbeiterprofil → Produkte & Provision** einstellbar.
 4. Die Stufe **Agentur** ist euer Erlös je Einheit – daraus berechnet das Dashboard den **Umsatz**.
-5. **Overhead:** Ausbilder erhalten automatisch Provision auf die Leistungen ihrer Auszubildenden, Teamleiter auf die Leistungen ihres Teams. Berechnungsart unten auf der Seite:
-   * **Differenz** (Standard): VP 30 €, Ausbilder 40 €, Teamleiter 50 € → VP 30 €, Ausbilder 10 €, Teamleiter 10 €.
-   * **Fester Betrag:** der Satz der Stufe Ausbilder/Teamleiter wird je Einheit der Struktur voll gezahlt.
-   Maßgeblich ist die Zuordnung (Ausbilder, Team) zum Ende des Abrechnungszeitraums.
+5. **Vermittlungsprovision & Overhead** (unten auf der Provisionen-Seite, feste Beträge je bestätigter Einheit, für alle Produkte):
+   * **Vermittlungsprovision 5 €** – für den Werber: Wer einen neuen Mitarbeiter in die Agentur bringt, erhält für jede bestätigte Einheit dieser Person 5 €. Dafür im **Mitarbeiterprofil → Verwaltung → „Geworben von“** den Werber auswählen (oder schon beim Einladen).
+   * **Overhead Ausbilder 10 €** – für jede Einheit der eigenen Azubis (Profil → „Ausbilder“).
+   * **Overhead Teamleiter 30 €** – für jede Einheit des eigenen Teams. Ist der Ausbilder zugleich Teamleiter, erhält er die 30 €.
+   * **Agentur:** kein Overhead – Agenturleiter rechnen ihre Mitarbeiter selbst bzw. individuell ab.
+   * In der Gutschrift erscheinen die Beträge als „Differenzprovision“ (Ausbilder/Teamleiter) und „Vermittlungsprovision“ (Werber).
+   * Maßgeblich ist die Zuordnung (Werber, Ausbilder, Team) zum Ende des Abrechnungszeitraums.
 
 ## Abrechnungen & Gutschriften
 Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (Einzelaufstellung), dann die **Gutschrift** (Auszahlung):
@@ -34,8 +37,8 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 3. Nach dem Veröffentlichen sind die übernommenen Abrechnungen und der ausgezahlte Einbehalt erledigt und werden nicht noch einmal vorgeschlagen. Wird die Gutschrift storniert, stehen sie wieder zur Verfügung.
 
 * **Gutschriftnummer:** fortlaufend, Format `GS{JAHR}{NR}` (z. B. GS202623). Unter „Belegnummern & Voreinstellungen“ die nächste Nummer eintragen, um eure bisherige Zählung fortzusetzen.
-* **Kundennummer** je Mitarbeiter (z. B. VPSS001 = Stufe + Initialen + laufende Nummer): wird bei der ersten Gutschrift automatisch vergeben oder im Mitarbeiterprofil eingetragen (z. B. eure bestehenden Nummern VPSS001, VPNC007). Die nächste laufende Nummer ist unter „Belegnummern & Voreinstellungen“ einstellbar.
-* Stufen-Kürzel: VP = Vertriebspartner, AB = Ausbilder, TL = Teamleiter, AG = Agentur.
+* **Kundennummer** je Mitarbeiter (z. B. VPSS001 = immer „VP“ + Initialen + laufende Nummer): wird bei der ersten Gutschrift automatisch vergeben oder im Mitarbeiterprofil eingetragen (z. B. eure bestehenden Nummern VPSS001, VPNC007). Die nächste laufende Nummer ist unter „Belegnummern & Voreinstellungen“ einstellbar.
+* Stufen-Kürzel auf dem Beleg („Stufe: …“): VP = Vertriebspartner, AB = Ausbilder, TL = Teamleiter, AG = Agentur. Kundennummern beginnen unabhängig von der Stufe immer mit „VP“.
 * Mitarbeitende sehen ihre veröffentlichten Belege unter **Abrechnungen & Gutschriften** und laden sie als PDF herunter.
 * **PDF hochladen** für fertige Dokumente; **Stornieren** statt Löschen bei Fehlern.
 * **Wichtig:** Die steuerliche Gestaltung (u. a. ob die KFZ-Rate vor der USt abgezogen werden darf, Pflichtangaben nach § 14 UStG für Gutschriften) bitte einmal mit eurer Steuerberatung abstimmen.

@@ -107,25 +107,38 @@ describe("Provisionen", () => {
       await expectDbError(db, "select public.commission_rate_set($1, 'agentur', 1)", [o.product], /Berechtigung/i);
     });
   });
-  it("Overhead: Ausbilder und Teamleiter erhalten automatisch die Differenz zur Stufe darunter", async () => {
+  it("Overhead fest: Werber 5 €, Ausbilder 10 €, Teamleiter 30 € je Einheit; Differenzmodell weiterhin wählbar", async () => {
     await scenario(async () => {
       await db.query("reset role");
-      // partner1 (Team Alpha, Ausbilder: ausbilder, Teamleiter: teamleiterA) verkauft 3 Einheiten
+      // partner1 (Team Alpha, Ausbilder: ausbilder, Teamleiter: teamleiterA, geworben von partner2) verkauft 3 Einheiten
       await insertRecord(db, o.partner1, o.product, { quantity: 3, team: o.alpha });
       // partner2 (Team Alpha, ohne Ausbilder) verkauft 2 Einheiten
       await insertRecord(db, o.partner2, o.product, { quantity: 2, team: o.alpha });
-      await setRates({ vertriebspartner: 2500, ausbilder: 3500, teamleiter: 5000, agentur: 8000 });
+      await db.query("insert into public.employee_details (user_id, recruited_by) values ($1, $2) on conflict (user_id) do update set recruited_by = excluded.recruited_by", [o.partner1, o.partner2]);
+      await setRates({ vertriebspartner: 2500, ausbilder: 3500, teamleiter: 5000 });
+      await db.query("select public.commission_settings_save('fest', 500, 1000, 3000)");
       const total = async (user: string) =>
         (await db.query("select kind, sum(total_cents)::int t from public.statement_preview($1, current_date - 30, current_date) group by kind order by kind", [user])).rows;
       expect(await total(o.partner1)).toEqual([{ kind: "vermittlung", t: 7500 }]);
+      expect(await total(o.partner2)).toEqual([{ kind: "vermittlung", t: 5000 }, { kind: "werbung", t: 3 * 500 }]);
       expect(await total(o.ausbilder)).toEqual([{ kind: "overhead_ausbilder", t: 3 * 1000 }]);
-      // Teamleiter: 3 × (5000 − 3500) für partner1 + 2 × (5000 − 2500) für partner2
-      expect(await total(o.teamleiterA)).toEqual([{ kind: "overhead_teamleiter", t: 3 * 1500 + 2 * 2500 }]);
+      expect(await total(o.teamleiterA)).toEqual([{ kind: "overhead_teamleiter", t: 5 * 3000 }]);
+      const sug = await db.query("select line, amount_cents::int a from public.gutschrift_suggestion($1, current_date - 30, current_date) order by line", [o.partner2]);
+      expect(sug.rows).toEqual([{ line: "werbung", a: 1500 }]);
 
+      await db.query("select public.commission_settings_save('differenz', 500, 1000, 3000)");
+      expect(await total(o.ausbilder)).toEqual([{ kind: "overhead_ausbilder", t: 3 * 1000 }]);
+      expect(await total(o.teamleiterA)).toEqual([{ kind: "overhead_teamleiter", t: 3 * 1500 + 2 * 2500 }]);
+    });
+  });
+  it("Agentur erhält keinen Overhead", async () => {
+    await scenario(async () => {
       await db.query("reset role");
-      await db.query("update public.organization_settings set value = '{\"overhead_mode\": \"fest\"}' where key = 'commission'");
-      await as(o.admin);
-      expect(await total(o.ausbilder)).toEqual([{ kind: "overhead_ausbilder", t: 3 * 3500 }]);
+      await insertRecord(db, o.partner1, o.product, { quantity: 1, team: o.alpha });
+      await setRates({ vertriebspartner: 2500 });
+      await db.query("select public.commission_settings_save('fest', 500, 1000, 3000)");
+      const r = await db.query("select 1 from public.statement_preview($1, current_date - 30, current_date)", [o.agenturleiter]);
+      expect(r.rowCount).toBe(0);
     });
   });
   it("Umsatz (Agentur-Sätze) sieht nur die Gesamtsicht, die eigene Provision jeder", async () => {
