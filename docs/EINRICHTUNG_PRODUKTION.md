@@ -132,6 +132,8 @@ Alternativ (technisch): `npx supabase db push`.
 
 ## E-Mail-Versand (Outlook / Microsoft 365)
 
+> Ausführliche Klick-für-Klick-Anleitung für Einsteiger: `docs/ANLEITUNG_OUTLOOK_EMAIL.md`. Im Portal unter **Einstellungen → E-Mail-Versand** kann eine Test-E-Mail verschickt werden.
+
 Das Portal verschickt Einladungen, Terminbestätigungen, Terminerinnerungen und Hinweise auf neue Gutschriften. Euer Postfach `kontakt@erlen-sales.de` liegt bei Outlook (Microsoft 365). Es gibt zwei Wege – **Weg A ist zu empfehlen**, weil Microsoft die Anmeldung per Passwort (SMTP) ab Dezember 2026 standardmäßig abschaltet.
 
 **Weg A – Microsoft Graph (ohne Postfach-Passwort, zukunftssicher)**

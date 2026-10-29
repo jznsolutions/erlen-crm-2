@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isPortalConfigured, supabasePublicKey, supabaseUrl } from "@/lib/env";
 
 // Öffentliche Website (indexierbar)
-const WEBSITE_PATHS = ["/", "/impressum", "/datenschutz", "/robots.txt", "/sitemap.xml"];
+const WEBSITE_PATHS = ["/", "/termin", "/impressum", "/datenschutz", "/robots.txt", "/sitemap.xml"];
 // Ohne Anmeldung erreichbar
 const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen", "/einladung", "/auth", "/api/public", "/datenschutz", "/impressum", "/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/demo", "/einrichtung", "/termin", "/api/cron"];
 
