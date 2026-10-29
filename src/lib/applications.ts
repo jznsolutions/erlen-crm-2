@@ -3,7 +3,9 @@ import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { secretKey, serverEnv } from "@/lib/env.server";
 import { applicationSchema } from "@/lib/validation";
-import { isPortalConfigured } from "@/lib/env";
+import { isPortalConfigured, siteUrl } from "@/lib/env";
+import { applicationEmails, sendEmail } from "@/lib/email";
+import { getBookingSettings } from "@/lib/booking";
 
 export type ApplicationResult = { ok: true } | { ok: false; status: number; error: string; fieldErrors?: Record<string, string> };
 
@@ -41,6 +43,22 @@ export async function submitApplication(input: unknown, ip: string): Promise<App
   if (error) {
     console.error("[bewerbung]", error.code);
     return { ok: false, status: 500, error: "Deine Bewerbung konnte nicht gespeichert werden. Bitte versuche es erneut." };
+  }
+  // Automatische Einladung zum Gespräch an den Bewerber + Info an die Agentur (Fehler blockieren die Bewerbung nicht)
+  try {
+    const cfg = await getBookingSettings();
+    const mails = applicationEmails({
+      name: parsed.data.full_name,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      message: parsed.data.message,
+      bookingLink: `${siteUrl()}/termin`,
+      portalLink: `${siteUrl()}/bewerber`,
+    });
+    await sendEmail({ to: parsed.data.email, ...mails.applicant, replyTo: cfg.notify_email || undefined });
+    if (cfg.notify_email) await sendEmail({ to: cfg.notify_email, ...mails.team });
+  } catch (e) {
+    console.error("[bewerbung] Mail", (e as Error).message);
   }
   return { ok: true };
 }

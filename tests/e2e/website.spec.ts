@@ -65,3 +65,35 @@ test("Impressum enthält die Pflichtangaben", async ({ page }) => {
   await expect(page.getByText("Mehmet Eren Ince")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Urheberrecht" })).toBeVisible();
 });
+
+test("Bewerbung über die Website verschickt automatisch die Einladung zum Gespräch", async ({ page }) => {
+  const dir = process.env.E2E_MAIL_DIR;
+  test.skip(!dir, "nur mit lokalem SMTP-Empfänger (E2E_MAIL_DIR)");
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const email = `einladung.${Date.now()}@example.com`;
+  await page.goto("/#bewerben");
+  await page.fill("#ap-name", "Lena Neu");
+  await page.fill("#ap-phone", "0170 5555555");
+  await page.fill("#ap-email", email);
+  await page.check("input[name=consent]");
+  await page.getByRole("button", { name: "Bewerbung absenden" }).click();
+  await expect(page.getByText("Danke für deine Bewerbung!")).toBeVisible();
+  await expect.poll(() => readdirSync(dir!).map((f) => readFileSync(`${dir}/${f}`, "utf8")).filter((m) => m.includes(email)).length, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+  const mails = readdirSync(dir!).map((f) => readFileSync(`${dir}/${f}`, "utf8").replace(/=\r?\n/g, "")).filter((m) => m.includes(email));
+  expect(mails.some((m) => /^To: .*einladung\./m.test(m) && m.includes("/termin"))).toBeTruthy();
+  expect(mails.some((m) => /^To: kontakt@erlen-sales\.de/m.test(m))).toBeTruthy();
+});
+
+test("Test-E-Mail im Portal", async ({ page }) => {
+  test.skip(!process.env.E2E_MAIL_DIR, "nur mit lokalem SMTP-Empfänger");
+  await login(page, "admin");
+  await page.goto("/admin/einstellungen");
+  await page.getByRole("button", { name: /Test-E-Mail an/ }).click();
+  await expect(page.getByText("Hat geklappt!")).toBeVisible();
+});
+
+test("Terminseite aus der Einladungs-Mail ist öffentlich", async ({ page }) => {
+  await page.goto("/termin");
+  await expect(page.getByRole("heading", { name: /Dein Termin/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Termin / }).first()).toBeVisible({ timeout: 20_000 });
+});

@@ -2,6 +2,12 @@
 
 Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
+## Erweiterung 30.10.2026 (E-Mail)
+
+* Bewerbung auf der Website → automatische **Einladung zum Bewerbungsgespräch** per E-Mail (Button zur neuen Seite `/termin`) und Info-Mail an `kontakt@erlen-sales.de`
+* Einstellungen → **Test-E-Mail senden** mit verständlicher Fehlerdiagnose (Microsoft-Fehlercodes)
+* Einsteiger-Anleitung `docs/ANLEITUNG_OUTLOOK_EMAIL.md`
+
 ## Erweiterung 29.10.2026
 
 | Punkt | Status |
