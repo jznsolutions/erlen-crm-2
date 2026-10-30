@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 // Eigene Seite für den Link aus der Einladungs-Mail
 export default function BookingPage() {
   return (
-    <div className="mx-auto grid max-w-6xl items-start gap-12 px-5 pb-24 pt-36 sm:px-8 lg:grid-cols-2">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-5 pb-24 pt-36 sm:px-8 lg:grid-cols-2">
       <div>
         <p className="eyebrow">Termin</p>
         <h1 className="font-display mt-6 text-[2.6rem] font-black uppercase leading-[0.95] tracking-tight text-white sm:text-6xl">
