@@ -66,3 +66,18 @@ test("Logo als Symbol und Web-App-Manifest", async ({ request }) => {
   expect((await request.get("/favicon.ico")).ok()).toBeTruthy();
   expect((await request.get("/apple-icon.png")).ok()).toBeTruthy();
 });
+
+test("Terminkalender passt auf das Handy (keine Überbreite)", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  for (const url of ["/termin", "/#termin"]) {
+    await page.goto(url);
+    await expect(page.getByRole("button", { name: /^Termin / }).first()).toBeVisible({ timeout: 20_000 });
+    const widths = await page.evaluate(() => {
+      const card = document.querySelector('[aria-label="Tag"]')!.closest(".glass")!.getBoundingClientRect();
+      return { right: card.right, vw: window.innerWidth };
+    });
+    expect(widths.right).toBeLessThanOrEqual(widths.vw);
+  }
+  await ctx.close();
+});

@@ -20,7 +20,7 @@ export default function BookingPage() {
           Wähle einen freien Termin für dein unverbindliches Kennenlerngespräch. Du erhältst sofort eine Bestätigung per E-Mail und 2 Stunden vorher eine Erinnerung.
         </p>
       </div>
-      <div className="glass rounded-[2rem] p-6 sm:p-10">
+      <div className="glass min-w-0 rounded-[2rem] p-6 sm:p-10">
         <BookingCalendar />
         <noscript><p className="text-white/60">Für die Terminbuchung wird JavaScript benötigt.</p></noscript>
       </div>
