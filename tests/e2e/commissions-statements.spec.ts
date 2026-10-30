@@ -161,3 +161,20 @@ test("Gutschriftnummer selbst festlegen und nachträglich ändern", async ({ pag
   expect(pdf.ok()).toBeTruthy();
   expect(pdf.headers()["content-disposition"] ?? "").toContain(`${nr}B`);
 });
+
+test("Stornobehalt 0 % erscheint nicht in der Gutschrift", async ({ page }) => {
+  await login(page, "admin");
+  await page.goto("/abrechnungen/neu?art=gutschrift&manuell=1");
+  await page.selectOption("#n-ma", { label: "Becker, Jonas" });
+  await page.getByRole("button", { name: "Berechnen" }).click();
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Position 1 Beschreibung").fill("Prämie ohne Einbehalt");
+  await page.getByLabel("Position 1 Einzelpreis").fill("100");
+  await expect(page.getByText("abzgl. Stornobehalt")).toBeVisible();
+  await page.fill("#st-ret", "0");
+  await expect(page.getByText("abzgl. Stornobehalt")).toHaveCount(0);
+  await expect(page.getByText("Netto nach Einbehalt")).toHaveCount(0);
+  await page.fill("#st-title", "Gutschrift ohne Stornobehalt");
+  await page.getByRole("button", { name: "Gutschrift erstellen & veröffentlichen" }).click();
+  await expect(page.getByText("Gutschrift erstellt und veröffentlicht.")).toBeVisible();
+});
