@@ -132,15 +132,22 @@ export function StatementBuilder({
             </div>
           ) : null}
 
+          {gs ? (
+            <Field label="Stornobehalt (%)" htmlFor="st-ret" hint="0 = kein Stornobehalt – die Zeilen erscheinen dann nicht in der Gutschrift" className="ml-auto w-full max-w-sm">
+              <Input id="st-ret" value={retention} onChange={(e) => setRetention(e.target.value)} inputMode="decimal" className="text-right" />
+            </Field>
+          ) : null}
+
           <div className="money ml-auto w-full max-w-sm space-y-1 rounded-lg border bg-muted/40 p-4 text-sm">
             <div className="flex justify-between font-semibold"><span>Zwischensumme</span><span className="tabular">{formatCents(t.subtotal)}</span></div>
             {gs ? (
               <>
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="st-ret" className="flex items-center gap-1">abzgl. Stornobehalt <Input id="st-ret" value={retention} onChange={(e) => setRetention(e.target.value)} inputMode="decimal" className="h-7 w-14 px-1.5 text-right" /> %</label>
-                  <span className="tabular">{formatCents(t.retention)}</span>
-                </div>
-                <div className="flex justify-between"><span>Netto nach Einbehalt</span><span className="tabular">{formatCents(t.afterRetention)}</span></div>
+                {rate > 0 ? (
+                  <>
+                    <div className="flex justify-between"><span>abzgl. Stornobehalt {String(rate).replace(".", ",")} %</span><span className="tabular">{formatCents(t.retention)}</span></div>
+                    <div className="flex justify-between"><span>Netto nach Einbehalt</span><span className="tabular">{formatCents(t.afterRetention)}</span></div>
+                  </>
+                ) : null}
                 {t.deductions ? (
                   <>
                     <div className="flex justify-between text-danger"><span>abzgl. Abzüge</span><span className="tabular">−{formatCents(t.deductions)}</span></div>
