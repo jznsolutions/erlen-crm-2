@@ -33,6 +33,8 @@ const statementSchema = z
     retention_rate: z.coerce.number().min(0).max(100).default(0),
     items: z.string(),
     publish: z.enum(["true", "false"]).default("true"),
+    number: z.string().trim().toUpperCase().regex(/^([A-Z0-9][A-Z0-9/_-]{1,39})?$/, "Nur Buchstaben, Ziffern, - / _ (max. 40 Zeichen)").optional(),
+    suggested_number: z.string().optional(),
   })
   .refine((d) => d.kind === "gutschrift" || (d.period_from && d.period_to), { message: "Zeitraum fehlt", path: ["period_from"] })
   .refine((d) => !d.period_from || !d.period_to || d.period_to >= d.period_from, { message: "Ende vor Beginn", path: ["period_to"] });
@@ -113,7 +115,14 @@ export async function createStatement(_: ActionResult | null, fd: FormData): Pro
   });
   if (error) return fromDbError(error);
   if (d.publish === "true") {
-    const { error: pe } = await supabase.rpc("statement_publish", { p_id: id, p_storage_path: null as unknown as string, p_file_name: null as unknown as string });
+    // Nur eine geänderte Nummer übernehmen – sonst fortlaufend automatisch
+    const manual = d.number && d.number !== (d.suggested_number ?? "").toUpperCase() ? d.number : null;
+    const { error: pe } = await supabase.rpc("statement_publish", {
+      p_id: id,
+      p_storage_path: null as unknown as string,
+      p_file_name: null as unknown as string,
+      p_number: manual as string,
+    });
     if (pe) return fromDbError(pe);
     const fail = await renderAndStore(supabase, id, true);
     revalidatePath("/abrechnungen");
@@ -134,6 +143,27 @@ export async function publishStatement(_: ActionResult | null, fd: FormData): Pr
   const fail = await renderAndStore(supabase, id.data, true);
   revalidatePath("/abrechnungen");
   return fail ? { ok: false, error: fail } : { ok: true, message: "Veröffentlicht – der Mitarbeiter wurde benachrichtigt." };
+}
+
+export async function renumberStatement(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("statements.manage");
+  const parsed = z
+    .object({ id: uuid, number: z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9/_-]{1,39}$/, "Nur Buchstaben, Ziffern, - / _ (max. 40 Zeichen)") })
+    .safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("statements").select("storage_path, is_upload").eq("id", parsed.data.id).maybeSingle();
+  const { error } = await supabase.rpc("statement_renumber", { p_id: parsed.data.id, p_number: parsed.data.number });
+  if (error) return fromDbError(error);
+  // PDF mit der neuen Nummer neu erzeugen und die alte Datei entfernen
+  if (before && !before.is_upload) {
+    const fail = await renderAndStore(supabase, parsed.data.id, false);
+    if (fail) return { ok: false, error: fail };
+    const { data: after } = await supabase.from("statements").select("storage_path").eq("id", parsed.data.id).maybeSingle();
+    if (before.storage_path && after?.storage_path !== before.storage_path) await supabase.storage.from("statements").remove([before.storage_path]);
+  }
+  revalidatePath("/abrechnungen");
+  return { ok: true, message: `Nummer geändert in ${parsed.data.number}.` };
 }
 
 export async function regeneratePdf(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

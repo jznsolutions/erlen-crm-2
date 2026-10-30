@@ -50,6 +50,7 @@ export function StatementBuilder({
   extras = [],
   vatRate,
   retentionRate = 0,
+  suggestedNumber,
 }: {
   kind: "abrechnung" | "gutschrift";
   userId: string;
@@ -60,6 +61,7 @@ export function StatementBuilder({
   extras?: BuilderExtra[];
   vatRate: number;
   retentionRate?: number;
+  suggestedNumber?: string;
 }) {
   const gs = kind === "gutschrift";
   const [items, setItems] = useState<BuilderItem[]>(initialItems.length ? initialItems : [blank()]);
@@ -85,9 +87,15 @@ export function StatementBuilder({
           <input type="hidden" name="retention_rate" value={String(rate)} />
           {periodFrom ? <input type="hidden" name="period_from" value={periodFrom} /> : null}
           {periodTo ? <input type="hidden" name="period_to" value={periodTo} /> : null}
-          <Field label="Titel (nur intern und im Dateinamen)" htmlFor="st-title" error={fieldErrors.title}>
-            <Input id="st-title" name="title" defaultValue={defaultTitle} required maxLength={200} />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+            <Field label="Titel (nur intern und im Dateinamen)" htmlFor="st-title" error={fieldErrors.title}>
+              <Input id="st-title" name="title" defaultValue={defaultTitle} required maxLength={200} />
+            </Field>
+            <Field label={gs ? "Gutschriftnummer" : "Abrechnungsnummer"} htmlFor="st-number" hint="Fortlaufend vorgeschlagen – bei Bedarf ändern" error={fieldErrors.number}>
+              <Input id="st-number" name="number" defaultValue={suggestedNumber ?? ""} placeholder="automatisch" maxLength={40} className="font-mono uppercase" />
+            </Field>
+          </div>
+          <input type="hidden" name="suggested_number" value={suggestedNumber ?? ""} />
 
           <div className="space-y-2">
             <div className="hidden grid-cols-[1fr_90px_120px_110px_36px] gap-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid">

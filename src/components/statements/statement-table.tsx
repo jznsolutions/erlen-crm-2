@@ -65,7 +65,7 @@ export function StatementTable({ rows, manage }: { rows: StatementRow[]; manage:
                     <Button asChild size="sm" variant="secondary"><a href={`/api/abrechnungen/${s.id}?download=1`} aria-label={`${s.title} herunterladen`}><Download />PDF</a></Button>
                   </>
                 ) : s.status !== "entwurf" ? <span className="text-xs text-muted-foreground">PDF fehlt</span> : null}
-                {manage ? <StatementActions id={s.id} status={s.status} canRegenerate={!s.is_upload && s.status !== "entwurf"} /> : null}
+                {manage ? <StatementActions id={s.id} status={s.status} number={s.number} canRegenerate={!s.is_upload && s.status !== "entwurf"} /> : null}
               </div>
             </TD>
           </TR>

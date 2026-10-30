@@ -1601,10 +1601,13 @@ isOneToOne: false
             }[]
                            },
 "statement_publish":
-{ Args: { "p_file_name": string,"p_id": string,"p_storage_path": string }; Returns: string
+{ Args: { "p_file_name": string,"p_id": string,"p_number"?: string,"p_storage_path": string }; Returns: string
                            },
 "statement_register_upload":
 { Args: { "p_file_name": string,"p_from": string,"p_gross_cents": number,"p_kind": Database["public"]['Enums']["statement_kind"],"p_note": string,"p_storage_path": string,"p_title": string,"p_to": string,"p_user": string }; Returns: string
+                           },
+"statement_renumber":
+{ Args: { "p_id": string,"p_number": string }; Returns: string
                            },
 "statement_set_file":
 { Args: { "p_file_name": string,"p_id": string,"p_storage_path": string }; Returns: undefined

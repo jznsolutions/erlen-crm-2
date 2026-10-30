@@ -36,7 +36,11 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
    Darunter: **Stornobehalt** (Standard 10 %), **Abzüge** wie KFZ (aus den Zusatzpositionen im Mitarbeiterprofil oder frei eingetragen), **USt. 19 %** bei umsatzsteuerpflichtigen Partnern → **GESAMTSUMME**.
 3. Nach dem Veröffentlichen sind die übernommenen Abrechnungen und der ausgezahlte Einbehalt erledigt und werden nicht noch einmal vorgeschlagen. Wird die Gutschrift storniert, stehen sie wieder zur Verfügung.
 
-* **Gutschriftnummer:** fortlaufend, Format `GS{JAHR}{NR}` (z. B. GS202623). Unter „Belegnummern & Voreinstellungen“ die nächste Nummer eintragen, um eure bisherige Zählung fortzusetzen.
+* **Gutschriftnummer:** fortlaufend, Format `GS{JAHR}{NR}` (z. B. GS202623).
+  * Beim Erstellen steht die vorgeschlagene Nummer im Feld **„Gutschriftnummer“** – einfach überschreiben, wenn ihr eine andere wollt.
+  * Nachträglich: in der Liste beim Beleg **„Nummer ändern“** – das PDF wird automatisch mit der neuen Nummer erzeugt.
+  * Dauerhaft fortsetzen: oben **„Nummern einstellen“** bzw. unten „Belegnummern & Voreinstellungen“ → **Nächste Nr.**
+  * Jede Nummer kann nur einmal vergeben werden.
 * **Kundennummer** je Mitarbeiter (z. B. VPSS001 = immer „VP“ + Initialen + laufende Nummer): wird bei der ersten Gutschrift automatisch vergeben oder im Mitarbeiterprofil eingetragen (z. B. eure bestehenden Nummern VPSS001, VPNC007). Die nächste laufende Nummer ist unter „Belegnummern & Voreinstellungen“ einstellbar.
 * Stufen-Kürzel auf dem Beleg („Stufe: …“): VP = Vertriebspartner, AB = Ausbilder, TL = Teamleiter, AG = Agentur. Kundennummern beginnen unabhängig von der Stufe immer mit „VP“.
 * Mitarbeitende sehen ihre veröffentlichten Belege unter **Abrechnungen & Gutschriften** und laden sie als PDF herunter.

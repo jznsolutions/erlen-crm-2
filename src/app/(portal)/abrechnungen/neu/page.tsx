@@ -77,6 +77,8 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
     }
   }
   const { data: defaults } = await supabase.from("organization_settings").select("value").eq("key", "statement_defaults").maybeSingle();
+  const { data: numbering } = await supabase.rpc("statement_numbering_get", {});
+  const suggestedNumber = (numbering ?? []).find((n) => n.kind === kind)?.example;
   const retentionDefault = Number(((defaults?.value ?? {}) as { retention_rate?: number }).retention_rate ?? 10);
   const sameMonth = from && to && from.slice(0, 7) === to.slice(0, 7) && from.endsWith("-01") && to === addDays(startOfMonth(addDays(from, 32)), -1);
   const defaultTitle = `${label}${sameMonth ? ` ${MONTHS[Number(from.slice(5, 7)) - 1]} ${from.slice(0, 4)}` : from && to ? ` ${formatDate(from)} – ${formatDate(to)}` : ""}`;
@@ -138,6 +140,7 @@ export default async function NewStatementPage({ searchParams }: { searchParams:
               extras={extras}
               vatRate={billing?.vat_liable ? 19 : 0}
               retentionRate={kind === "gutschrift" ? retentionDefault : 0}
+              suggestedNumber={suggestedNumber}
             />
           </CardContent>
         </Card>
