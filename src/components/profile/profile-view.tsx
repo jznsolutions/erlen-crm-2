@@ -18,6 +18,7 @@ import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
 import { DocUploader } from "@/components/unterlagen/uploader";
 import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
+import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
 import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
 import { formatCents } from "@/lib/format";
 import { levelForRole } from "@/lib/commission";
@@ -127,6 +128,9 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   const canBilling = isSelf || perms.has("statements.manage");
   const canExtras = perms.has("statements.manage") && !isSelf;
   const canDocs = perms.has("employee_docs.manage") && !isSelf;
+  const onboarding = isSelf || canDocs || perms.has("employees.update")
+    ? (((await supabase.rpc("onboarding_status", { p_user: userId })).data ?? []) as OnboardingItem[])
+    : [];
   const employeeDocs = canDocs
     ? (((await supabase.from("employee_documents").select("id, user_id, category, title, file_name, mime_type, valid_until, status, review_note, created_at").eq("user_id", userId).order("created_at", { ascending: false })).data ?? []) as DocRow[])
     : [];
@@ -289,12 +293,16 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
           </Card>
         ) : null}
         {canBilling ? (
-          <Card>
+          <Card id="abrechnungsdaten" className="scroll-mt-24">
             <CardHeader><div><CardTitle>Abrechnungsdaten</CardTitle><CardDescription>Erscheinen auf Abrechnungen und Gutschriften. Nur für {isSelf ? "dich" : "die Person"} und die Abrechnung sichtbar.</CardDescription></div></CardHeader>
             <CardContent><BillingForm userId={userId} billing={billing} /></CardContent>
           </Card>
         ) : null}
       </div>
+
+      {onboarding.length && (!isSelf || onboarding.some((i) => i.required && !i.done)) ? (
+        <OnboardingChecklist items={onboarding} self={isSelf} name={profile.first_name} />
+      ) : null}
 
       {canDocs ? (
         <Card id="unterlagen" className="scroll-mt-24">

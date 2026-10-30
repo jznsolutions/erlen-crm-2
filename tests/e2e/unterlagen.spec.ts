@@ -38,3 +38,16 @@ test("Mitarbeiter lädt Führerschein hoch, Verwaltung prüft, Fremde sehen nich
   await expect(done.getByText("Geprüft")).toBeVisible();
   await expect(done.getByRole("button", { name: "Löschen" })).toHaveCount(0);
 });
+
+test("Start-Checkliste auf dem Dashboard und im Profil", async ({ page }) => {
+  await login(page, "partner2");
+  const card = page.getByText("Dein Start bei ERLEN").locator("xpath=ancestor::div[contains(@class,'glass-card')][1]");
+  await expect(card).toBeVisible();
+  await card.locator("li", { hasText: "IBAN" }).getByRole("link", { name: /Erledigen/ }).click();
+  await expect(page).toHaveURL(/\/profil#abrechnungsdaten/);
+  await logout(page);
+  await login(page, "leitung");
+  await page.goto("/mitarbeiter");
+  await page.getByRole("link", { name: /Maier/ }).first().click();
+  await expect(page.getByText("Start-Checkliste")).toBeVisible();
+});
