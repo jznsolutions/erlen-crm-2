@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
+import { useTransition } from "react";
 import { DropdownMenu } from "radix-ui";
-import { LogOut, UserRound } from "lucide-react";
+import { Loader2, LogOut, UserRound } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { signOut } from "@/lib/auth-actions";
 
 export function UserMenu({ first, last, role, avatarUrl }: { first: string; last: string; role: string; avatarUrl: string | null }) {
+  const [pending, start] = useTransition();
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger className="flex items-center gap-2 rounded-md p-1 hover:bg-muted" aria-label="Benutzermenü">
@@ -23,13 +25,17 @@ export function UserMenu({ first, last, role, avatarUrl }: { first: string; last
             </Link>
           </DropdownMenu.Item>
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
-          <form action={signOut}>
-            <DropdownMenu.Item asChild>
-              <button type="submit" className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-danger outline-none data-[highlighted]:bg-muted">
-                <LogOut className="size-4" /> Abmelden
-              </button>
-            </DropdownMenu.Item>
-          </form>
+          {/* Abmelden direkt beim Auswählen auslösen: ein Formular im Menü würde beim Schließen entfernt, bevor es abgeschickt wird */}
+          <DropdownMenu.Item
+            disabled={pending}
+            onSelect={(e) => {
+              e.preventDefault();
+              start(() => signOut());
+            }}
+            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-danger outline-none data-[highlighted]:bg-muted data-[disabled]:opacity-60"
+          >
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />} {pending ? "Wird abgemeldet …" : "Abmelden"}
+          </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
