@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dashboardKind } from "@/lib/permissions";
 import { addDays, isPeriodKey, PERIOD_LABELS, periodRange, startOfMonth, todayBerlin, type PeriodKey } from "@/lib/dates";
 import { getSetupStatus } from "@/lib/setup";
+import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
 import { getDaily, getProducts, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filterRows } from "@/lib/metrics";
 import { formatDate, formatRelative } from "@/lib/format";
@@ -55,6 +56,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ownCommissionCents: moneyData?.[0] ? Number(moneyData[0].own_commission_cents) : null,
   };
   const ownMoney: MoneyKpis = { revenueCents: null, ownCommissionCents: money.ownCommissionCents };
+  // Start-Checkliste für alle außer der Systemadministration, solange Pflichtpunkte offen sind
+  const onboarding = user.role.key === "admin" ? [] : (((await supabase.rpc("onboarding_status", {})).data ?? []) as OnboardingItem[]);
+  const onboardingOpen = onboarding.some((i) => i.required && !i.done);
   const pendingUpdates = user.permissions.has("settings.manage") ? (await getSetupStatus()).pending.length : 0;
   const ownRows = rows.filter((r) => r.user_id === user.id);
   const ownTargets = targets.filter((t) => t.scope !== "mitarbeiter" || t.user_id === user.id);
@@ -83,6 +87,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           Für neue Funktionen muss die Datenbank einmalig erweitert werden. <Link className="font-medium underline" href="/einrichtung">Jetzt auf der Einrichtungsseite einspielen</Link> – bestehende Daten bleiben erhalten.
         </Alert>
       ) : null}
+      {onboardingOpen ? <OnboardingChecklist items={onboarding} /> : null}
       {params.willkommen ? (
         <Alert tone="success" title="Willkommen im ERLEN-Portal!">
           Dein Konto ist eingerichtet. Ergänze dein <Link className="underline" href="/profil">Profil</Link> und starte deine Pflichtschulungen in der Academy.

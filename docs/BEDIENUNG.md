@@ -49,6 +49,12 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * **Termine** im Portal: anstehende Gespräche, Absagen (Bewerber wird informiert), Erreichbarkeit je Wochentag, Dauer, Vorlaufzeit, gesperrte Zeiten (Urlaub).
 * Jede Buchung erscheint auch unter **Bewerber**.
 
+## Start-Checkliste für neue Mitarbeiter
+* Auf dem **Dashboard** sehen Mitarbeiter „**Dein Start bei ERLEN**“ mit allem, was noch fehlt: Profilbild, Telefonnummer, Anschrift, IBAN, Steuernummer/USt-IdNr., Pflicht-Unterlagen, Pflichtschulungen – und als Empfehlung Push-Benachrichtigungen. Jeder Punkt hat einen Knopf **„Erledigen“**, der direkt an die richtige Stelle führt.
+* Die Checkliste verschwindet automatisch, sobald alle Pflichtpunkte erledigt sind.
+* Welche Unterlagen Pflicht sind (Standard: Gewerbeanmeldung und Personalausweis), legt ihr unter **Einstellungen → Start-Checkliste** fest.
+* Im **Mitarbeiterprofil** seht ihr als Verwaltung den Stand (z. B. „5 von 8 Pflichtpunkten erledigt“).
+
 ## Meine Unterlagen (Gewerbeanmeldung, Führerschein …)
 * Jeder Mitarbeiter findet im Menü **Meine Unterlagen**. Dort: Art wählen (z. B. Gewerbeanmeldung, Führerschein, Personalausweis), optional Bezeichnung und „gültig bis“, dann **Datei auswählen** (PDF/Foto) oder **Foto aufnehmen** → **Hochladen**.
 * Sichtbar nur für den Mitarbeiter selbst und die Verwaltung (Agenturleitung, Administration) – nicht für Teamleiter oder Ausbilder.

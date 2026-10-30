@@ -1502,6 +1502,14 @@ isOneToOne: false
 "notifications_mark_read":
 { Args: { "p_ids"?: (string)[] }; Returns: undefined
                            },
+"onboarding_settings_save":
+{ Args: { "p_required_documents": (string)[] }; Returns: undefined
+                           },
+"onboarding_status":
+{ Args: { "p_user"?: string }; Returns: {
+              "done": boolean,"key": string,"label": string,"link": string,"required": boolean,"sort": number
+            }[]
+                           },
 "performance_correct":
 { Args: { "p_id": string,"p_occurred_on": string,"p_product": string,"p_quantity": number,"p_reason": string }; Returns: string
                            },

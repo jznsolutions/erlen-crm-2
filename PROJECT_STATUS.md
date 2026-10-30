@@ -2,6 +2,10 @@
 
 Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
+## Erweiterung 01.11.2026
+
+* Start-Checkliste für neue Mitarbeiter (Dashboard, Stand im Profil, Pflicht-Unterlagen einstellbar)
+
 ## Erweiterung 31.10.2026
 
 * „Meine Unterlagen“: Mitarbeiter laden Dokumente/Fotos hoch (Gewerbeanmeldung, Führerschein …), Verwaltung prüft/lehnt ab, Benachrichtigungen in beide Richtungen
@@ -70,7 +74,7 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 * `npm run typecheck` – ok · `npm run lint` – ok · `npm run build` – ok
 * `npm test` – 21/21 (Kennzahlen, Datum/Zeitzone, Open-Redirect, CSV-Injection, Validierung, Euro-Beträge)
-* `npm run test:db` – 88/88 (feste Overhead-Beträge, Vermittlungsprovision für Werber, Agentur ohne Overhead; Gutschrift rechnet wie die Vorlage; Übernahme/Freigabe von Abrechnung und Einbehalt; Terminbuchung: kein Doppeltermin, Erinnerung genau einmal, Rechte; Overhead Differenz/Fest; Umsatz-Sichtbarkeit; Nummernkreis; alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy, Einladungen, Produktfreigaben, Provisions-Sichtbarkeit, Abrechnungs-Vorschau, Nummernvergabe, Doppel-Abrechnung, USt)
+* `npm run test:db` – 98/98 (Start-Checkliste, Unterlagen, Push; feste Overhead-Beträge, Vermittlungsprovision für Werber, Agentur ohne Overhead; Gutschrift rechnet wie die Vorlage; Übernahme/Freigabe von Abrechnung und Einbehalt; Terminbuchung: kein Doppeltermin, Erinnerung genau einmal, Rechte; Overhead Differenz/Fest; Umsatz-Sichtbarkeit; Nummernkreis; alle 10 Pflichtszenarien + Freigabe, Storno, Korrektur, Duplikate, Ziele, Rankings, Academy, Einladungen, Produktfreigaben, Provisions-Sichtbarkeit, Abrechnungs-Vorschau, Nummernvergabe, Doppel-Abrechnung, USt)
 * `npm run test:e2e` – 26/26 (Terminbuchung mit gleichzeitigem zweiten Bewerber, Bestätigungsmails, Erinnerungs-Endpunkt gesperrt; Gutschrift mit Overhead und Fahrzeugrate; Beträge verbergen; Logo/Manifest; u. a. Abrechnung erstellen → Mitarbeiter lädt PDF, fremder Mitarbeiter erhält 404; Gutschrift; Produktfreigabe in der Erfassung; Einladung per E-Mail gegen lokalen SMTP-Empfänger geprüft; Impressum)
 * Datenbank-Update einer bestehenden (alten) Datenbank über `/einrichtung` und Ersteinrichtung einer leeren Datenbank manuell im Browser geprüft
 

@@ -4,6 +4,7 @@ import { getSetting } from "@/lib/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmailTest } from "@/components/admin/email-test";
 import { emailProvider } from "@/lib/email";
+import { OnboardingSettingsForm } from "@/components/admin/onboarding-settings";
 import { PageHeader } from "@/components/ui/misc";
 import { SettingsForm } from "@/components/admin/settings-form";
 
@@ -11,10 +12,11 @@ export const metadata: Metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const user = await requirePermission("settings.manage");
-  const [agency, perf, rankings] = await Promise.all([
+  const [agency, perf, rankings, onboarding] = await Promise.all([
     getSetting<{ name: string }>("agency"),
     getSetting<{ require_approval: boolean }>("performance"),
     getSetting<{ enabled: boolean; agency_roles: string[]; team_roles: string[] }>("rankings"),
+    getSetting<{ required_documents: string[] }>("onboarding"),
   ]);
   return (
     <div className="max-w-3xl space-y-6">
@@ -22,6 +24,10 @@ export default async function SettingsPage() {
       <Card><CardContent className="pt-5">
         <SettingsForm agencyName={agency?.name ?? "ERLEN Vertriebsagentur"} requireApproval={perf?.require_approval ?? true} rankings={rankings ?? { enabled: true, agency_roles: [], team_roles: [] }} />
       </CardContent></Card>
+      <Card>
+        <CardHeader><div><CardTitle>Start-Checkliste für neue Mitarbeiter</CardTitle><CardDescription>Erscheint auf dem Dashboard, bis alle Pflichtpunkte erledigt sind. Den Stand seht ihr im Mitarbeiterprofil.</CardDescription></div></CardHeader>
+        <CardContent><OnboardingSettingsForm required={onboarding?.required_documents ?? ["gewerbeanmeldung", "personalausweis"]} /></CardContent>
+      </Card>
       <Card>
         <CardHeader><div><CardTitle>E-Mail-Versand</CardTitle><CardDescription>Einladungen, Bewerber-Einladungen, Terminbestätigungen und Erinnerungen werden automatisch über euer Postfach verschickt. Anleitung: docs/ANLEITUNG_OUTLOOK_EMAIL.md</CardDescription></div></CardHeader>
         <CardContent><EmailTest provider={emailProvider()} from={process.env.EMAIL_FROM ?? null} to={user.email} /></CardContent>
