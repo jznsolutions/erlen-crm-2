@@ -38,6 +38,7 @@ export const PERMISSIONS = [
   "reports.read.team",
   "reports.read.all",
   "reports.export",
+  "employee_docs.manage",
   "applicants.read",
   "applicants.manage",
   "settings.manage",

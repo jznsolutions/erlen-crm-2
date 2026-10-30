@@ -49,6 +49,13 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * **Termine** im Portal: anstehende Gespräche, Absagen (Bewerber wird informiert), Erreichbarkeit je Wochentag, Dauer, Vorlaufzeit, gesperrte Zeiten (Urlaub).
 * Jede Buchung erscheint auch unter **Bewerber**.
 
+## Meine Unterlagen (Gewerbeanmeldung, Führerschein …)
+* Jeder Mitarbeiter findet im Menü **Meine Unterlagen**. Dort: Art wählen (z. B. Gewerbeanmeldung, Führerschein, Personalausweis), optional Bezeichnung und „gültig bis“, dann **Datei auswählen** (PDF/Foto) oder **Foto aufnehmen** → **Hochladen**.
+* Sichtbar nur für den Mitarbeiter selbst und die Verwaltung (Agenturleitung, Administration) – nicht für Teamleiter oder Ausbilder.
+* Die Verwaltung erhält eine Benachrichtigung und findet alle neuen Unterlagen unter **Meine Unterlagen → Zu prüfen** sowie im **Mitarbeiterprofil → Unterlagen**. Dort **Prüfen** (✓) oder **Ablehnen** (✕, mit Grund – der Mitarbeiter wird informiert und lädt neu hoch).
+* Mitarbeiter können eigene Unterlagen löschen, solange sie noch nicht geprüft sind. Abgelaufene Dokumente (Datum „gültig bis“) werden rot markiert.
+* Die Verwaltung kann im Mitarbeiterprofil auch selbst Unterlagen für den Mitarbeiter hochladen.
+
 ## Benachrichtigungen aufs Handy (Push)
 * Jede Benachrichtigung im Portal (z. B. **neue Gutschrift**, Leistung bestätigt/abgelehnt, neue Schulung, neuer Bewerbungstermin) kann zusätzlich als Mitteilung aufs Handy kommen – auch wenn das Portal geschlossen ist.
 * Einschalten macht jeder Mitarbeiter selbst: Glocke oben rechts → **Benachrichtigungen auf diesem Gerät → Aktivieren** → „Erlauben“. Mit **Testen** kommt sofort eine Probe-Mitteilung.
