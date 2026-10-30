@@ -84,7 +84,7 @@ export function ReminderButton({ active }: { active: boolean }) {
       }
     >
       {pending ? <Loader2 className="animate-spin" /> : <BellRing />}
-      {active ? "Erinnerungen neu einrichten" : "Automatische Erinnerungen aktivieren"}
+      {active ? "Automatik neu einrichten" : "Erinnerungen & Push aktivieren"}
     </Button>
   );
 }

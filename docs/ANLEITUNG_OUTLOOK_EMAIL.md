@@ -85,7 +85,7 @@ Microsoft ist fertig. Den Tab kannst du offen lassen.
 
 **Schritt 19.** Echter Test: Öffne die Website in einem privaten Browserfenster, bewirb dich mit einer privaten E-Mail-Adresse. Du solltest „Deine Einladung zum Bewerbungsgespräch bei ERLEN“ erhalten, und `kontakt@erlen-sales.de` bekommt „Neue Bewerbung: …“.
 
-**Schritt 20.** Damit die Erinnerungen 2 Stunden vor Terminen kommen: Portal → **Termine** → **Automatische Erinnerungen aktivieren** (einmalig).
+**Schritt 20.** Damit die Erinnerungen 2 Stunden vor Terminen kommen und Push-Benachrichtigungen sofort zugestellt werden: Portal → **Termine** → **Erinnerungen & Push aktivieren** (einmalig; wer das schon früher gemacht hat, tippt einmal auf **Automatik neu einrichten**).
 
 ---
 

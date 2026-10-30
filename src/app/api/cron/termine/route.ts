@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { cronSecret, sendDueReminders } from "@/lib/booking";
+import { deliverPendingPush } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,12 @@ async function handle(request: NextRequest) {
   }
   try {
     const sent = await sendDueReminders();
-    return NextResponse.json({ ok: true, reminders: sent });
+    // Nachzustellen, falls die Sofortzustellung einer Push-Benachrichtigung ausgefallen ist
+    const pushed = await deliverPendingPush().catch((e) => {
+      console.error("[cron] push", (e as Error).message);
+      return 0;
+    });
+    return NextResponse.json({ ok: true, reminders: sent, pushed });
   } catch (e) {
     console.error("[cron]", (e as Error).message);
     return NextResponse.json({ ok: false }, { status: 500 });

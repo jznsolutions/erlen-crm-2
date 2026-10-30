@@ -49,6 +49,13 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * **Termine** im Portal: anstehende Gespräche, Absagen (Bewerber wird informiert), Erreichbarkeit je Wochentag, Dauer, Vorlaufzeit, gesperrte Zeiten (Urlaub).
 * Jede Buchung erscheint auch unter **Bewerber**.
 
+## Benachrichtigungen aufs Handy (Push)
+* Jede Benachrichtigung im Portal (z. B. **neue Gutschrift**, Leistung bestätigt/abgelehnt, neue Schulung, neuer Bewerbungstermin) kann zusätzlich als Mitteilung aufs Handy kommen – auch wenn das Portal geschlossen ist.
+* Einschalten macht jeder Mitarbeiter selbst: Glocke oben rechts → **Benachrichtigungen auf diesem Gerät → Aktivieren** → „Erlauben“. Mit **Testen** kommt sofort eine Probe-Mitteilung.
+* **iPhone:** Funktioniert nur, wenn das Portal auf dem Home-Bildschirm liegt: In Safari **Teilen** (Quadrat mit Pfeil) → **Zum Home-Bildschirm** → **Hinzufügen**, dann das Portal über das ERLEN-Symbol öffnen und dort aktivieren. **Android:** direkt in Chrome.
+* Antippen der Mitteilung öffnet die passende Seite und markiert die Benachrichtigung als gelesen.
+* Administrator einmalig: **Termine → „Erinnerungen & Push aktivieren“** (bzw. „Automatik neu einrichten“), damit Mitteilungen sofort statt erst nach bis zu 5 Minuten ankommen.
+
 ## Geldbeträge verbergen
 * Über das **Augen-Symbol** oben rechts lassen sich alle Geldbeträge (Umsatz, Provision, Gutschriften) verschwommen darstellen – praktisch, wenn jemand mitschaut. Ein weiterer Klick zeigt sie wieder an; die Einstellung bleibt im Browser gespeichert.
 

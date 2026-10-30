@@ -2,6 +2,13 @@
 
 Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
+## Erweiterung 31.10.2026
+
+* Benachrichtigungen werden beim Antippen als gelesen markiert
+* Push-Benachrichtigungen aufs Handy (Web Push, iPhone über Home-Bildschirm), sofortige Zustellung per Datenbank-Auslöser, Nachzustellung über den 5-Minuten-Zeitplaner
+* Kein Hineinzoomen mehr beim Antippen von Eingabefeldern (16 px auf Handys)
+* Abmelden repariert, Terminkalender auf dem Handy repariert
+
 ## Erweiterung 30.10.2026 (Provisionen)
 
 * Overhead fest je bestätigter Einheit: Vermittlungsprovision Werber 5 €, Ausbilder 10 €, Teamleiter 30 €, Agentur keiner (Beträge änderbar)

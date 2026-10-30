@@ -158,6 +158,16 @@
   .animate-rise { animation: none; }
 }
 
+/* iPhone zoomt beim Antippen eines Eingabefelds hinein, wenn die Schrift kleiner als 16 px ist.
+   Auf Handys deshalb alle Eingabefelder mit 16 px – kein Zoom, kein Herauszoomen nötig. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Geldbeträge verbergen (Augen-Symbol im Kopfbereich) */
 .money {
   transition: filter 0.2s ease;
