@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fromDbError, type ActionResult } from "@/lib/actions";
-import { sendTestPush, vapidKeys } from "@/lib/push";
+import { pushProblem, sendTestPush, vapidKeys } from "@/lib/push";
 
 export async function markAllRead(): Promise<ActionResult> {
   await requireUser();
@@ -37,7 +37,17 @@ export async function sendPushTest(): Promise<ActionResult> {
   return sent ? { ok: true, message: "Test-Benachrichtigung verschickt – sie sollte gleich erscheinen." } : { ok: false, error: "Es ist kein Gerät für Benachrichtigungen registriert." };
 }
 
-export async function pushPublicKey(): Promise<string | null> {
+export async function pushPublicKey(): Promise<{ key: string } | { error: string }> {
   await requireUser();
-  return (await vapidKeys())?.publicKey ?? null;
+  const keys = await vapidKeys();
+  if (keys) return { key: keys.publicKey };
+  const problem = pushProblem();
+  return {
+    error:
+      problem === "update_fehlt"
+        ? "Push ist noch nicht freigeschaltet: Ein Administrator muss zuerst im Dashboard das „Datenbank-Update“ einspielen."
+        : problem === "nicht_eingerichtet"
+          ? "Push ist auf dem Server noch nicht eingerichtet (Supabase-Verbindung fehlt)."
+          : "Push ist gerade nicht verfügbar. Bitte später erneut versuchen.",
+  };
 }
