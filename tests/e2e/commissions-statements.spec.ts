@@ -135,3 +135,29 @@ test("Geworben von und feste Overhead-Beträge in der Verwaltung", async ({ page
   await page.getByRole("link", { name: /Maier/ }).first().click();
   await expect(page.getByLabel("Geworben von")).toHaveValue(/.+/);
 });
+
+test("Gutschriftnummer selbst festlegen und nachträglich ändern", async ({ page }) => {
+  const nr = `GSTEST${Date.now().toString().slice(-6)}`;
+  await login(page, "admin");
+  await page.goto("/abrechnungen/neu?art=gutschrift&manuell=1");
+  await page.selectOption("#n-ma", { label: "Wagner, Leon" });
+  await page.getByRole("button", { name: "Berechnen" }).click();
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("#st-number")).toHaveValue(/^GS\d{6,}$/);
+  await page.getByLabel("Position 1 Beschreibung").fill("Prämie");
+  await page.getByLabel("Position 1 Einzelpreis").fill("10");
+  await page.fill("#st-title", "Gutschrift Nummerntest");
+  await page.fill("#st-number", nr);
+  await page.getByRole("button", { name: "Gutschrift erstellen & veröffentlichen" }).click();
+  await expect(page.getByText("Gutschrift erstellt und veröffentlicht.")).toBeVisible();
+  const row = page.locator("tr", { hasText: nr });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Nummer ändern" }).click();
+  await page.getByRole("dialog").getByLabel("Neue Nummer").fill(`${nr}B`);
+  await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText(`Nummer geändert in ${nr}B.`)).toBeVisible();
+  const href = await page.locator("tr", { hasText: `${nr}B` }).getByRole("link", { name: /herunterladen/ }).getAttribute("href");
+  const pdf = await page.request.get(href!);
+  expect(pdf.ok()).toBeTruthy();
+  expect(pdf.headers()["content-disposition"] ?? "").toContain(`${nr}B`);
+});

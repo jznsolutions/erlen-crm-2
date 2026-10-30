@@ -317,3 +317,22 @@ describe("Vorlage Gutschrift (Stornobehalt, Abzüge, Kundennummer)", () => {
     });
   });
 });
+
+describe("Belegnummer selbst festlegen", () => {
+  it("eigene Nummer beim Veröffentlichen, nachträglich änderbar, keine doppelten Nummern", async () => {
+    await scenario(async () => {
+      await as(o.admin);
+      const items = JSON.stringify([{ description: "Bonus", quantity: 1, unit_cents: 1000 }]);
+      const a = (await one<{ id: string }>(db, "select public.statement_create($1, 'gutschrift', 'Gutschrift A', null, null, $2::jsonb, null) id", [o.partner1, items])).id;
+      expect((await one<{ n: string }>(db, "select public.statement_publish($1, null, null, 'gs202621') n", [a])).n).toBe("GS202621");
+      const b = (await one<{ id: string }>(db, "select public.statement_create($1, 'gutschrift', 'Gutschrift B', null, null, $2::jsonb, null) id", [o.partner1, items])).id;
+      await expectDbError(db, "select public.statement_publish($1, null, null, 'GS202621')", [b], /bereits vergeben/);
+      await db.query("select public.statement_publish($1, null, null)", [b]);
+      await expectDbError(db, "select public.statement_renumber($1, 'GS202621')", [b], /bereits vergeben/);
+      expect((await one<{ n: string }>(db, "select public.statement_renumber($1, 'GS202622') n", [b])).n).toBe("GS202622");
+      await expectDbError(db, "select public.statement_renumber($1, 'GS 22!')", [b], /Ungültige Nummer/);
+      await as(o.partner1);
+      await expectDbError(db, "select public.statement_renumber($1, 'GS999')", [b], /Berechtigung/);
+    });
+  });
+});

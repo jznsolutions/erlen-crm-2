@@ -60,6 +60,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
               <Button asChild><Link href="/abrechnungen/neu?art=gutschrift"><FilePlus2 />Gutschrift erstellen</Link></Button>
               <Button asChild variant="secondary"><Link href="/abrechnungen/neu?art=abrechnung"><FilePlus2 />Abrechnung erstellen</Link></Button>
               <StatementUploadDialog employees={employees} />
+              <Button asChild variant="ghost"><a href="#belegnummern">Nummern einstellen</a></Button>
             </div>
           ) : undefined
         }
@@ -93,7 +94,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
       ) : null}
 
       {manage && numbering.length ? (
-        <Card>
+        <Card id="belegnummern" className="scroll-mt-24">
           <CardHeader><div><CardTitle>Belegnummern & Voreinstellungen</CardTitle><CardDescription>Platzhalter: {"{JAHR}"} = Jahr, {"{NR}"} = fortlaufende Nummer. Mit „Nächste Nr.“ führt ihr eure bisherige Nummerierung fort.</CardDescription></div></CardHeader>
           <CardContent className="space-y-4">
             <DefaultsForm retention={retentionDefault} nextCustomer={nextCustomer} />
