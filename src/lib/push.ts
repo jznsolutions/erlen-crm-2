@@ -14,14 +14,28 @@ export function pushAvailable() {
   return isPortalConfigured() && Boolean(secretKey());
 }
 
+/** Grund, warum Push gerade nicht verfügbar ist (für eine verständliche Meldung). */
+export type PushProblem = "nicht_eingerichtet" | "update_fehlt" | "fehler";
+let lastProblem: PushProblem | null = null;
+export const pushProblem = () => lastProblem;
+
 export async function vapidKeys(): Promise<{ publicKey: string; privateKey: string } | null> {
   if (cached) return cached;
-  if (!pushAvailable()) return null;
+  if (!pushAvailable()) {
+    lastProblem = "nicht_eingerichtet";
+    return null;
+  }
   const admin = createAdminClient();
-  let { data } = await admin.rpc("push_vapid_keys", {});
-  if (!data?.[0]?.public_key) {
+  let { data, error } = await admin.rpc("push_vapid_keys", {});
+  if (!error && !data?.[0]?.public_key) {
     const k = webpush.generateVAPIDKeys();
-    ({ data } = await admin.rpc("push_vapid_keys", { p_public: k.publicKey, p_private: k.privateKey }));
+    ({ data, error } = await admin.rpc("push_vapid_keys", { p_public: k.publicKey, p_private: k.privateKey }));
+  }
+  if (error) {
+    // Funktion fehlt = Datenbank-Update (Migration 1100) noch nicht eingespielt
+    lastProblem = error.code === "PGRST202" || error.code === "42883" || /function|schema cache/i.test(error.message) ? "update_fehlt" : "fehler";
+    console.error("[push] Schlüssel", error.code, error.message);
+    return null;
   }
   const row = data?.[0];
   if (!row?.public_key || !row.private_key) return null;

@@ -38,8 +38,9 @@ export function PushToggle() {
       try {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return setState(permission === "denied" ? "blockiert" : "aus");
-        const key = await pushPublicKey();
-        if (!key) return void toast.error("Push-Benachrichtigungen sind auf dem Server noch nicht verfügbar.");
+        const res = await pushPublicKey();
+        if ("error" in res) return void toast.error(res.error, { duration: 10_000 });
+        const key = res.key;
         const reg = await navigator.serviceWorker.register("/sw.js");
         await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(key) });
