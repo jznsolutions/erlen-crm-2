@@ -163,6 +163,6 @@ Für „Passwort vergessen“ zusätzlich in **Supabase → Authentication → E
 Bewerber wählen auf der Website (Bereich „Termin“ und nach dem Absenden der Bewerbung) einen freien Termin. Ein Zeitpunkt kann nur einmal gebucht werden – das stellt die Datenbank sicher, auch wenn zwei Personen gleichzeitig buchen. Bewerber und ihr (Adresse unter **Termine → Einstellungen**) erhaltet eine Bestätigung mit Kalendereintrag, 2 Stunden vorher eine Erinnerung. Bewerber können über den Link in der Mail absagen.
 
 1. Portal → **Termine** → „Wann seid ihr erreichbar?“ Wochentage und Uhrzeiten festlegen, Dauer je Termin und Vorlaufzeit einstellen.
-2. **Einmalig:** auf der Seite **Termine** „Automatische Erinnerungen aktivieren“ klicken (nur Administrator). Das richtet in Supabase einen Zeitplaner ein, der alle 5 Minuten fällige Erinnerungen verschickt. Nach einem Domainwechsel erneut klicken („Erinnerungen neu einrichten“).
+2. **Einmalig:** auf der Seite **Termine** „Erinnerungen & Push aktivieren“ klicken (nur Administrator). Das richtet in Supabase einen Zeitplaner ein, der alle 5 Minuten fällige Erinnerungen verschickt, und sorgt dafür, dass Push-Benachrichtigungen sofort zugestellt werden. Nach einem Domainwechsel erneut klicken („Automatik neu einrichten“).
 3. Urlaub/Feiertage unter „Zeiten sperren“ eintragen.
 

@@ -113,12 +113,17 @@ export async function enableReminderJob(): Promise<ActionResult> {
       await c.query("select cron.unschedule(jobid) from cron.job where jobname = $1", [REMINDER_JOB]);
       const command = `select net.http_post(url := ${literal(url)}, headers := jsonb_build_object('Authorization', ${literal("Bearer " + secret)}, 'Content-Type', 'application/json'), body := '{}'::jsonb, timeout_milliseconds := 20000)`;
       await c.query("select cron.schedule($1, '*/5 * * * *', $2)", [REMINDER_JOB, command]);
+      // Sofortzustellung von Push-Benachrichtigungen (Datenbank ruft den Versand-Endpunkt auf)
+      await c.query(
+        "insert into private.app_secrets (key, value) values ('push_hook_url', $1), ('push_hook_secret', $2) on conflict (key) do update set value = excluded.value",
+        [`${siteUrl()}/api/push/deliver`, secret],
+      );
     });
   } catch (e) {
     console.error("[termine] cron", (e as Error).message);
     return { ok: false, error: "Der Zeitplaner konnte nicht eingerichtet werden: " + (e as Error).message.slice(0, 200) };
   }
-  return done("Automatische Erinnerungen sind aktiv (Prüfung alle 5 Minuten).");
+  return done("Automatik ist aktiv: Termin-Erinnerungen (Prüfung alle 5 Minuten) und sofortige Push-Benachrichtigungen.");
 }
 
 function literal(v: string) {

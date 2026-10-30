@@ -547,14 +547,14 @@ isOneToOne: false
                   ]
                 },"notifications": {
                   Row: {
-                    "body": string | null,"created_at": string,"id": string,"link": string | null,"read_at": string | null,"title": string,"type": string,"user_id": string
+                    "body": string | null,"created_at": string,"id": string,"link": string | null,"pushed_at": string | null,"read_at": string | null,"title": string,"type": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "body"?: string | null,"created_at"?: string,"id"?: string,"link"?: string | null,"read_at"?: string | null,"title": string,"type": string,"user_id": string
+                    "body"?: string | null,"created_at"?: string,"id"?: string,"link"?: string | null,"pushed_at"?: string | null,"read_at"?: string | null,"title": string,"type": string,"user_id": string
                   }
                   Update: {
-                    "body"?: string | null,"created_at"?: string,"id"?: string,"link"?: string | null,"read_at"?: string | null,"title"?: string,"type"?: string,"user_id"?: string
+                    "body"?: string | null,"created_at"?: string,"id"?: string,"link"?: string | null,"pushed_at"?: string | null,"read_at"?: string | null,"title"?: string,"type"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -744,6 +744,26 @@ isOneToOne: false
       columns: ["role_id"]
 isOneToOne: false
       referencedRelation: "roles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"id": string,"last_used_at": string | null,"p256dh": string,"user_agent": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"id"?: string,"last_used_at"?: string | null,"p256dh": string,"user_agent"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"id"?: string,"last_used_at"?: string | null,"p256dh"?: string,"user_agent"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_subscriptions_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -1463,6 +1483,30 @@ isOneToOne: false
                            },
 "purge_applicants":
 { Args: { "p_days"?: number }; Returns: number
+                           },
+"push_claim_pending":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "body": string,"link": string,"notification_id": string,"title": string,"user_id": string
+            }[]
+                           },
+"push_subscribe":
+{ Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent": string }; Returns: undefined
+                           },
+"push_subscription_remove":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"push_subscriptions_for":
+{ Args: { "p_users": (string)[] }; Returns: {
+              "auth": string,"endpoint": string,"id": string,"p256dh": string,"user_id": string
+            }[]
+                           },
+"push_unsubscribe":
+{ Args: { "p_endpoint": string }; Returns: undefined
+                           },
+"push_vapid_keys":
+{ Args: { "p_private"?: string,"p_public"?: string }; Returns: {
+              "private_key": string,"public_key": string
+            }[]
                            },
 "quiz_save":
 { Args: { "p_lesson": string,"p_max_attempts": number,"p_pass_percent": number,"p_questions": Json }; Returns: undefined

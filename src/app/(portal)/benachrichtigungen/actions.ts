@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fromDbError, type ActionResult } from "@/lib/actions";
+import { sendTestPush, vapidKeys } from "@/lib/push";
 
 export async function markAllRead(): Promise<ActionResult> {
   await requireUser();
@@ -11,4 +12,32 @@ export async function markAllRead(): Promise<ActionResult> {
   if (error) return fromDbError(error);
   revalidatePath("/", "layout");
   return { ok: true, message: "Alle Benachrichtigungen gelesen." };
+}
+
+export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string; userAgent: string }): Promise<ActionResult> {
+  await requireUser();
+  if (!/^https:\/\//.test(sub.endpoint) || sub.endpoint.length > 1000 || !sub.p256dh || !sub.auth) return { ok: false, error: "Ungültiges Gerät" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("push_subscribe", { p_endpoint: sub.endpoint, p_p256dh: sub.p256dh, p_auth: sub.auth, p_user_agent: sub.userAgent.slice(0, 300) });
+  if (error) return fromDbError(error);
+  return { ok: true, message: "Benachrichtigungen auf diesem Gerät aktiviert." };
+}
+
+export async function removePushSubscription(endpoint: string): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("push_unsubscribe", { p_endpoint: endpoint });
+  if (error) return fromDbError(error);
+  return { ok: true, message: "Benachrichtigungen auf diesem Gerät ausgeschaltet." };
+}
+
+export async function sendPushTest(): Promise<ActionResult> {
+  const user = await requireUser();
+  const sent = await sendTestPush(user.id);
+  return sent ? { ok: true, message: "Test-Benachrichtigung verschickt – sie sollte gleich erscheinen." } : { ok: false, error: "Es ist kein Gerät für Benachrichtigungen registriert." };
+}
+
+export async function pushPublicKey(): Promise<string | null> {
+  await requireUser();
+  return (await vapidKeys())?.publicKey ?? null;
 }
