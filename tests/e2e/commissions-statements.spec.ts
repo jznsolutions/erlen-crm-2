@@ -97,16 +97,32 @@ test("Fahrzeugrate ist bei Paul vorausgewählt und wird abgezogen", async ({ pag
   await expect(page.getByText("abzgl. Stornobehalt")).toBeVisible();
 });
 
-test("Geldbeträge lassen sich verbergen", async ({ page }) => {
+test("Geldbeträge sind standardmäßig verborgen und lassen sich per Knopf anzeigen", async ({ page }) => {
   await login(page, "partner1");
   const root = page.locator("#portal-root");
-  await expect(root).toHaveAttribute("data-money", "visible");
-  await page.getByRole("button", { name: "Geldbeträge verbergen" }).click();
   await expect(root).toHaveAttribute("data-money", "hidden");
+  await page.getByRole("button", { name: "Geldbeträge anzeigen" }).click();
+  await expect(root).toHaveAttribute("data-money", "visible");
+  // Nach dem Neuladen wieder verborgen
   await page.reload();
   await expect(page.locator("#portal-root")).toHaveAttribute("data-money", "hidden");
-  await page.getByRole("button", { name: "Geldbeträge anzeigen" }).click();
-  await expect(page.locator("#portal-root")).toHaveAttribute("data-money", "visible");
+});
+
+test("Zurück-Pfeil oben links", async ({ page }) => {
+  await login(page, "admin");
+  await expect(page.getByRole("button", { name: "Zurück zur vorherigen Seite" })).toHaveCount(0);
+  await page.goto("/abrechnungen");
+  await page.getByRole("link", { name: "Gutschrift erstellen" }).click();
+  await expect(page).toHaveURL(/\/abrechnungen\/neu/);
+  await page.getByRole("button", { name: "Zurück zur vorherigen Seite" }).click();
+  await expect(page).toHaveURL(/\/abrechnungen$/);
+});
+
+test("Zurück-Pfeil ohne Verlauf führt zur übergeordneten Seite", async ({ page }) => {
+  await login(page, "admin");
+  await page.goto("/abrechnungen/neu?art=gutschrift");
+  await page.getByRole("button", { name: "Zurück zur vorherigen Seite" }).click();
+  await expect(page).toHaveURL(/\/abrechnungen$/);
 });
 
 test("Geworben von und feste Overhead-Beträge in der Verwaltung", async ({ page }) => {

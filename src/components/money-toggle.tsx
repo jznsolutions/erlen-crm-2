@@ -2,22 +2,22 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
-import { MONEY_COOKIE } from "@/lib/ui-prefs";
-
-/** Blendet alle Geldbeträge im Portal ein oder aus (Einstellung bleibt im Browser gespeichert). */
-export function MoneyToggle({ initialHidden }: { initialHidden: boolean }) {
-  const [hidden, setHidden] = useState(initialHidden);
+/**
+ * Geldbeträge sind standardmäßig verborgen. Ein Tipp auf das Auge zeigt sie an – nur bis die Seite
+ * neu geladen oder das Portal neu geöffnet wird, danach sind sie wieder verborgen.
+ */
+export function MoneyToggle() {
+  const [hidden, setHidden] = useState(true);
   const toggle = () => {
     const next = !hidden;
     setHidden(next);
     document.getElementById("portal-root")?.setAttribute("data-money", next ? "hidden" : "visible");
-    document.cookie = `${MONEY_COOKIE}=${next ? "aus" : "an"}; path=/; max-age=31536000; samesite=lax`;
   };
   return (
     <button
       type="button"
       onClick={toggle}
-      aria-pressed={hidden}
+      aria-pressed={!hidden}
       title={hidden ? "Beträge anzeigen" : "Beträge verbergen"}
       aria-label={hidden ? "Geldbeträge anzeigen" : "Geldbeträge verbergen"}
       className="inline-flex size-10 items-center justify-center rounded-full text-foreground hover:bg-white/[0.06]"

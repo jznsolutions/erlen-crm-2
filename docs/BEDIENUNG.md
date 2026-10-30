@@ -56,8 +56,12 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * Antippen der Mitteilung öffnet die passende Seite und markiert die Benachrichtigung als gelesen.
 * Administrator einmalig: **Termine → „Erinnerungen & Push aktivieren“** (bzw. „Automatik neu einrichten“), damit Mitteilungen sofort statt erst nach bis zu 5 Minuten ankommen.
 
-## Geldbeträge verbergen
-* Über das **Augen-Symbol** oben rechts lassen sich alle Geldbeträge (Umsatz, Provision, Gutschriften) verschwommen darstellen – praktisch, wenn jemand mitschaut. Ein weiterer Klick zeigt sie wieder an; die Einstellung bleibt im Browser gespeichert.
+## Geldbeträge anzeigen
+* Alle Geldbeträge (Umsatz, Provision, Gutschriften) sind **standardmäßig verschwommen** – praktisch, wenn jemand mitschaut.
+* Ein Tipp auf das **Augen-Symbol** oben rechts zeigt sie an. Nach dem Neuladen bzw. erneuten Öffnen des Portals sind sie wieder verborgen.
+
+## Zurück-Pfeil
+* Auf allen Seiten außer dem Dashboard ist oben links (neben dem Menü) ein **Pfeil ←**. Er führt zur vorherigen Seite bzw. eine Ebene nach oben (z. B. von „Gutschrift erstellen“ zurück zu „Abrechnungen & Gutschriften“).
 
 ## Rollen und Rechte vergeben
 * **Rolle ändern:** Mitarbeiter → Person öffnen → Abschnitt **Verwaltung → Rolle & Berechtigungen** → Rolle wählen → **Ändern**.
