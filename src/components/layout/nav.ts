@@ -13,6 +13,7 @@ export const NAV: NavSection[] = [
       { href: "/academy", label: "ERLEN Academy", icon: "GraduationCap", any: ["training.read", "training.manage"] },
       { href: "/dokumente", label: "Dokumente", icon: "FileText", any: ["documents.read", "documents.manage"] },
       { href: "/abrechnungen", label: "Abrechnungen & Gutschriften", icon: "Receipt", any: ["statements.read.self", "statements.manage"] },
+      { href: "/unterlagen", label: "Meine Unterlagen", icon: "FolderUp", any: "all" },
     ],
   },
   {

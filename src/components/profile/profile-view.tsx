@@ -16,6 +16,8 @@ import { KpiRow, ProductCard, TrainingCard, TrendCard, type TrainingRow } from "
 import { TargetList, type TargetProgress } from "@/components/dashboard/targets";
 import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
+import { DocUploader } from "@/components/unterlagen/uploader";
+import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
 import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
 import { formatCents } from "@/lib/format";
 import { levelForRole } from "@/lib/commission";
@@ -124,6 +126,10 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   const canCommission = perms.has("commissions.manage") && !isSelf;
   const canBilling = isSelf || perms.has("statements.manage");
   const canExtras = perms.has("statements.manage") && !isSelf;
+  const canDocs = perms.has("employee_docs.manage") && !isSelf;
+  const employeeDocs = canDocs
+    ? (((await supabase.from("employee_documents").select("id, user_id, category, title, file_name, mime_type, valid_until, status, review_note, created_at").eq("user_id", userId).order("created_at", { ascending: false })).data ?? []) as DocRow[])
+    : [];
   const [userProducts, billing, levels, rates, extras] = await Promise.all([
     supabase.from("user_products").select("product_id").eq("user_id", userId).then((r) => (r.data ?? []).map((x) => x.product_id)),
     canBilling || canCommission ? supabase.from("employee_billing").select("*").eq("user_id", userId).maybeSingle().then((r) => r.data) : Promise.resolve(null),
@@ -289,6 +295,19 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
           </Card>
         ) : null}
       </div>
+
+      {canDocs ? (
+        <Card id="unterlagen" className="scroll-mt-24">
+          <CardHeader><div><CardTitle>Unterlagen</CardTitle><CardDescription>Vom Mitarbeiter hochgeladene Dokumente (z. B. Gewerbeanmeldung, Führerschein). Nur für ihn selbst und die Verwaltung sichtbar.</CardDescription></div></CardHeader>
+          <CardContent className="space-y-5 px-0">
+            {employeeDocs.length ? <DocList docs={employeeDocs} manage selfId={viewer.id} /> : <p className="px-5 text-sm text-muted-foreground">Noch keine Unterlagen.</p>}
+            <details className="mx-5 rounded-xl border p-4">
+              <summary className="cursor-pointer text-sm font-medium">Unterlage für {profile.first_name} hochladen</summary>
+              <div className="mt-4"><DocUploader userId={userId} forOther /></div>
+            </details>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {canManageOrg || canRoles || canStatus ? (
         <Card className="border-primary/20">

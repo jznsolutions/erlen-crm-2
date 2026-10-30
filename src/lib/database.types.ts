@@ -431,6 +431,38 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"employee_documents": {
+                  Row: {
+                    "category": string,"created_at": string,"file_name": string,"id": string,"mime_type": string,"review_note": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number,"status": Database["public"]['Enums']["employee_document_status"],"storage_path": string,"title": string | null,"uploaded_by": string | null,"user_id": string,"valid_until": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category": string,"created_at"?: string,"file_name": string,"id"?: string,"mime_type": string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes": number,"status"?: Database["public"]['Enums']["employee_document_status"],"storage_path": string,"title"?: string | null,"uploaded_by"?: string | null,"user_id": string,"valid_until"?: string | null
+                  }
+                  Update: {
+                    "category"?: string,"created_at"?: string,"file_name"?: string,"id"?: string,"mime_type"?: string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number,"status"?: Database["public"]['Enums']["employee_document_status"],"storage_path"?: string,"title"?: string | null,"uploaded_by"?: string | null,"user_id"?: string,"valid_until"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "employee_documents_reviewed_by_fkey"
+      columns: ["reviewed_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "employee_documents_uploaded_by_fkey"
+      columns: ["uploaded_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "employee_documents_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"invitations": {
                   Row: {
                     "accepted_at": string | null,"accepted_user_id": string | null,"applicant_id": string | null,"created_at": string,"email": string,"expires_at": string,"first_name": string,"id": string,"invited_by": string | null,"last_name": string,"product_ids": (string)[],"recruited_by": string | null,"revoked_at": string | null,"role_id": string,"supervisor_id": string | null,"team_id": string | null,"token_hash": string,"trainer_id": string | null
@@ -1361,6 +1393,15 @@ isOneToOne: false
 "employee_billing_save":
 { Args: { "p_city": string,"p_iban": string,"p_postal_code": string,"p_street": string,"p_tax_number": string,"p_user": string,"p_vat_id": string,"p_vat_liable": boolean }; Returns: undefined
                            },
+"employee_document_delete":
+{ Args: { "p_id": string }; Returns: string
+                           },
+"employee_document_register":
+{ Args: { "p_category": string,"p_file_name": string,"p_mime": string,"p_size": number,"p_storage_path": string,"p_title": string,"p_user": string,"p_valid_until": string }; Returns: string
+                           },
+"employee_document_review":
+{ Args: { "p_id": string,"p_note": string,"p_status": Database["public"]['Enums']["employee_document_status"] }; Returns: undefined
+                           },
 "employee_set_commission_level":
 { Args: { "p_level": string,"p_user": string }; Returns: undefined
                            },
@@ -1592,7 +1633,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"angenommen"|"abgelehnt","booking_status": "gebucht"|"storniert","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","statement_kind": "abrechnung"|"gutschrift","statement_status": "entwurf"|"veroeffentlicht"|"storniert","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
+            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"angenommen"|"abgelehnt","booking_status": "gebucht"|"storniert","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","employee_document_status": "eingereicht"|"geprueft"|"abgelehnt","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","statement_kind": "abrechnung"|"gutschrift","statement_status": "entwurf"|"veroeffentlicht"|"storniert","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1708,7 +1749,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "applicant_status": ["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"],"booking_status": ["gebucht", "storniert"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"statement_kind": ["abrechnung", "gutschrift"],"statement_status": ["entwurf", "veroeffentlicht", "storniert"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
+            "applicant_status": ["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"],"booking_status": ["gebucht", "storniert"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"employee_document_status": ["eingereicht", "geprueft", "abgelehnt"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"statement_kind": ["abrechnung", "gutschrift"],"statement_status": ["entwurf", "veroeffentlicht", "storniert"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
           }
         }
 } as const

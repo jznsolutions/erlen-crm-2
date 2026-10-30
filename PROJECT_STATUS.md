@@ -4,6 +4,9 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 31.10.2026
 
+* „Meine Unterlagen“: Mitarbeiter laden Dokumente/Fotos hoch (Gewerbeanmeldung, Führerschein …), Verwaltung prüft/lehnt ab, Benachrichtigungen in beide Richtungen
+* Geldbeträge standardmäßig verborgen, Zurück-Pfeil in der Kopfzeile
+
 * Benachrichtigungen werden beim Antippen als gelesen markiert
 * Push-Benachrichtigungen aufs Handy (Web Push, iPhone über Home-Bildschirm), sofortige Zustellung per Datenbank-Auslöser, Nachzustellung über den 5-Minuten-Zeitplaner
 * Kein Hineinzoomen mehr beim Antippen von Eingabefeldern (16 px auf Handys)
