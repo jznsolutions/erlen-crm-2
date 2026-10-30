@@ -8,8 +8,7 @@ import { NAV, type NavSection } from "@/components/layout/nav";
 import { MobileNav, Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { MoneyToggle } from "@/components/money-toggle";
-import { MONEY_COOKIE } from "@/lib/ui-prefs";
-import { cookies } from "next/headers";
+import { BackButton } from "@/components/layout/back-button";
 
 export const metadata: Metadata = {
   title: { default: "ERLEN Portal", template: "%s · ERLEN Portal" },
@@ -34,16 +33,16 @@ export default async function PortalLayout({ children }: { children: React.React
     signedUrl("avatars", user.avatarPath, 3600),
   ]);
   const badges: Record<string, number> = { "/leistungen/freigaben": pendingApprovals.count ?? 0 };
-  const moneyHidden = (await cookies()).get(MONEY_COOKIE)?.value === "aus";
 
   return (
-    <div id="portal-root" data-money={moneyHidden ? "hidden" : "visible"} className="portal-bg min-h-dvh">
+    <div id="portal-root" data-money="hidden" className="portal-bg min-h-dvh">
       <Sidebar sections={sections} badges={badges} />
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/70 px-4 backdrop-blur-xl sm:px-6">
           <MobileNav sections={sections} badges={badges} />
+          <BackButton />
           <div className="flex-1" />
-          <MoneyToggle initialHidden={moneyHidden} />
+          <MoneyToggle />
           <Link href="/benachrichtigungen" className="relative inline-flex size-10 items-center justify-center rounded-full hover:bg-white/[0.06]" aria-label={`Benachrichtigungen${unread ? ` (${unread} ungelesen)` : ""}`}>
             <Bell className="size-5" />
             {unread ? (
