@@ -348,7 +348,7 @@ export default function HomePage() {
               <CalendarDays className="size-4" />Lieber direkt einen Termin für das Gespräch buchen
             </a>
           </div>
-          <div data-reveal="scale" className="glass rounded-[2rem] p-6 sm:p-10">
+          <div data-reveal="scale" className="glass min-w-0 rounded-[2rem] p-6 sm:p-10">
             <ApplyForm />
           </div>
         </div>
@@ -362,7 +362,7 @@ export default function HomePage() {
             <Display className="!text-5xl sm:!text-6xl">Dein Gespräch.<br /><span className="text-accent">Dein Termin.</span></Display>
             <p data-reveal className="mt-8 max-w-md text-lg text-white/55">Such dir direkt einen freien Termin für dein Bewerbungsgespräch aus. Du erhältst sofort eine Bestätigung per E-Mail und 2 Stunden vorher eine Erinnerung.</p>
           </div>
-          <div data-reveal="scale" className="glass rounded-[2rem] p-6 sm:p-10">
+          <div data-reveal="scale" className="glass min-w-0 rounded-[2rem] p-6 sm:p-10">
             <BookingCalendar />
             <noscript><p className="text-white/60">Für die Terminbuchung wird JavaScript benötigt. Alternativ: Bewerbungsformular oben nutzen.</p></noscript>
           </div>
