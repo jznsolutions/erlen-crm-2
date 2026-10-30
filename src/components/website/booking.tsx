@@ -128,10 +128,10 @@ export function BookingCalendar({ prefill }: { prefill?: { full_name?: string; e
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       {error ? <p className="mb-3 text-sm text-red-300" role="alert">{error}</p> : null}
       <p className="mb-3 flex items-center gap-2 text-sm font-medium text-white/70"><CalendarDays className="size-4" />Tag wählen</p>
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2" role="listbox" aria-label="Tag">
+      <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2" role="listbox" aria-label="Tag">
         {days.map(([k, list]) => {
           const l = dayLabel(list[0]);
           const on = k === activeDay;

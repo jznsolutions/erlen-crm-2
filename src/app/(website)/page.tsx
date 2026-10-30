@@ -242,7 +242,7 @@ export default function HomePage() {
 
       {/* ───────────── VORTEILE ───────────── */}
       <section className="bg-[#0d1220] py-24 sm:py-32">
-        <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-14 px-5 sm:px-8 lg:grid-cols-2">
           <div>
             <Eyebrow>Deine Vorteile</Eyebrow>
             <Display className="!text-5xl sm:!text-6xl">Alles für<br /><span className="text-accent">deinen Erfolg.</span></Display>
@@ -334,7 +334,7 @@ export default function HomePage() {
       <section id="bewerben" className="scroll-mt-24 relative isolate overflow-hidden py-24 sm:py-32">
         <div className="orb absolute left-1/4 top-1/4 -z-10 size-[30rem] rounded-full bg-[#1e2a47]/60" aria-hidden />
         <div className="grid-bg absolute inset-0 -z-10 opacity-50" aria-hidden />
-        <div className="mx-auto grid max-w-7xl items-start gap-14 px-5 sm:px-8 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-14 px-5 sm:px-8 lg:grid-cols-2">
           <div>
             <Eyebrow>Bewerbung</Eyebrow>
             <Display className="!text-5xl sm:!text-6xl lg:!text-7xl">Jetzt in<br /><span className="text-accent">60 Sekunden</span><br />bewerben.</Display>
@@ -356,7 +356,7 @@ export default function HomePage() {
 
       {/* ───────────── TERMIN BUCHEN ───────────── */}
       <section id="termin" className="scroll-mt-24 relative isolate overflow-hidden pb-24 sm:pb-32">
-        <div className="mx-auto grid max-w-7xl items-start gap-14 px-5 sm:px-8 lg:grid-cols-2">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-14 px-5 sm:px-8 lg:grid-cols-2">
           <div>
             <Eyebrow>Termin</Eyebrow>
             <Display className="!text-5xl sm:!text-6xl">Dein Gespräch.<br /><span className="text-accent">Dein Termin.</span></Display>
