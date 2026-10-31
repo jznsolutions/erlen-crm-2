@@ -8,7 +8,7 @@ import { OnboardingSettingsForm } from "@/components/admin/onboarding-settings";
 import { SecuritySettingsForm } from "@/components/admin/security-settings";
 import { MonthlyReportSettings } from "@/components/admin/monthly-report-settings";
 import { CareerSettingsForm } from "@/components/admin/career-settings";
-import { GongSettingsForm } from "@/components/admin/gong-settings";
+import { GongSettingsForm, WeeklyReviewForm } from "@/components/admin/gong-settings";
 import { PageHeader } from "@/components/ui/misc";
 import { SettingsForm } from "@/components/admin/settings-form";
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const user = await requirePermission("settings.manage");
-  const [agency, perf, rankings, onboarding, security, report, career, gong] = await Promise.all([
+  const [agency, perf, rankings, onboarding, security, report, career, gong, weekly] = await Promise.all([
     getSetting<{ name: string }>("agency"),
     getSetting<{ require_approval: boolean }>("performance"),
     getSetting<{ enabled: boolean; agency_roles: string[]; team_roles: string[] }>("rankings"),
@@ -25,6 +25,7 @@ export default async function SettingsPage() {
     getSetting<{ enabled: boolean; last_sent_month: string | null }>("monthly_report"),
     getSetting<{ enabled: boolean; steps: { from: string; to: string; sales: number; recruits: number; months: number }[] }>("career"),
     getSetting<{ scope: string }>("gong"),
+    getSetting<{ enabled: boolean }>("weekly_review"),
   ]);
   return (
     <div className="max-w-3xl space-y-6">
@@ -46,6 +47,12 @@ export default async function SettingsPage() {
         <Card>
           <CardHeader><div><CardTitle>Abschluss-Gong 🔔</CardTitle><CardDescription>Bei jedem bestätigten Abschluss bekommt das Team eine Mitteilung (auch aufs Handy). Höchstens eine je Verkäufer in 10 Minuten; jeder kann den Gong unter Benachrichtigungen für sich stumm schalten.</CardDescription></div></CardHeader>
           <CardContent><GongSettingsForm scope={gong.scope ?? "team"} /></CardContent>
+        </Card>
+      ) : null}
+      {weekly ? (
+        <Card>
+          <CardHeader><div><CardTitle>Wochenrückblick</CardTitle><CardDescription>Persönliche Mitteilung (auch aufs Handy) zum Wochenende.</CardDescription></div></CardHeader>
+          <CardContent><WeeklyReviewForm enabled={weekly.enabled ?? true} /></CardContent>
         </Card>
       ) : null}
       {career ? (

@@ -116,6 +116,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             : { label: "Aktive Tage", value: formatNumber(heroMonth.activeDays), hint: "im Monat" },
       ]
     : [];
+  const streak = canPerf && kind !== "agentur" ? (((await supabase.rpc("my_streak", {})).data as number | null) ?? 0) : 0;
   const heroMessage =
     heroToday > 0
       ? `Stark – heute ${kind === "agentur" ? "schon" : "hast du schon"} ${formatNumber(heroToday)} bestätigte Abschlüsse. Weiter so!`
@@ -132,6 +133,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         message={heroMessage}
         stats={heroStats}
         canCreate={user.permissions.has("performance.create")}
+        streak={streak}
       />
 
       {pendingUpdates ? (
