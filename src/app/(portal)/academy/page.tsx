@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, GraduationCap, Library } from "lucide-react";
+import { BookOpen, Bot, GraduationCap, Library } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { signedUrls } from "@/lib/storage";
@@ -72,6 +72,7 @@ export default async function AcademyPage() {
         description="Deine Schulungen, Pflichtkurse und dein Lernfortschritt."
         actions={
           <>
+            <Button asChild><Link href="/academy/trainer"><Bot />KI-Verkaufstrainer</Link></Button>
             {user.permissions.has("documents.read") ? <Button asChild variant="secondary"><Link href="/dokumente"><Library />Wissensbibliothek</Link></Button> : null}
             {user.permissions.has("training.manage") ? <Button asChild variant="secondary"><Link href="/admin/academy">Kurse verwalten</Link></Button> : null}
           </>
