@@ -22,7 +22,10 @@ function sender() {
   return env("EMAIL_FROM") || env("SMTP_USER") || "";
 }
 
-export type EmailAttachment = { filename: string; content: string; contentType: string };
+export type EmailAttachment = { filename: string; content: string | Uint8Array; contentType: string };
+
+/** Anhang als Bytes (Text wird als UTF-8 übernommen, PDFs als Binärdaten) */
+const bytes = (c: string | Uint8Array) => (typeof c === "string" ? Buffer.from(c, "utf8") : Buffer.from(c));
 
 export type EmailMessage = {
   to: string;
@@ -76,7 +79,7 @@ async function sendViaGraph(msg: EmailMessage) {
           "@odata.type": "#microsoft.graph.fileAttachment",
           name: a.filename,
           contentType: a.contentType,
-          contentBytes: Buffer.from(a.content, "utf8").toString("base64"),
+          contentBytes: bytes(a.content).toString("base64"),
         })),
       },
       saveToSentItems: true,
@@ -118,7 +121,7 @@ export async function sendEmailResult(msg: EmailMessage): Promise<{ ok: true } |
         text: msg.text,
         html: msg.html,
         replyTo: msg.replyTo,
-        attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType })),
+        attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: bytes(a.content), contentType: a.contentType })),
       });
       return { ok: true };
     }
@@ -132,7 +135,7 @@ export async function sendEmailResult(msg: EmailMessage): Promise<{ ok: true } |
         text: msg.text,
         html: msg.html,
         reply_to: msg.replyTo,
-        attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content, "utf8").toString("base64") })),
+        attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: bytes(a.content).toString("base64") })),
       }),
     });
     if (!res.ok) {

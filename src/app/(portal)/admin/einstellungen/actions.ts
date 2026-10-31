@@ -4,6 +4,8 @@ import { explainEmailError, layout, sendEmailResult } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { fromDbError, type ActionResult } from "@/lib/actions";
+import { monthName, previousMonth, sendMonthlyReport } from "@/lib/monthly-report";
+import { todayBerlin } from "@/lib/dates";
 
 /** Schickt eine Test-E-Mail an die eigene Adresse und erklärt Fehler verständlich. */
 export async function sendTestEmail(): Promise<ActionResult> {
@@ -41,4 +43,26 @@ export async function saveSecuritySettings(_: ActionResult | null, fd: FormData)
   if (error) return fromDbError(error);
   revalidatePath("/", "layout");
   return { ok: true, message: "Sicherheitseinstellungen gespeichert." };
+}
+
+export async function saveMonthlyReportSettings(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("settings.manage");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("monthly_report_settings_save", { p_enabled: fd.get("enabled") === "on" });
+  if (error) return fromDbError(error);
+  revalidatePath("/admin/einstellungen");
+  return { ok: true, message: "Einstellung gespeichert." };
+}
+
+/** Bericht des Vormonats sofort an die eigene Adresse schicken (zum Ausprobieren). */
+export async function sendMonthlyReportToMe(): Promise<ActionResult> {
+  const user = await requirePermission("settings.manage");
+  if (!user.permissions.has("reports.read.all") || !user.permissions.has("performance.read.all")) return { ok: false, error: "Keine Berechtigung für agenturweite Berichte." };
+  const month = previousMonth(todayBerlin());
+  try {
+    const sent = await sendMonthlyReport(month, [{ email: user.email, first_name: user.firstName }]);
+    return sent ? { ok: true, message: `Monatsbericht ${monthName(month + "-01")} an ${user.email} verschickt.` } : { ok: false, error: "Die E-Mail konnte nicht verschickt werden. Bitte zuerst die Test-E-Mail oben prüfen." };
+  } catch {
+    return { ok: false, error: "Der Bericht konnte nicht erstellt werden. Ist das Datenbank-Update eingespielt?" };
+  }
 }

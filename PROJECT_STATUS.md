@@ -4,6 +4,7 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 01.11.2026
 
+* Monatsbericht als PDF: automatisch per E-Mail am Monatsanfang, Abruf unter Berichte
 * Erinnerung an ablaufende Unterlagen (30 Tage vorher und nach Ablauf, an Person und Verwaltung)
 * Bewerber-Pipeline als Kanban-Tafel (inkl. Schritt „Probetag“, Termin auf der Karte, Ziehen/Pfeile)
 * Wettbewerbe live auf dem Dashboard, Benachrichtigung bei Platz 1 / Überholen / Ergebnis

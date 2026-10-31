@@ -1515,6 +1515,20 @@ isOneToOne: false
 "module_upsert":
 { Args: { "p_course": string,"p_description": string,"p_id": string,"p_sort_order": number,"p_title": string }; Returns: string
                            },
+"monthly_report_claim":
+{ Args: { "p_month": string }; Returns: boolean
+                           },
+"monthly_report_data":
+{ Args: { "p_from": string,"p_to": string }; Returns: Json
+                           },
+"monthly_report_recipients":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "email": string,"first_name": string
+            }[]
+                           },
+"monthly_report_settings_save":
+{ Args: { "p_enabled": boolean }; Returns: undefined
+                           },
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },

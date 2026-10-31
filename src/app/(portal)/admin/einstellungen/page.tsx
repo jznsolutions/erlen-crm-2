@@ -6,6 +6,7 @@ import { EmailTest } from "@/components/admin/email-test";
 import { emailProvider } from "@/lib/email";
 import { OnboardingSettingsForm } from "@/components/admin/onboarding-settings";
 import { SecuritySettingsForm } from "@/components/admin/security-settings";
+import { MonthlyReportSettings } from "@/components/admin/monthly-report-settings";
 import { PageHeader } from "@/components/ui/misc";
 import { SettingsForm } from "@/components/admin/settings-form";
 
@@ -13,12 +14,13 @@ export const metadata: Metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const user = await requirePermission("settings.manage");
-  const [agency, perf, rankings, onboarding, security] = await Promise.all([
+  const [agency, perf, rankings, onboarding, security, report] = await Promise.all([
     getSetting<{ name: string }>("agency"),
     getSetting<{ require_approval: boolean }>("performance"),
     getSetting<{ enabled: boolean; agency_roles: string[]; team_roles: string[] }>("rankings"),
     getSetting<{ required_documents: string[] }>("onboarding"),
     getSetting<{ mfa_required_roles: string[] }>("security"),
+    getSetting<{ enabled: boolean; last_sent_month: string | null }>("monthly_report"),
   ]);
   return (
     <div className="max-w-3xl space-y-6">
@@ -34,6 +36,12 @@ export default async function SettingsPage() {
         <Card>
           <CardHeader><div><CardTitle>Zwei-Faktor-Anmeldung</CardTitle><CardDescription>Zusätzlicher Code aus einer Authenticator-App bei der Anmeldung. Verlorenes Handy? Im Mitarbeiterprofil zurücksetzen.</CardDescription></div></CardHeader>
           <CardContent><SecuritySettingsForm required={security.mfa_required_roles ?? []} /></CardContent>
+        </Card>
+      ) : null}
+      {report ? (
+        <Card>
+          <CardHeader><div><CardTitle>Monatsbericht per E-Mail</CardTitle><CardDescription>Die wichtigsten Zahlen des Vormonats als PDF – automatisch in eurem Postfach.</CardDescription></div></CardHeader>
+          <CardContent><MonthlyReportSettings enabled={report.enabled ?? true} lastSent={report.last_sent_month ?? null} /></CardContent>
         </Card>
       ) : null}
       <Card>
