@@ -1490,6 +1490,16 @@ isOneToOne: false
 "log_export":
 { Args: { "p_filters": Json,"p_kind": string,"p_rows": number }; Returns: undefined
                            },
+"mfa_enrolled":
+{ Args: { "p_users": (string)[] }; Returns: {
+              "enrolled": boolean,"user_id": string
+            }[]
+                           },
+"mfa_status":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "aal": string,"has_factor": boolean,"required": boolean
+            }[]
+                           },
 "module_delete":
 { Args: { "p_id": string }; Returns: undefined
                            },
@@ -1562,6 +1572,9 @@ isOneToOne: false
                            },
 "rate_limit_hit":
 { Args: { "p_key": string,"p_max": number,"p_window_seconds": number }; Returns: boolean
+                           },
+"security_settings_save":
+{ Args: { "p_mfa_required_roles": (string)[] }; Returns: undefined
                            },
 "set_own_avatar":
 { Args: { "p_path": string }; Returns: undefined

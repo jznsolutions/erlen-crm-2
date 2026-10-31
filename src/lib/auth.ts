@@ -24,15 +24,20 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const { data: claimsData } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;
   if (!userId) return null;
+  const aal = (claimsData?.claims as { aal?: string } | undefined)?.aal;
 
-  const [{ data: profile }, { data: perms }] = await Promise.all([
+  const [{ data: profile }, { data: perms }, mfa] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, email, first_name, last_name, employee_number, avatar_path, status, roles(key, name)")
       .eq("id", userId)
       .maybeSingle(),
     supabase.rpc("my_permissions"),
+    aal === "aal2" ? Promise.resolve(null) : supabase.rpc("mfa_status").then((r) => r.data?.[0] ?? null),
   ]);
+  // Zwei-Faktor-Anmeldung: erst Code eingeben bzw. einrichten
+  if (mfa?.has_factor) redirect("/zwei-faktor");
+  if (mfa?.required) redirect("/zwei-faktor/einrichten");
   if (!profile || profile.status !== "aktiv" || !profile.roles) return null;
 
   return {

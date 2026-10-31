@@ -27,3 +27,18 @@ export async function saveOnboardingSettings(_: ActionResult | null, fd: FormDat
   revalidatePath("/", "layout");
   return { ok: true, message: "Start-Checkliste gespeichert." };
 }
+
+export async function saveSecuritySettings(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const user = await requirePermission("settings.manage");
+  const roles = fd.getAll("mfa_required_roles").map(String);
+  const supabase = await createClient();
+  // Wer die Pflicht für die eigene Rolle einschaltet, braucht selbst schon die Zwei-Faktor-Anmeldung
+  const { data: status } = await supabase.rpc("mfa_status");
+  if (roles.includes(user.role.key) && !status?.[0]?.has_factor) {
+    return { ok: false, error: "Richte zuerst in deinem Profil die Zwei-Faktor-Anmeldung für dich selbst ein – sonst sperrst du dich aus." };
+  }
+  const { error } = await supabase.rpc("security_settings_save", { p_mfa_required_roles: roles });
+  if (error) return fromDbError(error);
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Sicherheitseinstellungen gespeichert." };
+}
