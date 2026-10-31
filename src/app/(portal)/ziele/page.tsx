@@ -58,6 +58,13 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
     );
   }
 
+  // Abzeichen der Personen in den Ranglisten (neueste zuerst)
+  const rankedIds = [...new Set([...(agency && "rows" in agency ? agency.rows : []), ...teamBoards.flatMap((t) => t.rows ?? []), ...competitions.flatMap((c) => c.rows)].map((r) => r.user_id))];
+  const badgeMap: Record<string, string[]> = {};
+  if (rankedIds.length) {
+    const { data: b } = await supabase.from("user_badges").select("user_id, badge").in("user_id", rankedIds).order("earned_at", { ascending: false });
+    for (const x of b ?? []) (badgeMap[x.user_id] ??= []).push(x.badge);
+  }
   const canManage = user.permissions.has("targets.manage");
   let manageData: { employees: { id: string; label: string }[]; teams: { id: string; label: string }[] } | null = null;
   if (canManage) {
@@ -119,12 +126,12 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader><CardTitle>Agenturranking</CardTitle></CardHeader>
-              <CardContent>{agency && "rows" in agency ? <Leaderboard rows={agency.rows} unit={unit} /> : <Alert tone="info">{agency?.error ?? "Nicht verfügbar"}</Alert>}</CardContent>
+              <CardContent>{agency && "rows" in agency ? <Leaderboard rows={agency.rows} unit={unit} badges={badgeMap} /> : <Alert tone="info">{agency?.error ?? "Nicht verfügbar"}</Alert>}</CardContent>
             </Card>
             {teamBoards.map((t) => (
               <Card key={t.id}>
                 <CardHeader><CardTitle>Teamranking · {t.name}</CardTitle></CardHeader>
-                <CardContent>{t.rows ? <Leaderboard rows={t.rows} unit={unit} /> : <Alert tone="info">{t.error}</Alert>}</CardContent>
+                <CardContent>{t.rows ? <Leaderboard rows={t.rows} unit={unit} badges={badgeMap} /> : <Alert tone="info">{t.error}</Alert>}</CardContent>
               </Card>
             ))}
           </div>
@@ -141,7 +148,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                       </div>
                       <Badge variant="primary">bis {formatDate(c.ends_on)}</Badge>
                     </CardHeader>
-                    <CardContent><Leaderboard rows={c.rows} limit={5} /></CardContent>
+                    <CardContent><Leaderboard rows={c.rows} limit={5} badges={badgeMap} /></CardContent>
                   </Card>
                 ))}
               </div>

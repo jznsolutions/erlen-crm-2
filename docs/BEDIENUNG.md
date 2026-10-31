@@ -130,6 +130,11 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 * **TV-Modus:** **Berichte → TV-Modus** öffnet eine Vollbild-Ansicht für einen Bildschirm im Büro: Uhr, Abschlüsse heute/Monat, Top 10, laufende Wettbewerbe, letzte Abschlüsse. Aktualisiert sich alle 30 Sekunden; bei einem neuen Abschluss erscheint groß der Gong mit Konfetti. Oben rechts: **Ton an** (Gong-Klang), **Vollbild**, **Schließen**. Tipp: Auf dem Büro-PC mit einem Leitungs-Konto anmelden und die Seite offen lassen.
 * **Einkommensrechner:** **Karriere & Empfehlen → Einkommensrechner**: Wunschverdienst, Arbeitstage und Produktmix einstellen – der Rechner zeigt, wie viele Verträge pro Monat, Woche und Arbeitstag nötig sind (mit den echten Provisionssätzen der eigenen Stufe; Richtwert ohne Overhead, Stornos und Abzüge).
 
+## Abzeichen, Serien, Wochenrückblick
+* **Abzeichen 🏅** werden automatisch vergeben (alle 5 Minuten geprüft) und gemeldet: Erster Abschluss, 10/50/100/500 Abschlüsse, 3/5/10 Tage in Folge, Erster Werber, 5 geworbene Partner, Trainer-Profi (80+ im KI-Training), Allrounder (jedes Produkt verkauft), dazu monatlich **Monatssieger** und **Top-Werber**. Zu sehen im **Profil → Abzeichen** (dort auch, was noch fehlt) und als Symbole neben den Namen in den Ranglisten.
+* **Serie 🔥:** Tage am Stück mit bestätigtem Abschluss (Sonntage zählen nicht und unterbrechen nicht). Die laufende Serie steht oben auf dem Dashboard.
+* **Wochenrückblick:** Freitags ab 16 Uhr bekommt jeder Mitarbeiter eine Mitteilung (auch aufs Handy) mit seinen Abschlüssen der Woche, Vergleich zur Vorwoche, Platz, Serie und neuen Abzeichen. Ein-/ausschalten: **Einstellungen → Wochenrückblick**.
+
 ## Ziele, Rankings, Wettbewerbe
 * **Ziele & Rankings → Ziel anlegen**: für Person, Team oder Agentur, optional je Produkt, täglich/wöchentlich/monatlich.
 * **Verwaltung → Wettbewerbe**: zeitlich begrenzte Challenges.

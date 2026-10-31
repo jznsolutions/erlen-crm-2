@@ -93,3 +93,12 @@ export async function saveGongSettings(_: ActionResult | null, fd: FormData): Pr
   revalidatePath("/admin/einstellungen");
   return { ok: true, message: "Abschluss-Gong gespeichert." };
 }
+
+export async function saveWeeklyReviewSettings(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("settings.manage");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("weekly_review_settings_save", { p_enabled: fd.get("enabled") === "on" });
+  if (error) return fromDbError(error);
+  revalidatePath("/admin/einstellungen");
+  return { ok: true, message: "Wochenrückblick gespeichert." };
+}

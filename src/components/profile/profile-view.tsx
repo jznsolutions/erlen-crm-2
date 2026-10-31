@@ -18,6 +18,7 @@ import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
 import { DocUploader } from "@/components/unterlagen/uploader";
 import { TwoFactorCard } from "@/components/mfa/two-factor-card";
+import { BadgesCard } from "@/components/badges-card";
 import { canChangeEmail } from "@/lib/employee-permissions";
 import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
 import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
@@ -143,6 +144,13 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
     supabase.from("commission_rates").select("level_id, product_id, amount_cents").then((r) => r.data ?? []),
     canExtras ? supabase.from("statement_extras").select("id, description, amount_cents, recurring, is_active, note").eq("user_id", userId).order("created_at").then((r) => (r.data ?? []).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) }))) : Promise.resolve([]),
   ]);
+  // Abzeichen und aktuelle Serie (nach dem Datenbank-Update verfügbar)
+  const [{ data: badgeData }, { data: streakData }] = await Promise.all([
+    supabase.from("user_badges").select("badge, earned_at").eq("user_id", userId).order("earned_at", { ascending: false }),
+    supabase.rpc("my_streak", { p_user: userId }),
+  ]);
+  const badgeRows = badgeData ?? [];
+  const streak = typeof streakData === "number" ? streakData : null;
   // Stufe: individuelle Zuordnung, sonst aus der Rolle
   const manualLevel = levels.find((l) => l.id === billing?.commission_level_id);
   const level = manualLevel ?? levels.find((l) => l.key === levelForRole(profile.roles?.key));
@@ -217,6 +225,8 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
           </CardContent>
         </Card>
       </div>
+
+      <BadgesCard earned={badgeRows} streak={streak} isSelf={isSelf} />
 
       {isSelf || canRoles ? <TwoFactorCard userId={userId} isSelf={isSelf} /> : null}
 

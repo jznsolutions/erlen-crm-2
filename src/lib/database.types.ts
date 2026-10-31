@@ -1235,6 +1235,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"user_badges": {
+                  Row: {
+                    "badge": string,"earned_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "badge": string,"earned_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "badge"?: string,"earned_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_badges_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"user_permissions": {
                   Row: {
                     "created_at": string,"effect": Database["public"]['Enums']["permission_effect"],"granted_by": string | null,"permission_key": string,"reason": string | null,"user_id": string
@@ -1366,6 +1386,9 @@ isOneToOne: false
                            },
 "applicant_update":
 { Args: { "p_id": string,"p_notes": string,"p_status": Database["public"]['Enums']["applicant_status"] }; Returns: undefined
+                           },
+"badge_watch":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "booking_availability_save":
 { Args: { "p_rows": Json }; Returns: undefined
@@ -1626,6 +1649,9 @@ isOneToOne: false
               "active_recruits": number,"applicants": number,"hired": number
             }[]
                            },
+"my_streak":
+{ Args: { "p_user"?: string }; Returns: number
+                           },
 "notifications_mark_read":
 { Args: { "p_ids"?: (string)[] }; Returns: undefined
                            },
@@ -1777,6 +1803,12 @@ isOneToOne: false
                            },
 "user_products_set":
 { Args: { "p_products": (string)[],"p_user": string }; Returns: undefined
+                           },
+"weekly_review_run":
+{ Args: { "p_now"?: string }; Returns: number
+                           },
+"weekly_review_settings_save":
+{ Args: { "p_enabled": boolean }; Returns: undefined
                            }
           }
           Enums: {

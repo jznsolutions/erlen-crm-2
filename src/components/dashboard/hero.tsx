@@ -13,6 +13,7 @@ export function DashboardHero({
   message,
   stats,
   canCreate,
+  streak = 0,
 }: {
   greeting: string;
   name: string;
@@ -20,6 +21,7 @@ export function DashboardHero({
   message: string;
   stats: HeroStat[];
   canCreate: boolean;
+  streak?: number;
 }) {
   return (
     <section className="hero-panel animate-rise rounded-3xl p-5 sm:p-8" aria-labelledby="hero-heading">
@@ -36,6 +38,11 @@ export function DashboardHero({
             {greeting}, <span className="text-gradient">{name}</span>
           </h1>
           <p className="mt-2 max-w-xl text-sm text-white/70 sm:text-base">{message}</p>
+          {streak >= 2 ? (
+            <Link href="/profil#abzeichen" className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#f97316] to-[#ec4899] px-3 py-1 text-sm font-semibold text-white shadow-[0_0_24px_-6px_#f97316]" data-testid="streak">
+              🔥 {streak} Tage in Folge – Serie halten!
+            </Link>
+          ) : null}
           {canCreate ? (
             <Button asChild size="lg" className="mt-5">
               <Link href="/leistungen/neu"><Plus />Leistung erfassen</Link>
