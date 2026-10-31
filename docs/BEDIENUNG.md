@@ -74,6 +74,14 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * Antippen der Mitteilung öffnet die passende Seite und markiert die Benachrichtigung als gelesen.
 * Administrator einmalig: **Termine → „Erinnerungen & Push aktivieren“** (bzw. „Automatik neu einrichten“), damit Mitteilungen sofort statt erst nach bis zu 5 Minuten ankommen.
 
+## Zwei-Faktor-Anmeldung (Code aus einer App)
+* Zusätzlich zum Passwort fragt das Portal nach einem 6-stelligen Code aus einer **Authenticator-App** (z. B. Microsoft Authenticator oder Google Authenticator, kostenlos). Wer nur das Passwort kennt, kommt nicht an die Daten – das prüft auch die Datenbank selbst.
+* **Selbst einrichten:** **Mein Profil → Zwei-Faktor-Anmeldung → Jetzt einrichten** → „Einrichtung starten“ → am Computer den QR-Code mit der App scannen, am Handy **In Authenticator-App öffnen** antippen → den angezeigten Code eintippen → **Einrichtung abschließen**.
+* **Pflicht machen:** **Einstellungen → Zwei-Faktor-Anmeldung** → Rollen ankreuzen (Empfehlung: Systemadministrator und Agenturleiter) → **Speichern**. Vorher bei sich selbst einrichten – das Portal lässt dich sonst nicht speichern, damit du dich nicht aussperrst. Wer betroffen ist, wird bei der nächsten Anmeldung durch die Einrichtung geführt.
+* **Handy verloren / neues Handy:** Ein Administrator öffnet **Mitarbeiter → Person → Zwei-Faktor-Anmeldung → Zurücksetzen**. Danach richtet die Person die App neu ein. Nur zurücksetzen, wenn du sicher bist, dass die Bitte wirklich von der Person kommt (z. B. Rückruf).
+* **Einziger Administrator hat das Handy verloren:** Im Supabase-Dashboard → **Authentication → Users** → Person öffnen → beim Faktor „Delete“. Danach meldet sie sich wieder nur mit Passwort an.
+* Der Code ändert sich alle 30 Sekunden. Kommt „Der Code stimmt nicht“: Uhrzeit des Handys auf „automatisch“ stellen und den aktuellen Code nehmen.
+
 ## Geldbeträge anzeigen
 * Alle Geldbeträge (Umsatz, Provision, Gutschriften) sind **standardmäßig verschwommen** – praktisch, wenn jemand mitschaut.
 * Ein Tipp auf das **Augen-Symbol** oben rechts zeigt sie an. Nach dem Neuladen bzw. erneuten Öffnen des Portals sind sie wieder verborgen.

@@ -53,6 +53,7 @@ Supabase → **Authentication**:
 3. **URL Configuration**: *Site URL* = `https://www.erlen-sales.de`; *Redirect URLs*: `https://www.erlen-sales.de/auth/callback`.
 4. **Emails → SMTP Settings**: eigenen SMTP-Server eintragen (z. B. von Resend oder deinem E-Mail-Anbieter). Ohne eigenen SMTP verschickt Supabase nur sehr wenige E-Mails („Passwort vergessen“ funktioniert sonst kaum).
 5. Optional: **Emails → Templates** → Vorlage „Reset Password“ ins Deutsche übersetzen.
+6. **Multi-Factor** (für die Zwei-Faktor-Anmeldung): „TOTP (App Authenticator)“ muss **Enabled** sein – bei neuen Projekten ist das bereits so.
 
 ## Schritt 4 – App bei Vercel veröffentlichen
 

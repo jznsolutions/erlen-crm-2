@@ -1,32 +1,17 @@
 "use server";
-import { createHash } from "node:crypto";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { publicEnv, siteUrl } from "@/lib/env";
-import { secretKey, serverEnv } from "@/lib/env.server";
+import { secretKey } from "@/lib/env.server";
 import { emailProvider, passwordResetEmail, sendEmail } from "@/lib/email";
 import { email, passwordSchema } from "@/lib/validation";
 import { hashToken } from "@/lib/tokens";
 import { safeRedirectPath } from "@/lib/redirect";
 import { fromZodError, type ActionResult } from "@/lib/actions";
-
-async function clientKey(prefix: string) {
-  const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unbekannt";
-  return `${prefix}:${createHash("sha256").update(ip + serverEnv().RATE_LIMIT_SALT).digest("hex").slice(0, 32)}`;
-}
-
-async function allowed(prefix: string, max: number, windowSeconds = 900) {
-  const { data } = await createAdminClient().rpc("rate_limit_hit", {
-    p_key: await clientKey(prefix),
-    p_window_seconds: windowSeconds,
-    p_max: max,
-  });
-  return data !== false;
-}
+import { allowed } from "@/lib/rate-limit";
+import { mfaPending } from "@/lib/mfa";
 
 
 export async function signIn(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
@@ -43,6 +28,9 @@ export async function signIn(_: ActionResult | null, fd: FormData): Promise<Acti
   if (error || !data.user) {
     return { ok: false, error: "E-Mail-Adresse oder Passwort ist falsch." };
   }
+  // Zwei-Faktor-Anmeldung: zuerst den Code abfragen bzw. die Einrichtung verlangen
+  const pending = await mfaPending(supabase);
+  if (pending) redirect(`${pending}?weiter=${encodeURIComponent(safeRedirectPath(fd.get("weiter")))}`);
   const { data: profile } = await supabase.from("profiles").select("status").eq("id", data.user.id).maybeSingle();
   if (!profile || profile.status !== "aktiv") {
     await supabase.auth.signOut();
@@ -94,6 +82,7 @@ export async function updatePassword(_: ActionResult | null, fd: FormData): Prom
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) return { ok: false, error: "Der Link ist abgelaufen. Bitte fordere einen neuen an." };
+  if ((await mfaPending(supabase)) === "/zwei-faktor") redirect("/zwei-faktor?weiter=/passwort-zuruecksetzen");
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { ok: false, error: "Das Passwort konnte nicht gespeichert werden. Bitte wähle ein anderes Passwort." };
   redirect("/dashboard?passwort=1");
@@ -144,5 +133,7 @@ export async function confirmPasswordLink(_: ActionResult | null, fd: FormData):
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash.data });
   if (error) return { ok: false, error: "Der Link ist abgelaufen oder wurde schon benutzt. Bitte fordere einen neuen an." };
+  // Mit Zwei-Faktor-Anmeldung reicht der E-Mail-Link allein nicht
+  if ((await mfaPending(supabase)) === "/zwei-faktor") redirect("/zwei-faktor?weiter=/passwort-zuruecksetzen");
   redirect("/passwort-zuruecksetzen");
 }

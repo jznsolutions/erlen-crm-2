@@ -17,6 +17,7 @@ import { TargetList, type TargetProgress } from "@/components/dashboard/targets"
 import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
 import { DocUploader } from "@/components/unterlagen/uploader";
+import { TwoFactorCard } from "@/components/mfa/two-factor-card";
 import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
 import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
 import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
@@ -210,6 +211,8 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
           </CardContent>
         </Card>
       </div>
+
+      {isSelf || canRoles ? <TwoFactorCard userId={userId} isSelf={isSelf} /> : null}
 
       {canPerf ? (
         <section className="space-y-4">

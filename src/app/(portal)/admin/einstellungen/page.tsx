@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { EmailTest } from "@/components/admin/email-test";
 import { emailProvider } from "@/lib/email";
 import { OnboardingSettingsForm } from "@/components/admin/onboarding-settings";
+import { SecuritySettingsForm } from "@/components/admin/security-settings";
 import { PageHeader } from "@/components/ui/misc";
 import { SettingsForm } from "@/components/admin/settings-form";
 
@@ -12,11 +13,12 @@ export const metadata: Metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const user = await requirePermission("settings.manage");
-  const [agency, perf, rankings, onboarding] = await Promise.all([
+  const [agency, perf, rankings, onboarding, security] = await Promise.all([
     getSetting<{ name: string }>("agency"),
     getSetting<{ require_approval: boolean }>("performance"),
     getSetting<{ enabled: boolean; agency_roles: string[]; team_roles: string[] }>("rankings"),
     getSetting<{ required_documents: string[] }>("onboarding"),
+    getSetting<{ mfa_required_roles: string[] }>("security"),
   ]);
   return (
     <div className="max-w-3xl space-y-6">
@@ -28,6 +30,12 @@ export default async function SettingsPage() {
         <CardHeader><div><CardTitle>Start-Checkliste für neue Mitarbeiter</CardTitle><CardDescription>Erscheint auf dem Dashboard, bis alle Pflichtpunkte erledigt sind. Den Stand seht ihr im Mitarbeiterprofil.</CardDescription></div></CardHeader>
         <CardContent><OnboardingSettingsForm required={onboarding?.required_documents ?? ["gewerbeanmeldung", "personalausweis"]} /></CardContent>
       </Card>
+      {security ? (
+        <Card>
+          <CardHeader><div><CardTitle>Zwei-Faktor-Anmeldung</CardTitle><CardDescription>Zusätzlicher Code aus einer Authenticator-App bei der Anmeldung. Verlorenes Handy? Im Mitarbeiterprofil zurücksetzen.</CardDescription></div></CardHeader>
+          <CardContent><SecuritySettingsForm required={security.mfa_required_roles ?? []} /></CardContent>
+        </Card>
+      ) : null}
       <Card>
         <CardHeader><div><CardTitle>E-Mail-Versand</CardTitle><CardDescription>Einladungen, Bewerber-Einladungen, Terminbestätigungen und Erinnerungen werden automatisch über euer Postfach verschickt. Anleitung: docs/ANLEITUNG_OUTLOOK_EMAIL.md</CardDescription></div></CardHeader>
         <CardContent><EmailTest provider={emailProvider()} from={process.env.EMAIL_FROM ?? null} to={user.email} /></CardContent>

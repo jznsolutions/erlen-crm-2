@@ -4,6 +4,8 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 01.11.2026
 
+* Zwei-Faktor-Anmeldung (Authenticator-App) – freiwillig im Profil, pro Rolle verpflichtend einstellbar, Durchsetzung auch in der Datenbank, Zurücksetzen durch die Administration
+
 * „Passwort vergessen“ über den eigenen Mailversand (Outlook), Link nur per Knopf einlösbar
 * Monatsabschluss: Provisionsabrechnungen und Gutschriften für alle ausgewählten Mitarbeiter in einem Durchgang
 
@@ -87,7 +89,7 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 * **Rechtliches:** Datenschutzhinweise/Impressum sind Vorlagen; AV-Verträge, Verarbeitungsverzeichnis und Information der Mitarbeitenden stehen aus. Keine Aussage zur DSGVO-Konformität ohne Prüfung.
 * **E-Mail:** Einladungen und Hinweise auf neue Abrechnungen werden per E-Mail versendet, sobald SMTP (oder Resend) in Vercel eingetragen ist. Übrige Benachrichtigungen sind In-App. „Passwort vergessen“ benötigt dieselben SMTP-Daten in Supabase.
 * **Abrechnungen:** PDFs sind eine Arbeitshilfe; steuerliche Pflichtangaben/Gutschriftverfahren mit der Steuerberatung abstimmen.
-* **Nicht umgesetzt (bewusst als spätere Erweiterung):** Abschlusszertifikate, Leistungsabzeichen/Badges, Zwei-Faktor-Anmeldung im Portal, Bulk-Import von Leistungen (CSV-Upload), automatische Löschjobs (Funktion `purge_applicants` vorhanden, Zeitplan fehlt).
+* **Nicht umgesetzt (bewusst als spätere Erweiterung):** Abschlusszertifikate, Leistungsabzeichen/Badges, Bulk-Import von Leistungen (CSV-Upload), automatische Löschjobs (Funktion `purge_applicants` vorhanden, Zeitplan fehlt).
 * **Video-Fortschritt** wird vom Browser gemeldet (mit serverseitiger Plausibilitätsprüfung). Große Videos: Free-Tarif max. 50 MB/Datei; resumable Uploads (TUS) nicht umgesetzt.
 * **Teamsicht nach Teamwechsel:** Der neue Teamleiter sieht die Person inkl. Historie; der alte nicht mehr. Teamsummen der Vergangenheit basieren auf dem Team zum Erfassungszeitpunkt.
 * **Performance:** Dashboards aggregieren Tageswerte (bis 180 Tage) – ausgelegt für Agenturen bis einige hundert Mitarbeitende. Bei deutlich größerem Volumen Aggregation weiter in die Datenbank verlagern.
