@@ -36,6 +36,7 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
    Darunter: **Stornobehalt** (Standard 10 %), **Abzüge** wie KFZ (aus den Zusatzpositionen im Mitarbeiterprofil oder frei eingetragen), **USt. 19 %** bei umsatzsteuerpflichtigen Partnern → **GESAMTSUMME**.
 3. Nach dem Veröffentlichen sind die übernommenen Abrechnungen und der ausgezahlte Einbehalt erledigt und werden nicht noch einmal vorgeschlagen. Wird die Gutschrift storniert, stehen sie wieder zur Verfügung.
 
+* **Monatsabschluss (alle auf einmal):** Abrechnungen & Gutschriften → **Monatsabschluss** → Monat wählen (Standard: Vormonat). Die Tabelle zeigt je Mitarbeiter Provisionen, Differenz-/Vermittlungsprovision, Einbehalt Vormonat, Abzüge und Gesamtsumme samt Hinweisen (z. B. „Anschrift fehlt“). Haken setzen oder entfernen, Stornobehalt prüfen → **Abrechnungen & Gutschriften erstellen**. Für jeden wird die Provisionsabrechnung und die Gutschrift erstellt, veröffentlicht und der Mitarbeiter benachrichtigt. Wer für den Monat schon eine Gutschrift hat, ist ausgegraut.
 * **Gutschriftnummer:** fortlaufend, Format `GS{JAHR}{NR}` (z. B. GS202623).
   * Beim Erstellen steht die vorgeschlagene Nummer im Feld **„Gutschriftnummer“** – einfach überschreiben, wenn ihr eine andere wollt.
   * Nachträglich: in der Liste beim Beleg **„Nummer ändern“** – das PDF wird automatisch mit der neuen Nummer erzeugt.
