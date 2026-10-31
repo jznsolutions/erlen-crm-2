@@ -41,6 +41,23 @@ function addressOf(from: string) {
   return from.match(/<([^>]+)>/)?.[1] ?? from.trim();
 }
 
+/** Anzeigename aus "Name <adresse>" (ohne Anführungszeichen), sonst null. */
+function nameOf(from: string) {
+  const m = from.match(/^\s*"?([^"<]+?)"?\s*</);
+  return m ? m[1].trim() : null;
+}
+
+/** Antwortadresse: aus der Nachricht oder allgemein EMAIL_REPLY_TO (z. B. kontakt@…, wenn der Absender ein eigenes Portal-Postfach ist). */
+export function replyToAddress(msg?: { replyTo?: string }) {
+  return msg?.replyTo || env("EMAIL_REPLY_TO") || undefined;
+}
+
+/** Absender und Antwortadresse, wie sie Empfänger sehen (für die Anzeige in den Einstellungen). */
+export function senderInfo() {
+  const from = sender();
+  return { from: from || null, name: from ? nameOf(from) : null, address: from ? addressOf(from) : null, replyTo: env("EMAIL_REPLY_TO") ?? null };
+}
+
 let graphToken: { value: string; expires: number } | null = null;
 
 async function graphAccessToken(): Promise<string> {
@@ -66,6 +83,8 @@ async function graphAccessToken(): Promise<string> {
 
 async function sendViaGraph(msg: EmailMessage) {
   const from = addressOf(sender());
+  const name = nameOf(sender());
+  const replyTo = replyToAddress(msg);
   const res = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`, {
     method: "POST",
     headers: { Authorization: `Bearer ${await graphAccessToken()}`, "Content-Type": "application/json" },
@@ -73,8 +92,10 @@ async function sendViaGraph(msg: EmailMessage) {
       message: {
         subject: msg.subject,
         body: msg.html ? { contentType: "HTML", content: msg.html } : { contentType: "Text", content: msg.text },
+        // Hinweis: Microsoft zeigt meist den Anzeigenamen des Postfachs an (im Microsoft-365-Admin festgelegt)
+        from: { emailAddress: name ? { name, address: from } : { address: from } },
         toRecipients: [{ emailAddress: { address: msg.to } }],
-        replyTo: msg.replyTo ? [{ emailAddress: { address: msg.replyTo } }] : undefined,
+        replyTo: replyTo ? [{ emailAddress: { address: replyTo } }] : undefined,
         attachments: msg.attachments?.map((a) => ({
           "@odata.type": "#microsoft.graph.fileAttachment",
           name: a.filename,
@@ -120,7 +141,7 @@ export async function sendEmailResult(msg: EmailMessage): Promise<{ ok: true } |
         subject: msg.subject,
         text: msg.text,
         html: msg.html,
-        replyTo: msg.replyTo,
+        replyTo: replyToAddress(msg),
         attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: bytes(a.content), contentType: a.contentType })),
       });
       return { ok: true };
@@ -134,7 +155,7 @@ export async function sendEmailResult(msg: EmailMessage): Promise<{ ok: true } |
         subject: msg.subject,
         text: msg.text,
         html: msg.html,
-        reply_to: msg.replyTo,
+        reply_to: replyToAddress(msg),
         attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: bytes(a.content).toString("base64") })),
       }),
     });

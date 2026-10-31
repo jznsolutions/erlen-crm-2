@@ -70,7 +70,8 @@ Supabase → **Authentication**:
 | `RATE_LIMIT_SALT` | beliebige lange Zufallszeichenkette (mind. 16 Zeichen) |
 | `APPLICATION_ALLOWED_ORIGINS` | leer lassen (nur nötig, falls ein externes Formular Bewerbungen schickt) |
 | `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` **oder** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | E-Mail-Versand, siehe Abschnitt „E-Mail-Versand“ |
-| `EMAIL_FROM` | Absender, z. B. `ERLEN <kontakt@erlen-sales.de>` |
+| `EMAIL_FROM` | Absender, z. B. `ERLEN Vertriebsagentur <portal@erlen-sales.de>` (eigenes Postfach, damit kein Personenname erscheint – siehe `ANLEITUNG_OUTLOOK_EMAIL.md`, Teil 4) |
+| `EMAIL_REPLY_TO` | Optional: Antwortadresse für automatische Mails, z. B. `kontakt@erlen-sales.de` |
 
 4. **Deploy** klicken. Danach unter **Settings → Functions → Region** möglichst **Frankfurt (fra1)** wählen und erneut deployen.
 5. Auftragsverarbeitungsvertrag (DPA) mit Vercel abschließen.

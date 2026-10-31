@@ -89,6 +89,34 @@ Microsoft ist fertig. Den Tab kannst du offen lassen.
 
 ---
 
+## Teil 4 – Absendername „ERLEN Vertriebsagentur“ statt eines Personennamens
+
+Welcher Name im Postfach der Empfänger steht, legt **Microsoft** fest: Es ist der Anzeigename des Postfachs, von dem gesendet wird. Ist `kontakt@erlen-sales.de` das Konto einer Person, steht dort deren Name. Lösung: ein eigenes Absender-Postfach. Ein **freigegebenes Postfach** kostet bei Microsoft 365 nichts extra.
+
+**Schritt 1.** Öffne <https://admin.microsoft.com> und melde dich mit dem Administrator-Konto an.
+
+**Schritt 2.** Links **Teams & Gruppen** → **Freigegebene Postfächer**. (Siehst du den Punkt nicht, unten links auf **Alle anzeigen** klicken.)
+
+**Schritt 3.** **+ Freigegebenes Postfach hinzufügen**:
+* **Name:** `ERLEN Vertriebsagentur` ← genau dieser Name erscheint später bei den Empfängern
+* **E-Mail:** `portal` (Domain `erlen-sales.de`)
+* **Änderungen speichern**
+
+**Schritt 4 (optional).** Beim neuen Postfach **Mitglieder hinzufügen** → dich und Eren auswählen. Dann seht ihr in Outlook auch die verschickten Mails.
+
+**Schritt 5.** Bei Vercel (Projekt → **Settings → Environment Variables**):
+* `EMAIL_FROM` bearbeiten → `ERLEN Vertriebsagentur <portal@erlen-sales.de>`
+* neu anlegen: `EMAIL_REPLY_TO` → `kontakt@erlen-sales.de` (Antworten auf automatische Mails landen weiterhin in eurem Kontakt-Postfach)
+* **Deployments** → oberster Eintrag **⋯ → Redeploy**
+
+**Schritt 6.** Portal → **Einstellungen → E-Mail-Versand** → **Test-E-Mail senden**. Im Postfach sollte jetzt „ERLEN Vertriebsagentur“ als Absender stehen. (Neu angelegte Postfächer brauchen manchmal bis zu einer Stunde, bis sie senden können – dann später erneut testen.)
+
+Die App-Berechtigung „Mail.Send“ aus Teil 1 gilt automatisch auch für das neue Postfach; bei Microsoft musst du nichts weiter einstellen.
+
+**Alternative (nur wenn `kontakt@` kein persönliches Konto ist):** Microsoft-365-Admin → **Benutzer → Aktive Benutzer** → `kontakt@erlen-sales.de` → **Namen verwalten** → Anzeigename `ERLEN Vertriebsagentur`. Achtung: Das ändert den Namen dieses Kontos überall (Outlook, Teams).
+
+---
+
 ## Häufige Fragen
 
 * **Ich finde „App-Registrierungen“ nicht / habe keine Rechte.** Dann ist dein Konto kein Administrator. Melde dich mit dem Konto an, mit dem ihr Microsoft 365 gekauft habt, oder frage die Person, die eure Microsoft-Lizenzen verwaltet.
