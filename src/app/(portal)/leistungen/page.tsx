@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, Plus, TrendingUp } from "lucide-react";
+import { Download, Plus, TrendingUp, Upload } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getVisibleEmployees } from "@/lib/queries";
@@ -63,6 +63,9 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
           <>
             {user.permissions.has("reports.export") ? (
               <Button asChild variant="secondary"><a href={`/api/export/leistungen?${qs}`}><Download />CSV-Export</a></Button>
+            ) : null}
+            {user.permissions.has("performance.update") ? (
+              <Button asChild variant="secondary"><Link href="/leistungen/import"><Upload />Importieren</Link></Button>
             ) : null}
             {user.permissions.any("performance.create", "performance.update") ? (
               <Button asChild><Link href="/leistungen/neu"><Plus />Leistung erfassen</Link></Button>
