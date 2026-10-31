@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/forms";
+import { confetti } from "@/lib/confetti";
 import { Alert } from "@/components/ui/misc";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
 import { createPerformance } from "@/app/(portal)/leistungen/actions";
@@ -32,7 +33,10 @@ export function PerformanceEntryForm({
   const forOther = userId !== defaultUserId;
 
   return (
-    <ActionForm key={key} action={createPerformance} onSuccess={() => setKey((k) => k + 1)} className="space-y-5">
+    <ActionForm key={key} action={createPerformance} onSuccess={() => {
+      setKey((k) => k + 1);
+      confetti();
+    }} className="space-y-5">
       {({ fieldErrors, result }) => (
         <>
           {employees ? (

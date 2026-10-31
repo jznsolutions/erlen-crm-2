@@ -51,3 +51,13 @@ export async function pushPublicKey(): Promise<{ key: string } | { error: string
           : "Push ist gerade nicht verfügbar. Bitte später erneut versuchen.",
   };
 }
+
+/** Abschluss-Gong für sich selbst stumm schalten oder wieder einschalten. */
+export async function setGongMuted(muted: boolean): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("gong_mute_set", { p_muted: Boolean(muted) });
+  if (error) return fromDbError(error);
+  revalidatePath("/benachrichtigungen");
+  return { ok: true, message: muted ? "Abschluss-Gong stumm geschaltet." : "Abschluss-Gong wieder an." };
+}

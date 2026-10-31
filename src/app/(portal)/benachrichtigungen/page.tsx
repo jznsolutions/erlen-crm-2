@@ -9,18 +9,22 @@ import { ActionForm, SubmitButton } from "@/components/forms";
 import { markAllRead } from "./actions";
 import { cn } from "@/lib/utils";
 import { PushToggle } from "@/components/push-toggle";
+import { GongToggle } from "@/components/gong-toggle";
 
 export const metadata: Metadata = { title: "Benachrichtigungen" };
 
 export default async function NotificationsPage() {
   await requireUser();
   const supabase = await createClient();
-  const { data } = await supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(100);
+  const [{ data }, { data: prefs }] = await Promise.all([
+    supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(100),
+    supabase.from("user_preferences").select("gong_muted").maybeSingle(),
+  ]);
   const unread = (data ?? []).filter((n) => !n.read_at).length;
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="Benachrichtigungen" description={unread ? `${unread} ungelesen` : "Alles gelesen"} actions={unread ? <ActionForm action={markAllRead}><SubmitButton variant="secondary" size="sm">Alle als gelesen markieren</SubmitButton></ActionForm> : undefined} />
-      <div className="mb-4"><PushToggle /></div>
+      <div className="mb-4 space-y-3"><PushToggle /><GongToggle muted={Boolean(prefs?.gong_muted)} /></div>
       <Card>
         {!data?.length ? <EmptyState icon={Bell} title="Keine Benachrichtigungen" className="m-5" /> : (
           <ul className="divide-y">

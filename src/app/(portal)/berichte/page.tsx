@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, Clock, Download, FileText, Gauge, Percent, Undo2, Users } from "lucide-react";
+import { CheckCircle2, Clock, Download, FileText, Gauge, Percent, Tv, Undo2, Users } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { getDaily, getProducts, getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filtersToQuery, parsePerformanceFilters } from "@/lib/performance-filters";
@@ -44,6 +44,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         description={user.permissions.has("reports.read.all") ? "Agenturweite Auswertung." : "Auswertung deines Verantwortungsbereichs."}
         actions={
           <>
+            <Button asChild variant="secondary"><Link href="/tv"><Tv />TV-Modus</Link></Button>
             <Button asChild variant="secondary"><Link href={`/berichte/storno?${filtersToQuery(f)}`}><Undo2 />Storno-Übersicht</Link></Button>
             {user.permissions.has("reports.read.all") && user.permissions.has("performance.read.all") ? (
               <Button asChild variant="secondary"><a href="/api/berichte/monatsbericht" target="_blank" rel="noopener"><FileText />Monatsbericht (PDF)</a></Button>

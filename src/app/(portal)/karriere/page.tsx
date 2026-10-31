@@ -11,17 +11,29 @@ import { Alert, PageHeader } from "@/components/ui/misc";
 import { StatTile } from "@/components/dashboard/stat";
 import { ReferralShare } from "@/components/career/referral-share";
 import { CareerLadder, type CareerProgress } from "@/components/career/ladder";
+import { IncomeCalculator } from "@/components/career/income-calculator";
+import { getProducts } from "@/lib/queries";
+import { levelForRole } from "@/lib/commission";
 
 export const metadata: Metadata = { title: "Karriere & Empfehlen" };
 
 export default async function CareerPage() {
   const user = await requireUser();
   const supabase = await createClient();
-  const [{ data: code, error }, { data: stats }, { data: progress }] = await Promise.all([
+  const [{ data: code, error }, { data: stats }, { data: progress }, { data: levels }, { data: billing }, { data: rates }, products] = await Promise.all([
     supabase.rpc("my_referral_code"),
     supabase.rpc("my_referral_stats"),
     supabase.rpc("career_progress", {}),
+    supabase.from("commission_levels").select("id, key, name").not("key", "is", null),
+    supabase.from("employee_billing").select("commission_level_id").eq("user_id", user.id).maybeSingle(),
+    supabase.from("commission_rates").select("level_id, product_id, amount_cents"),
+    getProducts(),
   ]);
+  // Eigene Provisionsstufe: individuelle Zuordnung, sonst aus der Rolle
+  const level = (levels ?? []).find((l) => l.id === billing?.commission_level_id) ?? (levels ?? []).find((l) => l.key === levelForRole(user.role.key));
+  const ownRates = products
+    .map((p) => ({ productId: p.id, name: p.name, unit: p.unit_label, cents: Number((rates ?? []).find((r) => r.level_id === level?.id && r.product_id === p.id)?.amount_cents ?? 0) }))
+    .filter((r) => r.cents > 0);
   if (error || !code) {
     return (
       <div>
@@ -46,6 +58,10 @@ export default async function CareerPage() {
         <StatTile label="Eingestellt" value={formatNumber(Number(s?.hired ?? 0))} icon={UserCheck} accent="emerald" />
         <StatTile label="Aktive Partner geworben" value={formatNumber(Number(s?.active_recruits ?? 0))} sub="zählen für die Karriereleiter" icon={Users} accent="cyan" />
       </div>
+      <Card id="rechner" className="scroll-mt-24">
+        <CardHeader><div><CardTitle>Einkommensrechner</CardTitle><CardDescription>Wie viele Verträge brauchst du für dein Wunsch-Einkommen? Gerechnet mit deinen echten Provisionssätzen.</CardDescription></div></CardHeader>
+        <CardContent><IncomeCalculator rates={ownRates} levelName={level?.name ?? "–"} /></CardContent>
+      </Card>
       {p?.enabled ? (
         <CareerLadder p={{ ...p, sales: Number(p.sales), recruits: Number(p.recruits) }} />
       ) : (
