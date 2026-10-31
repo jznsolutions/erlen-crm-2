@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/auth";
 import { getSetting } from "@/lib/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmailTest } from "@/components/admin/email-test";
-import { emailProvider } from "@/lib/email";
+import { emailProvider, senderInfo } from "@/lib/email";
 import { OnboardingSettingsForm } from "@/components/admin/onboarding-settings";
 import { SecuritySettingsForm } from "@/components/admin/security-settings";
 import { MonthlyReportSettings } from "@/components/admin/monthly-report-settings";
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
       ) : null}
       <Card>
         <CardHeader><div><CardTitle>E-Mail-Versand</CardTitle><CardDescription>Einladungen, Bewerber-Einladungen, Terminbestätigungen und Erinnerungen werden automatisch über euer Postfach verschickt. Anleitung: docs/ANLEITUNG_OUTLOOK_EMAIL.md</CardDescription></div></CardHeader>
-        <CardContent><EmailTest provider={emailProvider()} from={process.env.EMAIL_FROM ?? null} to={user.email} /></CardContent>
+        <CardContent><EmailTest provider={emailProvider()} from={senderInfo().from} replyTo={senderInfo().replyTo} to={user.email} /></CardContent>
       </Card>
     </div>
   );
