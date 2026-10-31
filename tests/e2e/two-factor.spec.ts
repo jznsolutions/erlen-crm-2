@@ -34,7 +34,8 @@ function totp(secret: string, offset = 0) {
   return String((h.readUInt32BE(o) & 0x7fffffff) % 1_000_000).padStart(6, "0");
 }
 
-async function enroll(page: Page) {
+async function enroll(page: Page, deviceName?: string) {
+  if (deviceName) await page.getByLabel("Name des Geräts").fill(deviceName);
   await page.getByRole("button", { name: "Einrichtung starten" }).click();
   const secret = (await page.getByTestId("mfa-secret").textContent())!.trim();
   await expect(page.getByAltText("QR-Code für die Authenticator-App")).toBeVisible();
@@ -83,6 +84,33 @@ test("Zwei-Faktor-Anmeldung freiwillig einrichten, anmelden, zurücksetzen", asy
   await page.fill("#code", totp(secret));
   await page.getByRole("button", { name: "Bestätigen" }).click();
   await expect(page).toHaveURL(/^https?:\/\/[^/]+\/dashboard/);
+
+  // Zweites Handy (z. B. Geschäftspartner bei gemeinsamem Konto) hinzufügen
+  await page.goto("/profil");
+  await page.locator("#zwei-faktor").getByRole("link", { name: "Weiteres Gerät hinzufügen" }).click();
+  await expect(page.getByRole("heading", { name: "Weiteres Gerät hinzufügen" })).toBeVisible();
+  const secret2 = await enroll(page, "Handy Eren");
+  expect(secret2).not.toBe(secret);
+  await expect(page).toHaveURL(/^https?:\/\/[^/]+\/profil/);
+  const devices = page.getByTestId("mfa-devices");
+  await expect(devices).toContainText("Handy Eren");
+  await expect(devices.locator("li")).toHaveCount(2);
+
+  // Anmeldung mit dem Code des zweiten Handys
+  await ctx.clearCookies();
+  await passwordLogin(page);
+  await expect(page).toHaveURL(/\/zwei-faktor/);
+  await page.fill("#code", totp(secret2));
+  await page.getByRole("button", { name: "Bestätigen" }).click();
+  await expect(page).toHaveURL(/^https?:\/\/[^/]+\/dashboard/);
+
+  // Erstes Gerät entfernen – das zweite bleibt
+  page.on("dialog", (d) => d.accept());
+  await page.goto("/profil");
+  await devices.locator("li", { hasText: "Gerät 1" }).getByRole("button", { name: /entfernen/ }).click();
+  await expect(devices.locator("li")).toHaveCount(1);
+  await expect(devices).toContainText("Handy Eren");
+  expect(await sql("select friendly_name from auth.mfa_factors where user_id = (select id from auth.users where email = $1)", [USER])).toEqual([{ friendly_name: "Handy Eren" }]);
   await ctx.close();
 
   // Verwaltung setzt zurück (Handy verloren)

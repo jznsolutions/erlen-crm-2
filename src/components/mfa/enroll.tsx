@@ -8,15 +8,16 @@ import { ActionForm, SubmitButton } from "@/components/forms";
 import { Field, Input } from "@/components/ui/input";
 import { confirmMfaEnrollment, startMfaEnrollment, type Enrollment } from "@/lib/mfa-actions";
 
-export function MfaEnroll({ weiter }: { weiter: string }) {
+export function MfaEnroll({ weiter, another = false }: { weiter: string; another?: boolean }) {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deviceName, setDeviceName] = useState("");
   const [pending, start] = useTransition();
 
   const begin = () =>
     start(async () => {
       setError(null);
-      const r = await startMfaEnrollment();
+      const r = await startMfaEnrollment(deviceName);
       if (r.ok) setEnrollment(r.enrollment);
       else setError(r.error);
     });
@@ -26,9 +27,13 @@ export function MfaEnroll({ weiter }: { weiter: string }) {
       <div className="space-y-4">
         {error ? <Alert tone="danger">{error}</Alert> : null}
         <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-          <li>Installiere auf deinem Handy eine Authenticator-App, z. B. <b>Microsoft Authenticator</b> oder <b>Google Authenticator</b> (kostenlos im App Store / Play Store).</li>
-          <li>Tippe dann hier auf „Einrichtung starten“.</li>
+          <li>Installiere auf {another ? "dem neuen" : "deinem"} Handy eine Authenticator-App, z. B. <b>Microsoft Authenticator</b> oder <b>Google Authenticator</b> (kostenlos im App Store / Play Store).</li>
+          <li>Gib dem Gerät einen Namen, damit ihr es später wiedererkennt.</li>
+          <li>Tippe dann auf „Einrichtung starten“.</li>
         </ol>
+        <Field label="Name des Geräts" htmlFor="device-name">
+          <Input id="device-name" value={deviceName} onChange={(e) => setDeviceName(e.target.value)} maxLength={40} placeholder={another ? "z. B. Handy Eren" : "z. B. Mein iPhone"} />
+        </Field>
         <Button className="w-full" size="lg" onClick={begin} disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : <ShieldCheck />} Einrichtung starten
         </Button>

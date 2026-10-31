@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/forms";
-import { disableOwnMfa, resetUserMfa } from "@/lib/mfa-actions";
+import { disableOwnMfa, removeOwnDevice, resetUserMfa } from "@/lib/mfa-actions";
 
 export function DisableMfaButton() {
   const [pending, start] = useTransition();
@@ -14,7 +14,7 @@ export function DisableMfaButton() {
       variant="secondary"
       disabled={pending}
       onClick={() => {
-        if (!confirm("Zwei-Faktor-Anmeldung wirklich abschalten? Dein Konto ist dann nur noch mit dem Passwort geschützt.")) return;
+        if (!confirm("Zwei-Faktor-Anmeldung wirklich abschalten? Alle Geräte werden entfernt, dein Konto ist dann nur noch mit dem Passwort geschützt.")) return;
         start(async () => {
           const r = await disableOwnMfa();
           if (r.ok) toast.success(r.message ?? "Abgeschaltet");
@@ -23,7 +23,34 @@ export function DisableMfaButton() {
         });
       }}
     >
-      Abschalten
+      Ganz abschalten
+    </Button>
+  );
+}
+
+export function RemoveDeviceButton({ factorId, name, last }: { factorId: string; name: string; last: boolean }) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={pending}
+      aria-label={`${name} entfernen`}
+      onClick={() => {
+        const text = last
+          ? `„${name}“ entfernen? Es ist das letzte Gerät – danach ist die Zwei-Faktor-Anmeldung aus.`
+          : `„${name}“ entfernen? Mit diesem Handy kann man sich dann nicht mehr anmelden.`;
+        if (!confirm(text)) return;
+        start(async () => {
+          const r = await removeOwnDevice(factorId);
+          if (r.ok) toast.success(r.message ?? "Entfernt");
+          else toast.error(r.error);
+          router.refresh();
+        });
+      }}
+    >
+      Entfernen
     </Button>
   );
 }

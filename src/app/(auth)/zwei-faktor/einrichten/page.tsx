@@ -19,14 +19,18 @@ export default async function TwoFactorEnrollPage({ searchParams }: { searchPara
   if (pending === "/zwei-faktor") redirect(`/zwei-faktor?weiter=${encodeURIComponent(weiter || "/dashboard")}`);
   const { data: status } = await supabase.rpc("mfa_status");
   const s = status?.[0];
-  if (s?.has_factor) redirect(weiter || "/profil");
+  // Weiteres Gerät hinzufügen (nur mit bereits bestätigtem Code, siehe oben)
+  const another = Boolean(s?.has_factor);
+  if (another && params.neu !== "1") redirect(weiter || "/profil");
   return (
     <div>
-      <h1 className="text-xl font-semibold tracking-tight">Zwei-Faktor-Anmeldung einrichten</h1>
+      <h1 className="text-xl font-semibold tracking-tight">{another ? "Weiteres Gerät hinzufügen" : "Zwei-Faktor-Anmeldung einrichten"}</h1>
       <p className="mt-1 mb-6 text-sm text-muted-foreground">
-        {s?.required ? "Für deine Rolle ist das Pflicht. " : ""}Zusätzlich zum Passwort fragt das Portal bei der Anmeldung nach einem Code aus einer App auf deinem Handy. So kommt niemand mit einem gestohlenen Passwort an eure Daten.
+        {another
+          ? "Damit kann sich dieses Konto zusätzlich mit den Codes eines weiteren Handys anmelden – z. B. wenn ihr euch ein Konto teilt. Die bisherigen Geräte funktionieren weiter."
+          : <>{s?.required ? "Für deine Rolle ist das Pflicht. " : ""}Zusätzlich zum Passwort fragt das Portal bei der Anmeldung nach einem Code aus einer App auf deinem Handy. So kommt niemand mit einem gestohlenen Passwort an eure Daten.</>}
       </p>
-      <MfaEnroll weiter={weiter} />
+      <MfaEnroll weiter={weiter} another={another} />
       {s?.required ? <SignOutLink /> : null}
     </div>
   );
