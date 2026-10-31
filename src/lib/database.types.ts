@@ -1265,6 +1265,9 @@ isOneToOne: false
 "admin_remove_user_permission":
 { Args: { "p_permission": string,"p_user": string }; Returns: undefined
                            },
+"admin_set_avatar":
+{ Args: { "p_path": string,"p_user": string }; Returns: undefined
+                           },
 "admin_set_role_permission":
 { Args: { "p_enabled": boolean,"p_permission": string,"p_role_key": string }; Returns: undefined
                            },
