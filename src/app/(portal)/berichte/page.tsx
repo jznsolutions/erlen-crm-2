@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, Undo2 } from "lucide-react";
+import { Download, FileText, Undo2 } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { getDaily, getProducts, getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filtersToQuery, parsePerformanceFilters } from "@/lib/performance-filters";
@@ -45,6 +45,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         actions={
           <>
             <Button asChild variant="secondary"><Link href={`/berichte/storno?${filtersToQuery(f)}`}><Undo2 />Storno-Übersicht</Link></Button>
+            {user.permissions.has("reports.read.all") && user.permissions.has("performance.read.all") ? (
+              <Button asChild variant="secondary"><a href="/api/berichte/monatsbericht" target="_blank" rel="noopener"><FileText />Monatsbericht (PDF)</a></Button>
+            ) : null}
             {user.permissions.has("reports.export") ? <Button asChild variant="secondary"><a href={`/api/export/leistungen?${filtersToQuery(f)}`}><Download />CSV-Export</a></Button> : null}
           </>
         }

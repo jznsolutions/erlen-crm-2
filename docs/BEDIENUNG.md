@@ -132,6 +132,7 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 
 ## Berichte & Export
 **Berichte**: Filter nach Zeitraum, Team, Rolle, Mitarbeiter, Produkt, Status → Kennzahlen, Verlauf, Produkt-/Teamvergleich, Tabelle je Mitarbeiter. **CSV-Export** öffnet sich in Excel (deutsche Spaltentrennung).
+* **Monatsbericht (PDF):** Am 1. jedes Monats bekommen Agenturleitung und Administration automatisch eine E-Mail mit dem Bericht des Vormonats als PDF: Abschlüsse und Umsatz (mit Vergleich zum Vormonat), Stornoquote, aktive Verkäufer, Produkte, Teams, Top 10 und Recruiting. Jederzeit ansehen: **Berichte → Monatsbericht (PDF)**. Ein-/ausschalten und „Jetzt an mich schicken“: **Einstellungen → Monatsbericht per E-Mail**. Voraussetzung: E-Mail-Versand und Automatik (Termine → „Erinnerungen & Push aktivieren“) sind eingerichtet.
 * **Storno-Übersicht:** **Berichte → Storno-Übersicht**. Zeigt, wie viele bestätigte Abschlüsse nachträglich storniert wurden – nach Abschlussmonat, Produkt, Team und Mitarbeiter, plus die letzten Stornierungen mit Grund. Quote = storniert ÷ (bestätigt + storniert); ab 15 % rot markiert. Standard-Zeitraum: letzte 90 Tage.
 
 ## Bewerber
