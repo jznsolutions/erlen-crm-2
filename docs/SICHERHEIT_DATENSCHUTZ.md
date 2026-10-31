@@ -46,7 +46,10 @@
 
 ## Organisatorische To-dos vor dem Echtbetrieb
 
-* [ ] Auftragsverarbeitungsverträge mit Supabase und Vercel (und ggf. Resend) abschließen.
+Schritt-für-Schritt-Anleitung mit Fundstellen der Verträge und Vorlage für das Verarbeitungsverzeichnis: `docs/DATENSCHUTZ_AVV_ANLEITUNG.md`.
+
+
+* [ ] Auftragsverarbeitungsverträge mit Supabase, Vercel (Pro-Tarif) und Microsoft 365 abschließen bzw. ablegen.
 * [ ] EU-Region (Frankfurt) für Supabase und Vercel-Functions wählen.
 * [ ] Datenschutzhinweise (`/datenschutz`) und Impressum (`/impressum`) rechtlich prüfen und vervollständigen.
 * [ ] Verzeichnis von Verarbeitungstätigkeiten ergänzen (Mitarbeiterportal, Bewerbermanagement).
