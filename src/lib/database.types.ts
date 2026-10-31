@@ -1292,6 +1292,9 @@ isOneToOne: false
 "applicant_delete":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"applicant_move":
+{ Args: { "p_id": string,"p_status": string }; Returns: undefined
+                           },
 "applicant_update":
 { Args: { "p_id": string,"p_notes": string,"p_status": Database["public"]['Enums']["applicant_status"] }; Returns: undefined
                            },
@@ -1660,7 +1663,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"angenommen"|"abgelehnt","booking_status": "gebucht"|"storniert","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","employee_document_status": "eingereicht"|"geprueft"|"abgelehnt","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","statement_kind": "abrechnung"|"gutschrift","statement_status": "entwurf"|"veroeffentlicht"|"storniert","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
+            "applicant_status": "neu"|"kontaktiert"|"gespraech"|"probetag"|"angenommen"|"abgelehnt","booking_status": "gebucht"|"storniert","completion_source": "selbst"|"video"|"quiz"|"ausbilder","course_status": "entwurf"|"veroeffentlicht"|"archiviert","employee_document_status": "eingereicht"|"geprueft"|"abgelehnt","lesson_type": "text"|"video"|"dokument"|"quiz","partner_status": "in_ausbildung"|"aktiv"|"pausiert"|"beendet","performance_status": "entwurf"|"eingereicht"|"bestaetigt"|"abgelehnt"|"storniert"|"korrigiert","permission_effect": "grant"|"deny","progress_status": "nicht_begonnen"|"in_bearbeitung"|"abgeschlossen","relationship_type": "vorgesetzter"|"ausbilder","statement_kind": "abrechnung"|"gutschrift","statement_status": "entwurf"|"veroeffentlicht"|"storniert","target_period": "tag"|"woche"|"monat"|"zeitraum","target_scope": "mitarbeiter"|"team"|"agentur","team_member_role": "mitglied"|"teamleiter","user_status": "eingeladen"|"aktiv"|"deaktiviert"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1776,7 +1779,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "applicant_status": ["neu", "kontaktiert", "gespraech", "angenommen", "abgelehnt"],"booking_status": ["gebucht", "storniert"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"employee_document_status": ["eingereicht", "geprueft", "abgelehnt"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"statement_kind": ["abrechnung", "gutschrift"],"statement_status": ["entwurf", "veroeffentlicht", "storniert"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
+            "applicant_status": ["neu", "kontaktiert", "gespraech", "probetag", "angenommen", "abgelehnt"],"booking_status": ["gebucht", "storniert"],"completion_source": ["selbst", "video", "quiz", "ausbilder"],"course_status": ["entwurf", "veroeffentlicht", "archiviert"],"employee_document_status": ["eingereicht", "geprueft", "abgelehnt"],"lesson_type": ["text", "video", "dokument", "quiz"],"partner_status": ["in_ausbildung", "aktiv", "pausiert", "beendet"],"performance_status": ["entwurf", "eingereicht", "bestaetigt", "abgelehnt", "storniert", "korrigiert"],"permission_effect": ["grant", "deny"],"progress_status": ["nicht_begonnen", "in_bearbeitung", "abgeschlossen"],"relationship_type": ["vorgesetzter", "ausbilder"],"statement_kind": ["abrechnung", "gutschrift"],"statement_status": ["entwurf", "veroeffentlicht", "storniert"],"target_period": ["tag", "woche", "monat", "zeitraum"],"target_scope": ["mitarbeiter", "team", "agentur"],"team_member_role": ["mitglied", "teamleiter"],"user_status": ["eingeladen", "aktiv", "deaktiviert"]
           }
         }
 } as const

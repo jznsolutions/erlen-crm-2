@@ -4,6 +4,7 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 01.11.2026
 
+* Bewerber-Pipeline als Kanban-Tafel (inkl. Schritt „Probetag“, Termin auf der Karte, Ziehen/Pfeile)
 * Wettbewerbe live auf dem Dashboard, Benachrichtigung bei Platz 1 / Überholen / Ergebnis
 * Storno-Übersicht (Quote nach Monat, Produkt, Team, Mitarbeiter; letzte Stornierungen mit Grund)
 * Leistungs-Import aus Excel/CSV mit Vorschau, Zeilenprüfung und Duplikatschutz
