@@ -106,6 +106,7 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 ## Produkte und Kennzahlen
 * **Verwaltung → Produkte**: Produkte/Leistungsarten anlegen (Name, Einheit wie „Verträge“ oder „Leads“). „Vorgangs-ID ist Pflicht“ verhindert Doppelerfassungen.
 * Leistungen erfassen: **Leistung erfassen** (Mitarbeitende selbst oder Führungskraft für Teammitglieder).
+* **Viele auf einmal aus Excel:** **Leistungen → Importieren** → „Vorlage herunterladen“ (oder eigene Liste mit den Spalten **Mitarbeiter** (E-Mail oder Mitarbeiter-ID), **Produkt**, **Datum**, **Menge**, optional **Vorgangs-ID**, **Notiz**) → Datei wählen → **Datei prüfen**. Die Vorschau zeigt jede Zeile mit „OK“ oder dem Fehler (z. B. unbekannter Mitarbeiter). Erst **… Leistungen importieren** speichert – fehlerhafte Zeilen werden übersprungen, gleiche Vorgangs-IDs nie doppelt übernommen. Excel (.xlsx) und CSV, bis 2.000 Zeilen.
 * Prüfen: **Freigaben** – bestätigen, ablehnen (mit Begründung) oder mehrere auf einmal bestätigen.
 * Bestätigte Fehler: in **Leistungen** → **Stornieren** (z. B. Widerruf) oder **Korrigieren** (falsche Menge/Datum/Produkt). Alles wird protokolliert (Klick auf das Datum zeigt den Verlauf).
 * Welche Zahl was bedeutet, steht in `KENNZAHLEN.md`.
