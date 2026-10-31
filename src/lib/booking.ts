@@ -163,6 +163,7 @@ const bookingSchema = z.object({
   message: z.string().trim().max(2000).optional(),
   consent: z.literal(true, { message: "Bitte stimme der Verarbeitung zu" }),
   website: z.string().max(500).optional(),
+  ref: z.string().trim().toLowerCase().regex(/^[a-z0-9-]{4,40}$/).optional().catch(undefined),
 });
 
 export type BookingResult = { ok: true; start: string } | { ok: false; error: string; fieldErrors?: Record<string, string>; taken?: boolean };
@@ -197,7 +198,12 @@ export async function createBooking(input: unknown, ip: string): Promise<Booking
     console.error("[termine]", error.message);
     return { ok: false, error: "Der Termin konnte nicht gebucht werden. Bitte versuche es erneut." };
   }
-  const { data: b } = await admin.from("bookings").select("starts_at, ends_at").eq("id", id).single();
+  const { data: b } = await admin.from("bookings").select("starts_at, ends_at, applicant_id").eq("id", id).single();
+  // Empfehlungslink: Bewerbung der werbenden Person zuordnen (nur, wenn noch niemand eingetragen ist)
+  if (d.ref && b?.applicant_id) {
+    const { data: referrer } = await admin.rpc("referral_resolve", { p_code: d.ref });
+    if (referrer) await admin.from("applicants").update({ referred_by: referrer }).eq("id", b.applicant_id).is("referred_by", null);
+  }
   const cfg = await getBookingSettings();
   await sendBookingConfirmation(
     { id, start: new Date(b!.starts_at).toISOString(), end: new Date(b!.ends_at).toISOString(), full_name: d.full_name, email: d.email, phone: d.phone, message: d.message, token },

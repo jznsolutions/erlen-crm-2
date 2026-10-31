@@ -80,6 +80,7 @@ export function BookingCalendar({ prefill }: { prefill?: { full_name?: string; e
               message: String(fd.get("message") ?? "") || undefined,
               consent: fd.get("consent") === "on",
               website: String(fd.get("website") ?? "") || undefined,
+              ref: new URLSearchParams(window.location.search).get("ref")?.slice(0, 40) || undefined,
             });
             if (r.ok) return setBooked(r.start);
             setError(r.error);

@@ -1,7 +1,7 @@
 "use client";
 import { useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
-import { CalendarClock, ChevronLeft, ChevronRight, Mail, Phone, Trash2, UserPlus } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Mail, Phone, Sparkles, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ export type BoardApplicant = {
   notes: string | null;
   created_at: string;
   next_booking: string | null;
+  referred_by_name?: string | null;
 };
 
 const COLUMN_TONE: Record<ApplicantStatus, string> = {
@@ -111,6 +112,7 @@ export function ApplicantBoard({ applicants, canManage, canInvite }: { applicant
                       {a.next_booking ? (
                         <p className="mt-1 flex items-center gap-1 text-xs text-info"><CalendarClock className="size-3.5" />Termin {formatDateTime(a.next_booking)}</p>
                       ) : null}
+                      {a.referred_by_name ? <p className="mt-1 flex items-center gap-1 text-xs text-[#c084fc]"><Sparkles className="size-3.5" />Empfohlen von {a.referred_by_name}</p> : null}
                       {a.notes ? <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{a.notes}</p> : null}
                     </button>
                     <div className="mt-2 flex items-center gap-1">
@@ -139,6 +141,7 @@ export function ApplicantBoard({ applicants, canManage, canInvite }: { applicant
                 <a className="inline-flex items-center gap-1.5 hover:underline" href={`mailto:${open.email}`}><Mail className="size-3.5" />{open.email}</a>
                 <a className="inline-flex items-center gap-1.5 hover:underline" href={`tel:${open.phone}`}><Phone className="size-3.5" />{open.phone}</a>
               </p>
+              {open.referred_by_name ? <p className="flex items-center gap-1.5 text-[#c084fc]"><Sparkles className="size-4" />Empfohlen von {open.referred_by_name} – wird beim Einladen als „geworben von“ übernommen</p> : null}
               {open.next_booking ? <p className="flex items-center gap-1.5 text-info"><CalendarClock className="size-4" />Gesprächstermin {formatDateTime(open.next_booking)} · <Link className="underline" href="/termine">Termine</Link></p> : null}
               {open.message ? <p className="whitespace-pre-line rounded-md bg-muted p-3">{open.message}</p> : null}
               {canManage ? <ApplicantForm key={`${open.id}-${open.status}`} id={open.id} status={open.status} notes={open.notes} onSaved={() => setOpenId(null)} /> : open.notes ? <p className="text-muted-foreground">{open.notes}</p> : null}

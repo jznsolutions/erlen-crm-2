@@ -66,3 +66,20 @@ export async function sendMonthlyReportToMe(): Promise<ActionResult> {
     return { ok: false, error: "Der Bericht konnte nicht erstellt werden. Ist das Datenbank-Update eingespielt?" };
   }
 }
+
+export async function saveCareerSettings(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("settings.manage");
+  const steps: { from: string; to: string; sales: number; recruits: number; months: number }[] = [];
+  for (let i = 0; i < 5; i++) {
+    const from = fd.get(`from_${i}`);
+    const to = fd.get(`to_${i}`);
+    if (typeof from !== "string" || typeof to !== "string" || !from || !to) continue;
+    const n = (k: string) => Math.max(0, Math.round(Number(fd.get(`${k}_${i}`) ?? 0) || 0));
+    steps.push({ from, to, sales: n("sales"), recruits: n("recruits"), months: n("months") });
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("career_settings_save", { p_enabled: fd.get("enabled") === "on", p_steps: steps });
+  if (error) return fromDbError(error);
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Karriereleiter gespeichert." };
+}

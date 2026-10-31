@@ -18,6 +18,7 @@ export async function applyAction(_: ApplyState, fd: FormData): Promise<ApplySta
       consent: fd.get("consent") === "on",
       website: fd.get("website") || undefined,
       source: "website",
+      ref: fd.get("ref") || undefined,
     },
     ip,
   );
@@ -34,7 +35,7 @@ export async function loadSlots(): Promise<SlotList> {
   return getFreeSlots();
 }
 
-export async function bookSlot(input: { start: string; full_name: string; email: string; phone: string; message?: string; consent: boolean; website?: string }): Promise<BookingResult> {
+export async function bookSlot(input: { start: string; full_name: string; email: string; phone: string; message?: string; consent: boolean; website?: string; ref?: string }): Promise<BookingResult> {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unbekannt";
   return createBooking(input, ip);

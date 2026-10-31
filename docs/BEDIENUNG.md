@@ -121,6 +121,10 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 * Bestätigte Fehler: in **Leistungen** → **Stornieren** (z. B. Widerruf) oder **Korrigieren** (falsche Menge/Datum/Produkt). Alles wird protokolliert (Klick auf das Datum zeigt den Verlauf).
 * Welche Zahl was bedeutet, steht in `KENNZAHLEN.md`.
 
+## Karriere & Empfehlen
+* **Empfehlungslink:** Jeder findet im Menü **Karriere & Empfehlen** seinen persönlichen Link und QR-Code (Knöpfe: Kopieren, WhatsApp, Teilen, QR-Code speichern). Wer sich über den Link auf der Website bewirbt oder einen Termin bucht, ist der werbenden Person automatisch zugeordnet: In der Bewerber-Pipeline steht „Empfohlen von …“, und beim Einladen ist „Geworben von“ schon ausgefüllt – die Vermittlungsprovision läuft dann automatisch.
+* **Karriereleiter:** **Einstellungen → Karriereleiter**: Kriterien je Schritt (Vertriebspartner → Ausbilder → Teamleiter → Agenturleiter): bestätigte Verträge gesamt, geworbene aktive Partner, Monate dabei. Die Werte sind Vorschläge – anpassen und „für alle sichtbar schalten“. Dann sieht jeder seinen Fortschritt auf dem Dashboard und unter „Karriere & Empfehlen“. Wer alle Kriterien erfüllt, bekommt eine Glückwunsch-Benachrichtigung, die Administration einen Hinweis. Die Beförderung (Rolle ändern) bleibt eure Entscheidung.
+
 ## Ziele, Rankings, Wettbewerbe
 * **Ziele & Rankings → Ziel anlegen**: für Person, Team oder Agentur, optional je Produkt, täglich/wöchentlich/monatlich.
 * **Verwaltung → Wettbewerbe**: zeitlich begrenzte Challenges.

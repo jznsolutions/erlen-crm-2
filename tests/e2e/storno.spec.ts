@@ -32,6 +32,8 @@ test("Storno-Übersicht zeigt Quote und Grund", async ({ page }) => {
   await page.goto("/berichte");
   await page.getByRole("link", { name: "Storno-Übersicht" }).click();
   await expect(page).toHaveURL(/\/berichte\/storno/);
+  // Zeitraum unabhängig vom Monatsanfang: letzte 90 Tage
+  await page.goto("/berichte/storno?zeitraum=90tage");
   await expect(page.getByRole("heading", { name: "Storno-Übersicht" })).toBeVisible();
   await expect(page.getByText(`Widerruf ${tag}`)).toBeVisible();
   await expect(page.getByText("Mitarbeiter mit Stornos")).toBeVisible();

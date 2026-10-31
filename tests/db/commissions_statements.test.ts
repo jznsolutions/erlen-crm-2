@@ -42,7 +42,7 @@ describe("Produktfreigaben", () => {
       await as(o.partner1);
       await expectDbError(
         db,
-        "select public.performance_create($1, $2, current_date, 1, null, null, true, false)",
+        "select public.performance_create($1, $2, private.today_berlin(), 1, null, null, true, false)",
         [o.partner1, o.product],
         /PRODUKT_GESPERRT/,
       );
@@ -118,12 +118,12 @@ describe("Provisionen", () => {
       await setRates({ vertriebspartner: 2500, ausbilder: 3500, teamleiter: 5000 });
       await db.query("select public.commission_settings_save('fest', 500, 1000, 3000)");
       const total = async (user: string) =>
-        (await db.query("select kind, sum(total_cents)::int t from public.statement_preview($1, current_date - 30, current_date) group by kind order by kind", [user])).rows;
+        (await db.query("select kind, sum(total_cents)::int t from public.statement_preview($1, private.today_berlin() - 30, private.today_berlin()) group by kind order by kind", [user])).rows;
       expect(await total(o.partner1)).toEqual([{ kind: "vermittlung", t: 7500 }]);
       expect(await total(o.partner2)).toEqual([{ kind: "vermittlung", t: 5000 }, { kind: "werbung", t: 3 * 500 }]);
       expect(await total(o.ausbilder)).toEqual([{ kind: "overhead_ausbilder", t: 3 * 1000 }]);
       expect(await total(o.teamleiterA)).toEqual([{ kind: "overhead_teamleiter", t: 5 * 3000 }]);
-      const sug = await db.query("select line, amount_cents::int a from public.gutschrift_suggestion($1, current_date - 30, current_date) order by line", [o.partner2]);
+      const sug = await db.query("select line, amount_cents::int a from public.gutschrift_suggestion($1, private.today_berlin() - 30, private.today_berlin()) order by line", [o.partner2]);
       expect(sug.rows).toEqual([{ line: "werbung", a: 1500 }]);
 
       await db.query("select public.commission_settings_save('differenz', 500, 1000, 3000)");
@@ -137,7 +137,7 @@ describe("Provisionen", () => {
       await insertRecord(db, o.partner1, o.product, { quantity: 1, team: o.alpha });
       await setRates({ vertriebspartner: 2500 });
       await db.query("select public.commission_settings_save('fest', 500, 1000, 3000)");
-      const r = await db.query("select 1 from public.statement_preview($1, current_date - 30, current_date)", [o.agenturleiter]);
+      const r = await db.query("select 1 from public.statement_preview($1, private.today_berlin() - 30, private.today_berlin())", [o.agenturleiter]);
       expect(r.rowCount).toBe(0);
     });
   });
@@ -147,10 +147,10 @@ describe("Provisionen", () => {
       await insertRecord(db, o.partner1, o.product, { quantity: 2, team: o.alpha });
       await setRates({ vertriebspartner: 2500, agentur: 8000 });
       await as(o.agenturleiter);
-      const a = await one<{ revenue_cents: string | null }>(db, "select * from public.get_money_kpis(current_date - 30, current_date)");
+      const a = await one<{ revenue_cents: string | null }>(db, "select * from public.get_money_kpis(private.today_berlin() - 30, private.today_berlin())");
       expect(Number(a.revenue_cents)).toBe(16000);
       await as(o.partner1);
-      const p = await one<{ revenue_cents: string | null; own_commission_cents: string }>(db, "select * from public.get_money_kpis(current_date - 30, current_date)");
+      const p = await one<{ revenue_cents: string | null; own_commission_cents: string }>(db, "select * from public.get_money_kpis(private.today_berlin() - 30, private.today_berlin())");
       expect(p.revenue_cents).toBeNull();
       expect(Number(p.own_commission_cents)).toBe(5000);
     });
@@ -166,7 +166,7 @@ describe("Abrechnungen & Gutschriften", () => {
       await setRates({ vertriebspartner: 2500 });
       const r = await one<{ quantity: string; total_cents: string }>(
         db,
-        "select quantity, total_cents from public.statement_preview($1, current_date - 30, current_date)",
+        "select quantity, total_cents from public.statement_preview($1, private.today_berlin() - 30, private.today_berlin())",
         [o.partner1],
       );
       expect(Number(r.quantity)).toBe(3);
@@ -191,7 +191,7 @@ describe("Abrechnungen & Gutschriften", () => {
       const a = (
         await one<{ id: string }>(
           db,
-          "select public.statement_create($1, 'abrechnung', 'Abrechnung Test', current_date - 30, current_date, $2::jsonb, null) id",
+          "select public.statement_create($1, 'abrechnung', 'Abrechnung Test', private.today_berlin() - 30, private.today_berlin(), $2::jsonb, null) id",
           [o.partner1, items],
         )
       ).id;

@@ -12,7 +12,7 @@ type Opt = { id: string; label: string };
 
 type Delivery = { sent: boolean; configured?: boolean; link?: string };
 
-export function InviteForm({ roles, teams, people, recruiters, products, canAssignRoles, prefill }: { roles: { key: string; name: string }[]; teams: Opt[]; people: Opt[]; recruiters?: Opt[]; products: Opt[] | null; canAssignRoles: boolean; prefill?: { first_name: string; last_name: string; email: string; applicant_id: string } }) {
+export function InviteForm({ roles, teams, people, recruiters, products, canAssignRoles, prefill }: { roles: { key: string; name: string }[]; teams: Opt[]; people: Opt[]; recruiters?: Opt[]; products: Opt[] | null; canAssignRoles: boolean; prefill?: { first_name: string; last_name: string; email: string; applicant_id: string; recruiter_id?: string | null } }) {
   const [link, setLink] = useState<Delivery | null>(null);
   return (
     <div className="space-y-4">
@@ -32,7 +32,7 @@ export function InviteForm({ roles, teams, people, recruiters, products, canAssi
               <Field label="Team" htmlFor="i-team"><Select id="i-team" name="team_id"><option value="">– später zuordnen –</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</Select></Field>
               <Field label="Direkter Vorgesetzter" htmlFor="i-sup"><Select id="i-sup" name="supervisor_id"><option value="">–</option>{people.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select></Field>
               <Field label="Ausbilder" htmlFor="i-tr"><Select id="i-tr" name="trainer_id"><option value="">–</option>{people.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select></Field>
-              <Field label="Geworben von" htmlFor="i-rec" hint="erhält die Vermittlungsprovision"><Select id="i-rec" name="recruiter_id"><option value="">– niemand –</option>{(recruiters ?? people).map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select></Field>
+              <Field label="Geworben von" htmlFor="i-rec" hint="erhält die Vermittlungsprovision"><Select id="i-rec" name="recruiter_id" defaultValue={prefill?.recruiter_id ?? ""}><option value="">– niemand –</option>{(recruiters ?? people).map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select></Field>
               <Field label="Gültigkeit" htmlFor="i-valid">
                 <Select id="i-valid" name="valid_hours" defaultValue="72"><option value="24">24 Stunden</option><option value="72">3 Tage</option><option value="168">7 Tage</option><option value="336">14 Tage</option></Select>
               </Field>

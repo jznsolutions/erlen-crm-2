@@ -10,6 +10,7 @@ export const NAV: NavSection[] = [
       { href: "/leistungen", label: "Leistungen", icon: "TrendingUp", any: ["performance.read.self", "performance.read.team", "performance.read.all", "performance.read.assigned"] },
       { href: "/leistungen/freigaben", label: "Freigaben", icon: "CheckCheck", any: ["performance.approve"] },
       { href: "/ziele", label: "Ziele & Rankings", icon: "Target", any: "all" },
+      { href: "/karriere", label: "Karriere & Empfehlen", icon: "Rocket", any: "all" },
       { href: "/academy", label: "ERLEN Academy", icon: "GraduationCap", any: ["training.read", "training.manage"] },
       { href: "/dokumente", label: "Dokumente", icon: "FileText", any: ["documents.read", "documents.manage"] },
       { href: "/abrechnungen", label: "Abrechnungen & Gutschriften", icon: "Receipt", any: ["statements.read.self", "statements.manage"] },

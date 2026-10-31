@@ -27,19 +27,25 @@ isOneToOne: false
                   ]
                 },"applicants": {
                   Row: {
-                    "consent_at": string,"created_at": string,"email": string,"full_name": string,"handled_by": string | null,"id": string,"message": string | null,"notes": string | null,"phone": string,"source": string,"status": Database["public"]['Enums']["applicant_status"],"updated_at": string
+                    "consent_at": string,"created_at": string,"email": string,"full_name": string,"handled_by": string | null,"id": string,"message": string | null,"notes": string | null,"phone": string,"referred_by": string | null,"source": string,"status": Database["public"]['Enums']["applicant_status"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "consent_at": string,"created_at"?: string,"email": string,"full_name": string,"handled_by"?: string | null,"id"?: string,"message"?: string | null,"notes"?: string | null,"phone": string,"source"?: string,"status"?: Database["public"]['Enums']["applicant_status"],"updated_at"?: string
+                    "consent_at": string,"created_at"?: string,"email": string,"full_name": string,"handled_by"?: string | null,"id"?: string,"message"?: string | null,"notes"?: string | null,"phone": string,"referred_by"?: string | null,"source"?: string,"status"?: Database["public"]['Enums']["applicant_status"],"updated_at"?: string
                   }
                   Update: {
-                    "consent_at"?: string,"created_at"?: string,"email"?: string,"full_name"?: string,"handled_by"?: string | null,"id"?: string,"message"?: string | null,"notes"?: string | null,"phone"?: string,"source"?: string,"status"?: Database["public"]['Enums']["applicant_status"],"updated_at"?: string
+                    "consent_at"?: string,"created_at"?: string,"email"?: string,"full_name"?: string,"handled_by"?: string | null,"id"?: string,"message"?: string | null,"notes"?: string | null,"phone"?: string,"referred_by"?: string | null,"source"?: string,"status"?: Database["public"]['Enums']["applicant_status"],"updated_at"?: string
                   }
                   Relationships: [
                     {
       foreignKeyName: "applicants_handled_by_fkey"
       columns: ["handled_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "applicants_referred_by_fkey"
+      columns: ["referred_by"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
@@ -885,6 +891,26 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"referral_codes": {
+                  Row: {
+                    "code": string,"created_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "code": string,"created_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "code"?: string,"created_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "referral_codes_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"reporting_relationships": {
                   Row: {
                     "created_by": string | null,"employee_id": string,"ended_at": string | null,"id": string,"manager_id": string,"relation_type": Database["public"]['Enums']["relationship_type"],"started_at": string
@@ -1342,6 +1368,17 @@ isOneToOne: false
 "bootstrap_admin":
 { Args: { "p_email": string }; Returns: undefined
                            },
+"career_progress":
+{ Args: { "p_user"?: string }; Returns: {
+              "enabled": boolean,"months": number,"months_target": number,"next_role": string,"ready": boolean,"recruits": number,"recruits_target": number,"role_now": string,"sales": number,"sales_target": number
+            }[]
+                           },
+"career_settings_save":
+{ Args: { "p_enabled": boolean,"p_steps": Json }; Returns: undefined
+                           },
+"career_watch":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "commission_level_upsert":
 { Args: { "p_description": string,"p_id": string,"p_is_active": boolean,"p_name": string,"p_sort_order": number }; Returns: string
                            },
@@ -1535,6 +1572,14 @@ isOneToOne: false
 "my_permissions":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"my_referral_code":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"my_referral_stats":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "active_recruits": number,"applicants": number,"hired": number
+            }[]
+                           },
 "notifications_mark_read":
 { Args: { "p_ids"?: (string)[] }; Returns: undefined
                            },
@@ -1598,6 +1643,9 @@ isOneToOne: false
                            },
 "rate_limit_hit":
 { Args: { "p_key": string,"p_max": number,"p_window_seconds": number }; Returns: boolean
+                           },
+"referral_resolve":
+{ Args: { "p_code": string }; Returns: string
                            },
 "security_settings_save":
 { Args: { "p_mfa_required_roles": (string)[] }; Returns: undefined

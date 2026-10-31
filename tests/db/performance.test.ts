@@ -37,7 +37,7 @@ async function confirmedSum(user: string) {
 }
 const create = async (user: string, qty = 1, ref: string | null = null, product?: string, confirmDup = false) =>
   (
-    await one<{ id: string }>(db, "select public.performance_create($1, $2, current_date, $3, $4, null, true, $5) id", [
+    await one<{ id: string }>(db, "select public.performance_create($1, $2, private.today_berlin(), $3, $4, null, true, $5) id", [
       user,
       product ?? o.product,
       qty,
@@ -102,9 +102,9 @@ describe("Freigabeprozess", () => {
   it("ungültige Werte werden abgelehnt (Menge, Zukunftsdatum, Pflicht-Vorgangs-ID)", async () => {
     await scenario(async () => {
       await as(o.partner1);
-      await expectDbError(db, "select public.performance_create($1, $2, current_date, 0)", [o.partner1, o.product], /Menge/);
-      await expectDbError(db, "select public.performance_create($1, $2, current_date + 5, 1)", [o.partner1, o.product], /Zukunft/);
-      await expectDbError(db, "select public.performance_create($1, $2, current_date, 1)", [o.partner1, o.productRef], /Vorgangs-ID/);
+      await expectDbError(db, "select public.performance_create($1, $2, private.today_berlin(), 0)", [o.partner1, o.product], /Menge/);
+      await expectDbError(db, "select public.performance_create($1, $2, private.today_berlin() + 5, 1)", [o.partner1, o.product], /Zukunft/);
+      await expectDbError(db, "select public.performance_create($1, $2, private.today_berlin(), 1)", [o.partner1, o.productRef], /Vorgangs-ID/);
     });
   });
 });
@@ -120,7 +120,7 @@ describe("Szenario 7: Stornierte Leistungen werden korrekt berücksichtigt", () 
       await db.query("select public.performance_transition($1, 'stornieren', 'Kunde hat widerrufen')", [id]);
       expect(await confirmedSum(o.partner1)).toBe(0);
       await as(o.partner1);
-      const board = await db.query("select * from public.get_leaderboard(current_date - 30, current_date)");
+      const board = await db.query("select * from public.get_leaderboard(private.today_berlin() - 30, private.today_berlin())");
       expect(board.rows.find((r) => r.user_id === o.partner1)).toBeUndefined();
       await db.query("reset role");
       const adj = await one<{ n: string }>(db, "select count(*) n from public.performance_adjustments where record_id = $1 and action = 'storniert'", [id]);
@@ -132,7 +132,7 @@ describe("Szenario 7: Stornierte Leistungen werden korrekt berücksichtigt", () 
       await as(o.teamleiterA);
       const id = await create(o.partner1, 5, "VG-100", o.productRef);
       const newId = (
-        await one<{ id: string }>(db, "select public.performance_correct($1, $2, current_date, 3, 'Zählfehler') id", [id, o.productRef])
+        await one<{ id: string }>(db, "select public.performance_correct($1, $2, private.today_berlin(), 3, 'Zählfehler') id", [id, o.productRef])
       ).id;
       expect(await confirmedSum(o.partner1)).toBe(3);
       const orig = await one<{ status: string }>(db, "select status from public.performance_records where id = $1", [id]);
@@ -149,14 +149,14 @@ describe("Szenario 7: Stornierte Leistungen werden korrekt berücksichtigt", () 
       const id = await create(o.partner1, 2);
       await as(o.partner1);
       await expectDbError(db, "select public.performance_transition($1, 'stornieren', 'x')", [id], /Keine Berechtigung/);
-      await expectDbError(db, "select public.performance_correct($1, $2, current_date, 9, 'x')", [id, o.product], /Keine Berechtigung/);
+      await expectDbError(db, "select public.performance_correct($1, $2, private.today_berlin(), 9, 'x')", [id, o.product], /Keine Berechtigung/);
     });
   });
   it("bestätigte Leistungen können nicht als Entwurf bearbeitet oder gelöscht werden", async () => {
     await scenario(async () => {
       await as(o.teamleiterA);
       const id = await create(o.partner1, 2);
-      await expectDbError(db, "select public.performance_update_draft($1, $2, current_date, 9)", [id, o.product], /Korrektur/);
+      await expectDbError(db, "select public.performance_update_draft($1, $2, private.today_berlin(), 9)", [id, o.product], /Korrektur/);
       await expectDbError(db, "select public.performance_transition($1, 'loeschen')", [id], /Entwürfe/);
     });
   });
@@ -169,7 +169,7 @@ describe("Szenario 8: Doppelte Leistungserfassungen werden verhindert", () => {
       await create(o.partner1, 1, "ABC-1", o.productRef);
       await expectDbError(
         db,
-        "select public.performance_create($1, $2, current_date, 1, 'abc-1')",
+        "select public.performance_create($1, $2, private.today_berlin(), 1, 'abc-1')",
         [o.partner2 === o.partner1 ? o.partner1 : o.partner1, o.productRef],
         /DUPLIKAT_REFERENZ/,
       );
@@ -180,14 +180,14 @@ describe("Szenario 8: Doppelte Leistungserfassungen werden verhindert", () => {
       await as(o.partner1);
       await create(o.partner1, 1, "XYZ-9", o.productRef);
       await as(o.partner2);
-      await expectDbError(db, "select public.performance_create($1, $2, current_date, 1, 'XYZ-9')", [o.partner2, o.productRef], /DUPLIKAT_REFERENZ/);
+      await expectDbError(db, "select public.performance_create($1, $2, private.today_berlin(), 1, 'XYZ-9')", [o.partner2, o.productRef], /DUPLIKAT_REFERENZ/);
     });
   });
   it("identische Erfassung ohne ID erzeugt Duplikatverdacht, bewusste Bestätigung ist möglich", async () => {
     await scenario(async () => {
       await as(o.partner1);
       await create(o.partner1, 2);
-      await expectDbError(db, "select public.performance_create($1, $2, current_date, 2)", [o.partner1, o.product], /DUPLIKAT_VERDACHT/);
+      await expectDbError(db, "select public.performance_create($1, $2, private.today_berlin(), 2)", [o.partner1, o.product], /DUPLIKAT_VERDACHT/);
       await create(o.partner1, 2, null, undefined, true);
       await db.query("reset role");
       const n = await one<{ n: string }>(db, "select count(*) n from public.performance_records where user_id = $1", [o.partner1]);
@@ -210,7 +210,7 @@ describe("Ziele und Rankings", () => {
       await as(o.teamleiterA);
       await db.query(
         `select public.target_upsert(null, 'Monatsziel', 'mitarbeiter', $1, null, null, 'monat',
-           date_trunc('month', current_date)::date, (date_trunc('month', current_date) + interval '1 month - 1 day')::date, 4)`,
+           date_trunc('month', private.today_berlin())::date, (date_trunc('month', private.today_berlin()) + interval '1 month - 1 day')::date, 4)`,
         [o.partner1],
       );
       await as(o.partner1);
@@ -234,13 +234,13 @@ describe("Ziele und Rankings", () => {
       await as(o.teamleiterA);
       await expectDbError(
         db,
-        "select public.target_upsert(null, 'X', 'team', null, $1, null, 'monat', current_date, current_date, 5)",
+        "select public.target_upsert(null, 'X', 'team', null, $1, null, 'monat', private.today_berlin(), private.today_berlin(), 5)",
         [o.beta],
         /Keine Berechtigung/,
       );
       await expectDbError(
         db,
-        "select public.target_upsert(null, 'X', 'agentur', null, null, null, 'monat', current_date, current_date, 5)",
+        "select public.target_upsert(null, 'X', 'agentur', null, null, null, 'monat', private.today_berlin(), private.today_berlin(), 5)",
         [],
         /Keine Berechtigung/,
       );
@@ -252,16 +252,16 @@ describe("Ziele und Rankings", () => {
         `update public.organization_settings set value = jsonb_set(value, '{agency_roles}', '["agenturleiter","admin"]') where key = 'rankings'`,
       );
       await as(o.partner1);
-      await expectDbError(db, "select * from public.get_leaderboard(current_date - 7, current_date)", [], /nicht freigegeben/);
+      await expectDbError(db, "select * from public.get_leaderboard(private.today_berlin() - 7, private.today_berlin())", [], /nicht freigegeben/);
       await as(o.agenturleiter);
-      await db.query("select * from public.get_leaderboard(current_date - 7, current_date)");
+      await db.query("select * from public.get_leaderboard(private.today_berlin() - 7, private.today_berlin())");
     });
   });
   it("Teamranking fremder Teams ist gesperrt", async () => {
     await scenario(async () => {
       await as(o.partner1);
-      await db.query("select * from public.get_leaderboard(current_date - 7, current_date, null, $1)", [o.alpha]);
-      await expectDbError(db, "select * from public.get_leaderboard(current_date - 7, current_date, null, $1)", [o.beta], /Keine Berechtigung/);
+      await db.query("select * from public.get_leaderboard(private.today_berlin() - 7, private.today_berlin(), null, $1)", [o.alpha]);
+      await expectDbError(db, "select * from public.get_leaderboard(private.today_berlin() - 7, private.today_berlin(), null, $1)", [o.beta], /Keine Berechtigung/);
     });
   });
 });

@@ -22,6 +22,12 @@ const field = "h-14 w-full rounded-2xl border border-white/15 bg-white/[0.06] px
 export function ApplyForm() {
   const [state, action] = useActionState<ApplyState, FormData>(applyAction, null);
   const msgRef = useRef<HTMLTextAreaElement>(null);
+  const refInput = useRef<HTMLInputElement>(null);
+  // Empfehlungslink (?ref=code) – nur aus der Adresse, ohne Cookie
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("ref");
+    if (code && refInput.current) refInput.current.value = code.slice(0, 40);
+  }, [state]);
   // Ergebnis des Quiz in die Nachricht übernehmen
   useEffect(() => {
     const on = (e: Event) => { if (msgRef.current) msgRef.current.value = String((e as CustomEvent).detail ?? ""); };
@@ -46,6 +52,7 @@ export function ApplyForm() {
   const err = (k: string) => (fe[k] ? <p className="mt-1.5 text-sm text-red-300">{fe[k]}</p> : null);
   return (
     <form action={action} className="space-y-4" noValidate>
+      <input ref={refInput} type="hidden" name="ref" defaultValue="" />
       <div>
         <label htmlFor="ap-name" className="sr-only">Vollständiger Name</label>
         <input id="ap-name" name="full_name" defaultValue={v?.full_name} autoComplete="name" required placeholder="Vollständiger Name" className={field} aria-invalid={!!fe.full_name} />
