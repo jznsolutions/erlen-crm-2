@@ -433,14 +433,14 @@ isOneToOne: true
                   ]
                 },"employee_documents": {
                   Row: {
-                    "category": string,"created_at": string,"file_name": string,"id": string,"mime_type": string,"review_note": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number,"status": Database["public"]['Enums']["employee_document_status"],"storage_path": string,"title": string | null,"uploaded_by": string | null,"user_id": string,"valid_until": string | null
+                    "category": string,"created_at": string,"expired_notified_at": string | null,"expiry_warned_at": string | null,"file_name": string,"id": string,"mime_type": string,"review_note": string | null,"reviewed_at": string | null,"reviewed_by": string | null,"size_bytes": number,"status": Database["public"]['Enums']["employee_document_status"],"storage_path": string,"title": string | null,"uploaded_by": string | null,"user_id": string,"valid_until": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "category": string,"created_at"?: string,"file_name": string,"id"?: string,"mime_type": string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes": number,"status"?: Database["public"]['Enums']["employee_document_status"],"storage_path": string,"title"?: string | null,"uploaded_by"?: string | null,"user_id": string,"valid_until"?: string | null
+                    "category": string,"created_at"?: string,"expired_notified_at"?: string | null,"expiry_warned_at"?: string | null,"file_name": string,"id"?: string,"mime_type": string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes": number,"status"?: Database["public"]['Enums']["employee_document_status"],"storage_path": string,"title"?: string | null,"uploaded_by"?: string | null,"user_id": string,"valid_until"?: string | null
                   }
                   Update: {
-                    "category"?: string,"created_at"?: string,"file_name"?: string,"id"?: string,"mime_type"?: string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number,"status"?: Database["public"]['Enums']["employee_document_status"],"storage_path"?: string,"title"?: string | null,"uploaded_by"?: string | null,"user_id"?: string,"valid_until"?: string | null
+                    "category"?: string,"created_at"?: string,"expired_notified_at"?: string | null,"expiry_warned_at"?: string | null,"file_name"?: string,"id"?: string,"mime_type"?: string,"review_note"?: string | null,"reviewed_at"?: string | null,"reviewed_by"?: string | null,"size_bytes"?: number,"status"?: Database["public"]['Enums']["employee_document_status"],"storage_path"?: string,"title"?: string | null,"uploaded_by"?: string | null,"user_id"?: string,"valid_until"?: string | null
                   }
                   Relationships: [
                     {
@@ -1389,6 +1389,9 @@ isOneToOne: false
                            },
 "document_delete":
 { Args: { "p_id": string }; Returns: string
+                           },
+"document_expiry_watch":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "document_set_access":
 { Args: { "p_access": Json,"p_document": string }; Returns: undefined

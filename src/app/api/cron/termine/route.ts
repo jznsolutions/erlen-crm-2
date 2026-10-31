@@ -17,15 +17,16 @@ async function handle(request: NextRequest) {
   try {
     const sent = await sendDueReminders();
     // Wettbewerbe: Platzierungen prüfen und bei Änderungen benachrichtigen (vor der Push-Zustellung)
-    const competition = await createAdminClient()
-      .rpc("competition_watch")
-      .then((r) => (r.error ? 0 : (r.data ?? 0)));
+    const admin = createAdminClient();
+    const competition = await admin.rpc("competition_watch").then((r) => (r.error ? 0 : (r.data ?? 0)));
+    // Unterlagen, die bald ablaufen (30 Tage vorher und nach Ablauf)
+    const documents = await admin.rpc("document_expiry_watch").then((r) => (r.error ? 0 : (r.data ?? 0)));
     // Nachzustellen, falls die Sofortzustellung einer Push-Benachrichtigung ausgefallen ist
     const pushed = await deliverPendingPush().catch((e) => {
       console.error("[cron] push", (e as Error).message);
       return 0;
     });
-    return NextResponse.json({ ok: true, reminders: sent, competition, pushed });
+    return NextResponse.json({ ok: true, reminders: sent, competition, documents, pushed });
   } catch (e) {
     console.error("[cron]", (e as Error).message);
     return NextResponse.json({ ok: false }, { status: 500 });

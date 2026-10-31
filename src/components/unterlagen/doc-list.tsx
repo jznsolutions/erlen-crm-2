@@ -1,7 +1,7 @@
 import { Eye, FileText, ImageIcon } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { docCategoryLabel } from "@/lib/employee-docs";
-import { todayBerlin } from "@/lib/dates";
+import { addDays, todayBerlin } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocActions } from "./doc-actions";
@@ -33,6 +33,7 @@ export function DocList({ docs, manage, selfId, showOwner = false }: { docs: Doc
       {docs.map((d) => {
         const Icon = d.mime_type === "application/pdf" ? FileText : ImageIcon;
         const expired = d.valid_until && d.valid_until < today;
+        const soon = !expired && d.valid_until && d.valid_until <= addDays(today, 30);
         return (
           <li key={d.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
             <Icon className="size-5 shrink-0 text-muted-foreground" />
@@ -40,7 +41,7 @@ export function DocList({ docs, manage, selfId, showOwner = false }: { docs: Doc
               <p className="truncate text-sm font-medium">{showOwner && d.owner_name ? `${d.owner_name} · ` : ""}{docCategoryLabel(d.category)}{d.title ? ` – ${d.title}` : ""}</p>
               <p className="truncate text-xs text-muted-foreground">
                 {d.file_name} · {formatDateTime(d.created_at)}
-                {d.valid_until ? <span className={expired ? " font-medium text-danger" : ""}> · gültig bis {formatDate(d.valid_until)}{expired ? " (abgelaufen)" : ""}</span> : null}
+                {d.valid_until ? <span className={expired ? " font-medium text-danger" : soon ? " font-medium text-warning" : ""}> · gültig bis {formatDate(d.valid_until)}{expired ? " (abgelaufen)" : soon ? " (läuft bald ab)" : ""}</span> : null}
               </p>
               {d.status === "abgelehnt" && d.review_note ? <p className="mt-1 text-xs text-danger">Grund: {d.review_note}</p> : null}
             </div>
