@@ -18,6 +18,7 @@ import { StatTile } from "@/components/dashboard/stat";
 import { AvatarUpload } from "./avatar-upload";
 import { DocUploader } from "@/components/unterlagen/uploader";
 import { TwoFactorCard } from "@/components/mfa/two-factor-card";
+import { canChangeEmail } from "@/lib/employee-permissions";
 import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
 import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
 import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
@@ -113,7 +114,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   const ledTeams = memberships?.filter((m) => !m.ended_at && m.member_role === "teamleiter") ?? [];
 
   const canManageOrg = perms.has("teams.manage") && !isSelf;
-  const canEdit = perms.has("employees.update") && !isSelf;
+  const canEdit = perms.has("employees.update");
   const canRoles = perms.has("roles.assign") && !isSelf;
   const canStatus = perms.has("employees.deactivate") && !isSelf;
   const canNotes = perms.has("training.notes.write") && !isSelf;
@@ -176,7 +177,12 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
           </div>
           <div className="flex flex-wrap gap-2">
             {isSelf ? <AvatarUpload userId={userId} /> : null}
-            {canEdit && details ? <EditEmployeeDialog user={{ id: userId, first_name: profile.first_name, last_name: profile.last_name, phone: details.phone, entry_date: details.entry_date, sales_start_date: details.sales_start_date, sales_region: details.sales_region, partner_status: details.partner_status }} /> : null}
+            {canEdit ? (
+              <EditEmployeeDialog
+                emailEditable={canChangeEmail(perms, profile.roles?.key)}
+                user={{ id: userId, first_name: profile.first_name, last_name: profile.last_name, email: profile.email, phone: details?.phone ?? null, entry_date: details?.entry_date ?? null, sales_start_date: details?.sales_start_date ?? null, sales_region: details?.sales_region ?? null, partner_status: details?.partner_status ?? "aktiv" }}
+              />
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -191,7 +197,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
               <Item label="Eintrittsdatum">{formatDate(details?.entry_date)}</Item>
               <Item label="Telefon">{details?.phone ?? "–"}</Item>
             </dl>
-            {isSelf ? <div className="mt-5 border-t pt-4"><OwnProfileForm phone={details?.phone ?? null} /><p className="mt-2 text-xs text-muted-foreground">Name, E-Mail und berufliche Angaben werden von der Administration gepflegt.</p></div> : null}
+            {isSelf && !canEdit ? <div className="mt-5 border-t pt-4"><OwnProfileForm phone={details?.phone ?? null} /><p className="mt-2 text-xs text-muted-foreground">Name, E-Mail und berufliche Angaben werden von der Administration gepflegt.</p></div> : null}
           </CardContent>
         </Card>
         <Card>

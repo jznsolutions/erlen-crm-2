@@ -266,3 +266,16 @@ export function passwordResetEmail(opts: { firstName: string; link: string }): O
     ),
   };
 }
+
+/** Hinweis an alte und neue Adresse, wenn die Verwaltung die Anmelde-E-Mail ändert. */
+export function emailChangedEmail(opts: { firstName: string; newEmail: string; changedBy: string }): Omit<EmailMessage, "to"> {
+  const text = `Hallo ${opts.firstName},\n\ndeine Anmelde-E-Mail im ERLEN-Portal wurde von ${opts.changedBy} geändert. Ab sofort meldest du dich mit ${opts.newEmail} an. Dein Passwort bleibt gleich.\n\nWarst du das nicht bzw. ist das nicht abgesprochen? Dann melde dich bitte sofort bei der Agenturleitung.\n\nDein ERLEN-Portal`;
+  return {
+    subject: "Deine Anmelde-E-Mail im ERLEN-Portal wurde geändert",
+    text,
+    html: layout(
+      "Anmelde-E-Mail geändert",
+      `Hallo ${esc(opts.firstName)},<br><br>deine Anmelde-E-Mail im ERLEN-Portal wurde von ${esc(opts.changedBy)} geändert. Ab sofort meldest du dich mit <b>${esc(opts.newEmail)}</b> an. Dein Passwort bleibt gleich.<br><br>Ist das nicht abgesprochen? Dann melde dich bitte sofort bei der Agenturleitung.`,
+    ),
+  };
+}

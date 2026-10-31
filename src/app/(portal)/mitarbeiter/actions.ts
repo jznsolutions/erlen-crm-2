@@ -5,7 +5,9 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formToObject, fromDbError, fromZodError, type ActionResult } from "@/lib/actions";
-import { checkbox, name, optionalIsoDate, optionalText, optionalUuid, phone, roleKey, uuid } from "@/lib/validation";
+import { checkbox, email, name, optionalIsoDate, optionalText, optionalUuid, phone, roleKey, uuid } from "@/lib/validation";
+import { emailChangedEmail, sendEmail } from "@/lib/email";
+import { canChangeEmail } from "@/lib/employee-permissions";
 import { PERMISSIONS } from "@/lib/permissions";
 
 const done = (message: string): ActionResult => {
@@ -40,14 +42,23 @@ const employeeSchema = z.object({
   sales_start_date: optionalIsoDate,
   sales_region: optionalText(120),
   partner_status: z.enum(["in_ausbildung", "aktiv", "pausiert", "beendet"]),
+  email: z.union([email, z.literal("")]).optional(),
 });
 
+
 export async function updateEmployee(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  await requireUser();
+  const viewer = await requireUser();
   const parsed = employeeSchema.safeParse(formToObject(fd));
   if (!parsed.success) return fromZodError(parsed.error);
   const d = parsed.data;
   const supabase = await createClient();
+  // Aktuelle Daten (über RLS: nur sichtbare Personen)
+  const { data: current } = await supabase.from("profiles").select("email, first_name, roles(key)").eq("id", d.user_id).maybeSingle();
+  if (!current) return { ok: false, error: "Mitarbeiter nicht gefunden." };
+  const newEmail = d.email && d.email !== current.email.toLowerCase() ? d.email : null;
+  if (newEmail && !canChangeEmail(viewer.permissions, current.roles?.key)) {
+    return { ok: false, error: "Die E-Mail-Adresse von Agenturleitung und Administration kann nur die Administration ändern.", fieldErrors: { email: "Keine Berechtigung" } };
+  }
   const { error } = await supabase.rpc("admin_update_employee", {
     p_user: d.user_id,
     p_first_name: d.first_name,
@@ -58,7 +69,24 @@ export async function updateEmployee(_: ActionResult | null, fd: FormData): Prom
     p_sales_region: (d.sales_region ?? null) as string,
     p_partner_status: d.partner_status,
   });
-  return error ? fromDbError(error) : done("Stammdaten gespeichert.");
+  if (error) return fromDbError(error);
+  if (newEmail) {
+    const admin = createAdminClient();
+    const { data: taken } = await admin.from("profiles").select("id").ilike("email", newEmail.replace(/[%_\\]/g, "\\$&")).neq("id", d.user_id).limit(1);
+    if (taken?.length) {
+      return { ok: false, error: "Die übrigen Stammdaten wurden gespeichert. Diese E-Mail-Adresse wird aber bereits von einem anderen Konto verwendet.", fieldErrors: { email: "Schon vergeben" } };
+    }
+    // Anmelde-E-Mail im Auth-System ändern (bestätigt, damit die Anmeldung sofort klappt); das Profil folgt per Trigger
+    const { error: authError } = await admin.auth.admin.updateUserById(d.user_id, { email: newEmail, email_confirm: true });
+    if (authError) {
+      console.error("[stammdaten] email", authError.message);
+      return { ok: false, error: "Die übrigen Stammdaten wurden gespeichert, die E-Mail-Adresse konnte aber nicht geändert werden (evtl. schon vergeben).", fieldErrors: { email: "Nicht geändert" } };
+    }
+    const notice = emailChangedEmail({ firstName: current.first_name, newEmail, changedBy: `${viewer.firstName} ${viewer.lastName}` });
+    await Promise.all([sendEmail({ to: newEmail, ...notice }), sendEmail({ to: current.email, ...notice })]);
+    return done(`Stammdaten gespeichert. Anmeldung ab sofort mit ${newEmail}.`);
+  }
+  return done("Stammdaten gespeichert.");
 }
 
 export async function setRole(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

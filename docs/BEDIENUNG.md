@@ -92,6 +92,12 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 ## Zurück-Pfeil
 * Auf allen Seiten außer dem Dashboard ist oben links (neben dem Menü) ein **Pfeil ←**. Er führt zur vorherigen Seite bzw. eine Ebene nach oben (z. B. von „Gutschrift erstellen“ zurück zu „Abrechnungen & Gutschriften“).
 
+## Stammdaten bearbeiten (Name, E-Mail, Telefon …)
+* **Mitarbeiter → Person öffnen → Stammdaten bearbeiten** (oben rechts im Profilkopf): Vorname, Nachname, **E-Mail-Adresse**, Telefon, Partnerstatus, Eintrittsdatum, Start im Vertrieb, Vertriebsgebiet → **Speichern**.
+* **Eigene Stammdaten:** Wer Mitarbeiter bearbeiten darf (Agenturleitung, Administration), findet denselben Knopf auch unter **Mein Profil**.
+* **E-Mail-Adresse = Anmelde-Adresse:** Die Änderung gilt sofort, das Passwort bleibt gleich. Alte und neue Adresse bekommen automatisch einen Hinweis. Die E-Mail-Adresse von Agenturleitung und Administration kann nur die Administration ändern (Schutz vor Kontoübernahme).
+* **Abrechnungsdaten** (Anschrift, Steuernummer, IBAN) stehen weiter unten im Profil im Kasten **Abrechnungsdaten**.
+
 ## Rollen und Rechte vergeben
 * **Rolle ändern:** Mitarbeiter → Person öffnen → Abschnitt **Verwaltung → Rolle & Berechtigungen** → Rolle wählen → **Ändern**.
 * **Einzelne Ausnahme:** im selben Abschnitt eine Berechtigung wählen und „Zusätzlich erlauben“ oder „Einschränken“. Beispiel: Ein Teamleiter soll keinen Export machen → `reports.export` einschränken.

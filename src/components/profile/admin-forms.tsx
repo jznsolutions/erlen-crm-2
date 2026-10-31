@@ -10,7 +10,7 @@ import {
 
 type Opt = { id: string; label: string };
 
-export function EditEmployeeDialog({ user }: { user: { id: string; first_name: string; last_name: string; phone: string | null; entry_date: string | null; sales_start_date: string | null; sales_region: string | null; partner_status: string } }) {
+export function EditEmployeeDialog({ user, emailEditable = false }: { user: { id: string; first_name: string; last_name: string; email: string; phone: string | null; entry_date: string | null; sales_start_date: string | null; sales_region: string | null; partner_status: string }; emailEditable?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -23,6 +23,15 @@ export function EditEmployeeDialog({ user }: { user: { id: string; first_name: s
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Vorname" htmlFor="e-first" error={fieldErrors.first_name}><Input id="e-first" name="first_name" defaultValue={user.first_name} required /></Field>
                 <Field label="Nachname" htmlFor="e-last" error={fieldErrors.last_name}><Input id="e-last" name="last_name" defaultValue={user.last_name} required /></Field>
+                <Field
+                  label="E-Mail-Adresse (Anmeldung)"
+                  htmlFor="e-email"
+                  className="sm:col-span-2"
+                  error={fieldErrors.email}
+                  hint={emailEditable ? "Wird sofort zur neuen Anmelde-Adresse; alte und neue Adresse bekommen einen Hinweis. Das Passwort bleibt gleich." : "Die E-Mail-Adresse von Agenturleitung und Administration ändert nur die Administration."}
+                >
+                  <Input id="e-email" name="email" type="email" defaultValue={user.email} disabled={!emailEditable} autoComplete="off" />
+                </Field>
                 <Field label="Telefon" htmlFor="e-phone" error={fieldErrors.phone}><Input id="e-phone" name="phone" type="tel" defaultValue={user.phone ?? ""} /></Field>
                 <Field label="Partnerstatus" htmlFor="e-ps">
                   <Select id="e-ps" name="partner_status" defaultValue={user.partner_status}>
