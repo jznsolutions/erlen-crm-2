@@ -58,3 +58,22 @@ test("Agenturleitung darf eigene Stammdaten ändern, aber nicht die E-Mail der A
   await page.getByRole("button", { name: "Stammdaten bearbeiten" }).click();
   await expect(page.getByRole("dialog").getByLabel("E-Mail-Adresse (Anmeldung)")).toBeDisabled();
 });
+
+// Kleines gültiges PNG (1×1 Pixel)
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+
+test("Verwaltung setzt und entfernt das Profilbild eines Mitarbeiters", async ({ page }) => {
+  await login(page, "leitung");
+  const [{ id }] = await sql("select id from public.profiles where email = 'partner3@erlen.local'");
+  await sql("update public.profiles set avatar_path = null where id = $1", [id]);
+  await page.goto(`/mitarbeiter/${id}`);
+  // Erst wenn die Seite fertig geladen ist, reagiert die Dateiauswahl
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Profilbild auswählen").setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: PNG });
+  await expect.poll(async () => (await sql("select avatar_path from public.profiles where id = $1", [id]))[0].avatar_path, { timeout: 15_000 }).toMatch(new RegExp(`^${id}/avatar-`));
+  await expect(page.getByRole("button", { name: "Profilbild entfernen" })).toBeVisible();
+  page.on("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Profilbild entfernen" }).click();
+  await expect(page.getByText("Profilbild entfernt.")).toBeVisible();
+  expect((await sql("select avatar_path from public.profiles where id = $1", [id]))[0].avatar_path).toBeNull();
+});

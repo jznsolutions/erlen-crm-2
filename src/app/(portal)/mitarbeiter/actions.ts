@@ -33,6 +33,16 @@ export async function setOwnAvatar(_: ActionResult | null, fd: FormData): Promis
   return error ? fromDbError(error) : done("Profilbild aktualisiert.");
 }
 
+/** Verwaltung: Profilbild einer Person setzen oder entfernen (Datei wurde vorher in deren Ordner hochgeladen). */
+export async function setEmployeeAvatar(userId: string, path: string | null): Promise<ActionResult> {
+  await requireUser();
+  if (!uuid.safeParse(userId).success) return { ok: false, error: "Ungültige Anfrage" };
+  if (path !== null && (typeof path !== "string" || !path.startsWith(`${userId}/`))) return { ok: false, error: "Ungültige Datei" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_avatar", { p_user: userId, p_path: path as string });
+  return error ? fromDbError(error) : done(path ? "Profilbild aktualisiert." : "Profilbild entfernt.");
+}
+
 const employeeSchema = z.object({
   user_id: uuid,
   first_name: name,

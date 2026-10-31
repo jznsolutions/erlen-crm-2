@@ -96,6 +96,7 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * **Mitarbeiter → Person öffnen → Stammdaten bearbeiten** (oben rechts im Profilkopf): Vorname, Nachname, **E-Mail-Adresse**, Telefon, Partnerstatus, Eintrittsdatum, Start im Vertrieb, Vertriebsgebiet → **Speichern**.
 * **Eigene Stammdaten:** Wer Mitarbeiter bearbeiten darf (Agenturleitung, Administration), findet denselben Knopf auch unter **Mein Profil**.
 * **E-Mail-Adresse = Anmelde-Adresse:** Die Änderung gilt sofort, das Passwort bleibt gleich. Alte und neue Adresse bekommen automatisch einen Hinweis. Die E-Mail-Adresse von Agenturleitung und Administration kann nur die Administration ändern (Schutz vor Kontoübernahme).
+* **Profilbild:** Im Profilkopf der Person **Profilbild ändern** → Foto wählen (PNG, JPG oder WebP, max. 2 MB). Mit dem Papierkorb daneben wird es wieder entfernt. Geht auch beim eigenen Profil.
 * **Abrechnungsdaten** (Anschrift, Steuernummer, IBAN) stehen weiter unten im Profil im Kasten **Abrechnungsdaten**.
 
 ## Rollen und Rechte vergeben

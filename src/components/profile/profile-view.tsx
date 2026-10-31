@@ -176,7 +176,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {isSelf ? <AvatarUpload userId={userId} /> : null}
+            {isSelf || canEdit ? <AvatarUpload userId={userId} forOther={!isSelf} hasAvatar={Boolean(profile.avatar_path)} /> : null}
             {canEdit ? (
               <EditEmployeeDialog
                 emailEditable={canChangeEmail(perms, profile.roles?.key)}
