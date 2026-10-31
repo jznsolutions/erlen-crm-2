@@ -983,6 +983,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"sales_trainings": {
+                  Row: {
+                    "created_at": string,"difficulty": string,"feedback": NonNullable<Json>,"id": string,"outcome": string,"scenario": string,"score": number,"turns": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"difficulty": string,"feedback": NonNullable<Json>,"id"?: string,"outcome": string,"scenario": string,"score": number,"turns": number,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"difficulty"?: string,"feedback"?: NonNullable<Json>,"id"?: string,"outcome"?: string,"scenario"?: string,"score"?: number,"turns"?: number,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sales_trainings_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"statement_extras": {
                   Row: {
                     "amount_cents": number,"created_at": string,"created_by": string | null,"description": string,"id": string,"is_active": boolean,"note": string | null,"recurring": boolean,"user_id": string
@@ -1646,6 +1666,9 @@ isOneToOne: false
                            },
 "referral_resolve":
 { Args: { "p_code": string }; Returns: string
+                           },
+"sales_training_save":
+{ Args: { "p_difficulty": string,"p_feedback": Json,"p_outcome": string,"p_scenario": string,"p_score": number,"p_turns": number }; Returns: string
                            },
 "security_settings_save":
 { Args: { "p_mfa_required_roles": (string)[] }; Returns: undefined

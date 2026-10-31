@@ -139,6 +139,11 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 4. Status auf **Veröffentlicht** setzen. Freigegebene Personen werden bei neuen Lektionen benachrichtigt.
 5. Ausbilder dokumentieren Fortschritt und Feedback im Profil der Auszubildenden.
 
+## KI-Verkaufstrainer
+* **Academy → KI-Verkaufstrainer**: Situation (Glasfaser, Strom/Gas, PV) und Schwierigkeit wählen, dann wie an der Haustür schreiben – die KI antwortet als Kunde mit echten Einwänden. **Gespräch beenden & bewerten** liefert Note, Stärken, Verbesserungen und bessere Formulierungen.
+* Ausbilder und Leitung sehen auf derselben Seite die Noten ihrer Leute (nicht die Gespräche).
+* Einrichtung (API-Schlüssel, Kosten, Datenschutz): `docs/ANLEITUNG_KI_TRAINER.md`.
+
 ## Dokumente & Mitteilungen
 * **Dokumente verwalten** → Datei, Titel, Kategorie, Freigabe für Rollen/Teams → **Hochladen & freigeben**.
 * **Neue Mitteilung**: Text, Empfänger (leer = alle) → alle Empfänger erhalten eine Benachrichtigung.
