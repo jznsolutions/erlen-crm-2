@@ -83,3 +83,13 @@ export async function saveCareerSettings(_: ActionResult | null, fd: FormData): 
   revalidatePath("/", "layout");
   return { ok: true, message: "Karriereleiter gespeichert." };
 }
+
+export async function saveGongSettings(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("settings.manage");
+  const scope = String(fd.get("scope") ?? "team");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("gong_settings_save", { p_scope: scope });
+  if (error) return fromDbError(error);
+  revalidatePath("/admin/einstellungen");
+  return { ok: true, message: "Abschluss-Gong gespeichert." };
+}

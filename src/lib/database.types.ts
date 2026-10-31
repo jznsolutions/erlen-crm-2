@@ -1267,6 +1267,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"user_preferences": {
+                  Row: {
+                    "gong_muted": boolean,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "gong_muted"?: boolean,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "gong_muted"?: boolean,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_preferences_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"user_products": {
                   Row: {
                     "granted_at": string,"granted_by": string | null,"product_id": string,"user_id": string
@@ -1507,6 +1527,12 @@ isOneToOne: false
 { Args: { "p_user"?: string }; Returns: {
               "completed_lessons": number,"course_id": string,"due_on": string,"is_mandatory": boolean,"last_activity": string,"title": string,"total_lessons": number
             }[]
+                           },
+"gong_mute_set":
+{ Args: { "p_muted": boolean }; Returns: undefined
+                           },
+"gong_settings_save":
+{ Args: { "p_scope": string }; Returns: undefined
                            },
 "gutschrift_suggestion":
 { Args: { "p_from": string,"p_to": string,"p_user": string }; Returns: {

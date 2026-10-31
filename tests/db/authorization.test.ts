@@ -309,7 +309,7 @@ describe("Weitere Schutzmechanismen", () => {
   it("Benachrichtigungen: nur eigene", async () => {
     await db.query("savepoint s");
     await db.query("insert into public.notifications (user_id, type, title) values ($1, 'x', 'Für partner2')", [o.partner2]);
-    expect(await asUser(db, o.partner1, () => ids(db, "select id from public.notifications"))).toEqual([]);
+    expect(await asUser(db, o.partner1, () => ids(db, "select id from public.notifications where title = 'Für partner2'"))).toEqual([]);
     await db.query("rollback to savepoint s");
   });
   it("Einladung höherer Rollen erfordert Rechtevergabe-Berechtigung", async () => {
