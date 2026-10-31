@@ -12,12 +12,16 @@ export default async function ApplicantsPage() {
   const user = await requirePermission("applicants.read");
   const supabase = await createClient();
   const [{ data }, { data: bookings }] = await Promise.all([
-    supabase.from("applicants").select("id, full_name, email, phone, message, source, status, notes, created_at").order("created_at", { ascending: false }).limit(500),
+    supabase.from("applicants").select("id, full_name, email, phone, message, source, status, notes, created_at, referrer:profiles!applicants_referred_by_fkey(first_name, last_name)").order("created_at", { ascending: false }).limit(500),
     supabase.from("bookings").select("applicant_id, starts_at").eq("status", "gebucht").gte("starts_at", addDays(todayBerlin(), -1)).not("applicant_id", "is", null).order("starts_at"),
   ]);
   const nextBooking = new Map<string, string>();
   for (const b of bookings ?? []) if (b.applicant_id && !nextBooking.has(b.applicant_id)) nextBooking.set(b.applicant_id, b.starts_at);
-  const applicants: BoardApplicant[] = (data ?? []).map((a) => ({ ...a, next_booking: nextBooking.get(a.id) ?? null }));
+  const applicants: BoardApplicant[] = (data ?? []).map(({ referrer, ...a }) => ({
+    ...a,
+    next_booking: nextBooking.get(a.id) ?? null,
+    referred_by_name: referrer ? `${referrer.first_name} ${referrer.last_name}` : null,
+  }));
   return (
     <div>
       <PageHeader

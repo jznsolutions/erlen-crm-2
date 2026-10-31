@@ -23,6 +23,8 @@ async function handle(request: NextRequest) {
     const competition = await admin.rpc("competition_watch").then((r) => (r.error ? 0 : (r.data ?? 0)));
     // Unterlagen, die bald ablaufen (30 Tage vorher und nach Ablauf)
     const documents = await admin.rpc("document_expiry_watch").then((r) => (r.error ? 0 : (r.data ?? 0)));
+    // Karriereleiter: Verwaltung informieren, wenn jemand die Kriterien erfüllt
+    const career = await admin.rpc("career_watch").then((r) => (r.error ? 0 : (r.data ?? 0)));
     // Monatsbericht: in den ersten Tagen des Monats einmalig an die Agenturleitung
     const report = emailProvider()
       ? await monthlyReportDue().catch((e) => {
@@ -35,7 +37,7 @@ async function handle(request: NextRequest) {
       console.error("[cron] push", (e as Error).message);
       return 0;
     });
-    return NextResponse.json({ ok: true, reminders: sent, competition, documents, report, pushed });
+    return NextResponse.json({ ok: true, reminders: sent, competition, documents, career, report, pushed });
   } catch (e) {
     console.error("[cron]", (e as Error).message);
     return NextResponse.json({ ok: false }, { status: 500 });

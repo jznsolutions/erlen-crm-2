@@ -10,6 +10,7 @@ import { OnboardingChecklist, type OnboardingItem } from "@/components/onboardin
 import { getDaily, getProducts, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filterRows, summarize } from "@/lib/metrics";
 import { DashboardHero, type HeroStat } from "@/components/dashboard/hero";
+import { CareerLadder, type CareerProgress } from "@/components/career/ladder";
 import { formatDate, formatNumber, formatRelative } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/misc";
@@ -95,6 +96,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <FilterSelect param="zeitraum" label="Zeitraum Verlauf" value={period} options={(["woche", "monat", "30tage", "90tage", "vormonat"] as PeriodKey[]).map((p) => ({ value: p, label: PERIOD_LABELS[p] }))} />
   );
 
+  // Karriereleiter (nur wenn eingeschaltet und ein nächster Schritt existiert)
+  const career = kind === "agentur" ? null : (((await supabase.rpc("career_progress", {})).data?.[0] ?? null) as CareerProgress | null);
+  const showCareer = Boolean(career?.enabled && career.next_role);
+
   // Kurzzahlen für den Begrüßungsbereich: Agentur bzw. eigene Leistung
   const heroRows = kind === "agentur" ? rows : ownRows;
   const heroToday = summarize(filterRows(heroRows, today, today)).confirmed;
@@ -148,6 +153,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </Alert>
       ) : null}
 
+      {showCareer && career ? <CareerLadder compact p={{ ...career, sales: Number(career.sales), recruits: Number(career.recruits) }} /> : null}
       <CompetitionsLive competitions={liveCompetitions} />
       {liveCompetitions.length ? <AutoRefresh seconds={120} /> : null}
 

@@ -70,4 +70,5 @@ export const applicationSchema = z.object({
   consent: z.literal(true, { message: "Bitte stimme der Datenverarbeitung zu" }),
   source: z.string().trim().max(60).optional(),
   website: z.string().max(500).optional(), // Honeypot – von Menschen nie ausgefüllt
+  ref: z.string().trim().toLowerCase().regex(/^[a-z0-9-]{4,40}$/).optional().catch(undefined), // Empfehlungscode aus dem Link
 });

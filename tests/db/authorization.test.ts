@@ -31,7 +31,7 @@ describe("Szenario 1: Vertriebspartner sieht nur eigene geschützte Daten", () =
   });
   it("Manipulierte ID: Leistung für fremden Mitarbeiter anlegen wird abgelehnt", async () => {
     await asUser(db, o.partner1, () =>
-      expectDbError(db, "select public.performance_create($1, $2, current_date, 1)", [o.partner2, o.product], /Keine Berechtigung/),
+      expectDbError(db, "select public.performance_create($1, $2, private.today_berlin(), 1)", [o.partner2, o.product], /Keine Berechtigung/),
     );
   });
   it("Profilhistorie fremder Mitarbeiter ist gesperrt", async () => {
@@ -106,7 +106,7 @@ describe("Szenario 4: Agenturleiter sieht agenturweite Kennzahlen", () => {
     const r = await asUser(db, o.agenturleiter, () =>
       one<{ s: string }>(
         db,
-        "select sum(quantity) s from public.performance_daily(current_date - 1, current_date) where status = 'bestaetigt'",
+        "select sum(quantity) s from public.performance_daily(private.today_berlin() - 1, private.today_berlin()) where status = 'bestaetigt'",
       ),
     );
     expect(Number(r.s)).toBe(10);

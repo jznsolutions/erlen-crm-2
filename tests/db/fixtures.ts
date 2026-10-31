@@ -80,7 +80,7 @@ export async function insertRecord(
     db,
     `insert into public.performance_records (user_id, team_id, product_id, occurred_on, quantity, status, created_by,
         external_ref, confirmed_at)
-     values ($1, $2, $3, coalesce($4::date, current_date), $5, $6::public.performance_status, $1, $7,
+     values ($1, $2, $3, coalesce($4::date, private.today_berlin()), $5, $6::public.performance_status, $1, $7,
         case when $6 = 'bestaetigt' then now() end)
      returning id`,
     [user, opts.team ?? null, product, opts.day ?? null, opts.quantity ?? 1, opts.status ?? "bestaetigt", opts.ref ?? null],

@@ -32,7 +32,10 @@ export async function submitApplication(input: unknown, ip: string): Promise<App
   const { data: allowed } = await admin.rpc("rate_limit_hit", { p_key: key, p_window_seconds: 3600, p_max: 5 });
   if (allowed === false) return { ok: false, status: 429, error: "Zu viele Anfragen. Bitte versuche es später erneut." };
 
+  // Empfehlungslink: Bewerbung der werbenden Person zuordnen (unbekannte Codes werden ignoriert)
+  const referredBy = parsed.data.ref ? ((await admin.rpc("referral_resolve", { p_code: parsed.data.ref })).data ?? null) : null;
   const { error } = await admin.from("applicants").insert({
+    referred_by: referredBy,
     full_name: parsed.data.full_name,
     email: parsed.data.email,
     phone: parsed.data.phone,

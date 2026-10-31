@@ -28,12 +28,12 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
     getProducts(),
     canInvite ? supabase.from("invitations").select("id, email, first_name, last_name, role_id, expires_at, accepted_at, revoked_at, created_at, accepted_user_id").order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] }),
   ]);
-  let prefill: { first_name: string; last_name: string; email: string; applicant_id: string } | undefined;
+  let prefill: { first_name: string; last_name: string; email: string; applicant_id: string; recruiter_id?: string | null } | undefined;
   if (params.bewerber && /^[0-9a-f-]{36}$/.test(params.bewerber) && user.permissions.has("applicants.read")) {
-    const { data: a } = await supabase.from("applicants").select("id, full_name, email").eq("id", params.bewerber).maybeSingle();
+    const { data: a } = await supabase.from("applicants").select("id, full_name, email, referred_by").eq("id", params.bewerber).maybeSingle();
     if (a) {
       const [first, ...rest] = a.full_name.split(" ");
-      prefill = { first_name: first, last_name: rest.join(" ") || "-", email: a.email, applicant_id: a.id };
+      prefill = { first_name: first, last_name: rest.join(" ") || "-", email: a.email, applicant_id: a.id, recruiter_id: a.referred_by };
     }
   }
   const roleName = new Map(roles.map((r) => [r.id, r.name]));

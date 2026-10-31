@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   BarChart3, BookOpen, CalendarClock, CheckCheck, FileText, FolderLock, FolderUp, GraduationCap, Inbox, LayoutDashboard, Menu, Network,
-  Package, Percent, Receipt, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
+  Package, Percent, Receipt, Rocket, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
 } from "lucide-react";
 import { Sheet } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ import type { NavSection } from "./nav";
 
 const ICONS = {
   BarChart3, BookOpen, CalendarClock, CheckCheck, FileText, FolderLock, FolderUp, GraduationCap, Inbox, LayoutDashboard, Network,
-  Package, Percent, Receipt, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
+  Package, Percent, Receipt, Rocket, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
 } as const;
 
 function NavList({ sections, onNavigate, badges }: { sections: NavSection[]; onNavigate?: () => void; badges: Record<string, number> }) {
