@@ -51,7 +51,9 @@ test("Bewerber bucht einen Termin; derselbe Termin ist danach vergeben", async (
   await page.goto("/termine");
   await expect(page.locator("tr", { hasText: email })).toBeVisible();
   await page.goto("/bewerber");
-  await expect(page.getByText(email)).toBeVisible();
+  // Die Bewerbung aus der Buchung steht mit Termin in der Pipeline; Details mit E-Mail im Dialog
+  const card = page.getByTestId("applicant-card").filter({ hasText: "Max Bewerber" }).filter({ hasText: "Termin" }).first();
+  await expect(card).toBeVisible();
 });
 
 test("Erinnerungs-Endpunkt ist ohne Schlüssel gesperrt", async ({ request }) => {

@@ -134,7 +134,11 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 * **Storno-Übersicht:** **Berichte → Storno-Übersicht**. Zeigt, wie viele bestätigte Abschlüsse nachträglich storniert wurden – nach Abschlussmonat, Produkt, Team und Mitarbeiter, plus die letzten Stornierungen mit Grund. Quote = storniert ÷ (bestätigt + storniert); ab 15 % rot markiert. Standard-Zeitraum: letzte 90 Tage.
 
 ## Bewerber
-**Bewerber** zeigt Bewerbungen von der Website (nach Anbindung, siehe `WEBSITE_INTEGRATION.md`). Status pflegen, Notizen, **Einladen** oder löschen.
+**Bewerber** ist eine Tafel mit Spalten: **Neu → Kontaktiert → Gespräch → Probetag → Eingestellt** (und **Abgelehnt**). Jede Bewerbung von der Website landet automatisch in „Neu“; ist ein Gesprächstermin gebucht, steht er auf der Karte.
+* **Verschieben:** auf der Karte die Pfeile **‹ ›** antippen – am Computer kannst du die Karte auch mit der Maus in eine andere Spalte ziehen. Auf dem Handy wischst du seitlich durch die Spalten.
+* **Details:** Karte antippen → Nachricht, Kontaktdaten, interne **Notiz** (z. B. Eindruck aus dem Gespräch), Status.
+* **Eingestellt?** Im Dialog **Ins Portal einladen** – das Einladungsformular ist schon mit Name und E-Mail ausgefüllt.
+* **Löschen:** im Dialog. Abgeschlossene Bewerbungen spätestens nach 6 Monaten löschen.
 
 ## Audit-Log
 **Verwaltung → Audit-Log**: wer hat wann was geändert (nur Administratoren).
