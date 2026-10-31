@@ -35,12 +35,17 @@ export default async function AcademyPage() {
     return (
       <Link href={`/academy/kurs/${c.id}`} className="group">
         <Card className="h-full overflow-hidden transition-shadow group-hover:shadow-md">
-          <div className="flex aspect-[16/7] items-center justify-center bg-gradient-to-br from-[#1e2a47] to-[#0b0f1a]">
+          <div className="relative flex aspect-[16/7] items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_20%_20%,#22d3ee55,transparent_45%),radial-gradient(circle_at_85%_80%,#a855f777,transparent_50%),linear-gradient(135deg,#1b2a6b,#0d1430_60%,#2a1157)]">
             {c.cover_path && covers.get(c.cover_path) ? (
               // eslint-disable-next-line @next/next/no-img-element -- signierte URL
-              <img src={covers.get(c.cover_path)} alt="" className="size-full object-cover" />
+              <img src={covers.get(c.cover_path)} alt="" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
             ) : (
-              <GraduationCap className="size-10 text-white/40" />
+              <>
+                <span aria-hidden className="absolute -right-4 -bottom-6 font-display text-7xl font-black tracking-tighter text-white/[0.06]">ERLEN</span>
+                <span className="flex size-16 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6">
+                  <GraduationCap className="size-8 text-white" />
+                </span>
+              </>
             )}
           </div>
           <CardContent className="space-y-3 pt-4">

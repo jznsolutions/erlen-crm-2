@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, FileText, Undo2 } from "lucide-react";
+import { CheckCircle2, Clock, Download, FileText, Gauge, Percent, Undo2, Users } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { getDaily, getProducts, getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filtersToQuery, parsePerformanceFilters } from "@/lib/performance-filters";
@@ -54,13 +54,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       />
       <PerformanceFilterBar f={f} employees={scoped.length > 1 || f.userId ? employees : undefined} products={products} teams={teams} roles={roles} />
       <p className="-mt-4 text-xs text-muted-foreground">{formatDate(f.from)} – {formatDate(f.to)} · {scoped.length} Mitarbeiter im Filter · Leistungswerte = bestätigte Leistungen</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile label="Bestätigt" value={formatNumber(s.confirmed)} />
-        <StatTile label="Offen" value={formatNumber(s.pending)} />
-        <StatTile label="Storniert" value={formatNumber(s.cancelled)} />
-        <StatTile label="Stornoquote" value={s.cancellationRate === null ? "–" : formatPercent1(s.cancellationRate)} />
-        <StatTile label="Ø pro aktivem Tag" value={formatDecimal(s.avgPerActiveDay)} />
-        <StatTile label="Ø pro Kopf" value={formatDecimal(byUser.size ? s.confirmed / byUser.size : 0)} sub={`${byUser.size} mit Leistung`} />
+      <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <StatTile label="Bestätigt" value={formatNumber(s.confirmed)} icon={CheckCircle2} accent="emerald" />
+        <StatTile label="Offen" value={formatNumber(s.pending)} icon={Clock} accent="amber" />
+        <StatTile label="Storniert" value={formatNumber(s.cancelled)} icon={Undo2} accent="pink" />
+        <StatTile label="Stornoquote" value={s.cancellationRate === null ? "–" : formatPercent1(s.cancellationRate)} icon={Percent} accent="violet" />
+        <StatTile label="Ø pro aktivem Tag" value={formatDecimal(s.avgPerActiveDay)} icon={Gauge} accent="cyan" />
+        <StatTile label="Ø pro Kopf" value={formatDecimal(byUser.size ? s.confirmed / byUser.size : 0)} sub={`${byUser.size} mit Leistung`} icon={Users} accent="blue" />
       </div>
       <Card>
         <CardHeader><div><CardTitle>Entwicklung</CardTitle><CardDescription>{days > 120 ? "Monatswerte" : days > 45 ? "Wochenwerte (ab Montag)" : "Tageswerte"}</CardDescription></div></CardHeader>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, Plus, TrendingUp, Upload } from "lucide-react";
+import { CheckCircle2, Clock, Database, Download, Plus, TrendingUp, Undo2, Upload } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getVisibleEmployees } from "@/lib/queries";
@@ -74,11 +74,11 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
         }
       />
       <PerformanceFilterBar f={f} employees={employees.length > 1 ? employees : undefined} products={products} />
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Bestätigt" value={formatNumber(sum("bestaetigt"))} />
-        <StatTile label="Offen" value={formatNumber(sum("eingereicht"))} sub="eingereicht, ungeprüft" />
-        <StatTile label="Storniert" value={formatNumber(sum("storniert"))} />
-        <StatTile label="Datensätze" value={formatNumber(count ?? 0)} sub={`${formatDate(f.from)} – ${formatDate(f.to)}`} />
+      <div className="stagger mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Bestätigt" value={formatNumber(sum("bestaetigt"))} icon={CheckCircle2} accent="emerald" />
+        <StatTile label="Offen" value={formatNumber(sum("eingereicht"))} sub="eingereicht, ungeprüft" icon={Clock} accent="amber" />
+        <StatTile label="Storniert" value={formatNumber(sum("storniert"))} icon={Undo2} accent="pink" />
+        <StatTile label="Datensätze" value={formatNumber(count ?? 0)} sub={`${formatDate(f.from)} – ${formatDate(f.to)}`} icon={Database} accent="blue" />
       </div>
       <Card>
         {!records || records.length === 0 ? (

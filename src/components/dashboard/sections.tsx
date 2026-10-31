@@ -32,18 +32,18 @@ export function KpiRow({ rows, today, scopeLabel, money }: { rows: DailyRow[]; t
   const showRevenue = money?.revenueCents !== null && money?.revenueCents !== undefined;
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatTile label="Leistung diesen Monat" value={formatNumber(month.confirmed)} sub={month.pending ? `+ ${formatNumber(month.pending)} offen` : "bestätigt"} icon={CalendarDays} />
-        <StatTile label="Leistung dieser Woche" value={formatNumber(week.confirmed)} sub={week.pending ? `+ ${formatNumber(week.pending)} offen` : "bestätigt"} icon={TrendingUp} />
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatTile label="Leistung diesen Monat" value={formatNumber(month.confirmed)} sub={month.pending ? `+ ${formatNumber(month.pending)} offen` : "bestätigt"} icon={CalendarDays} accent="blue" />
+        <StatTile label="Leistung dieser Woche" value={formatNumber(week.confirmed)} sub={week.pending ? `+ ${formatNumber(week.pending)} offen` : "bestätigt"} icon={TrendingUp} accent="violet" />
         {single ? (
-          <StatTile label="Ø pro aktivem Tag" value={formatDecimal(month.avgPerActiveDay)} sub={`${formatNumber(month.activeDays)} aktive Tage im Monat`} icon={Gauge} />
+          <StatTile label="Ø pro aktivem Tag" value={formatDecimal(month.avgPerActiveDay)} sub={`${formatNumber(month.activeDays)} aktive Tage im Monat`} icon={Gauge} accent="cyan" />
         ) : (
-          <StatTile label="Monatsleistung pro Kopf" value={formatDecimal(sellers ? month.confirmed / sellers : 0)} sub={`${formatNumber(sellers)} aktive Verkäufer`} icon={Gauge} />
+          <StatTile label="Monatsleistung pro Kopf" value={formatDecimal(sellers ? month.confirmed / sellers : 0)} sub={`${formatNumber(sellers)} aktive Verkäufer`} icon={Gauge} accent="cyan" />
         )}
         {showRevenue ? (
-          <StatTile label="Umsatz diesen Monat" value={<span className="money">{formatCents(money!.revenueCents!)}</span>} sub="bestätigte Leistung × Agentur-Satz" icon={Euro} />
+          <StatTile label="Umsatz diesen Monat" value={<span className="money">{formatCents(money!.revenueCents!)}</span>} sub="bestätigte Leistung × Agentur-Satz" icon={Euro} accent="pink" />
         ) : (
-          <StatTile label="Meine Provision (Monat)" value={<span className="money">{formatCents(money?.ownCommissionCents ?? 0)}</span>} sub="inkl. Overhead, vor Abzügen" icon={Euro} />
+          <StatTile label="Meine Provision (Monat)" value={<span className="money">{formatCents(money?.ownCommissionCents ?? 0)}</span>} sub="inkl. Overhead, vor Abzügen" icon={Euro} accent="pink" />
         )}
       </div>
       <p className="px-1 text-xs text-muted-foreground">
@@ -125,7 +125,7 @@ export function MemberTable({ members, rows, today, targets }: { members: Employ
           const t = targets?.find((x) => (x as { user_id?: string | null }).user_id === m.id && x.period === "monat");
           return (
             <TR key={m.id}>
-              <TD className="w-10 text-muted-foreground tabular">{rankOf.get(m.id)}</TD>
+              <TD className="w-10"><RankDot rank={rankOf.get(m.id) ?? 0} /></TD>
               <TD>
                 <Link href={`/mitarbeiter/${m.id}`} className="font-medium hover:underline">{m.first_name} {m.last_name}</Link>
                 <p className="text-xs text-muted-foreground">{m.role_name}{m.team_name ? ` · ${m.team_name}` : ""}</p>
@@ -155,6 +155,16 @@ export function MemberTable({ members, rows, today, targets }: { members: Employ
   );
 }
 
+/** Platzierung mit Gold/Silber/Bronze für die ersten drei */
+function RankDot({ rank }: { rank: number }) {
+  const medal = rank === 1 ? "from-[#fde68a] to-[#d97706] text-[#3b2503] shadow-[0_0_14px_#fbc94a88]" : rank === 2 ? "from-[#f1f5f9] to-[#94a3b8] text-[#0f172a] shadow-[0_0_12px_#cbd5e166]" : rank === 3 ? "from-[#fdba74] to-[#9a3412] text-[#2a1205] shadow-[0_0_12px_#fb923c66]" : "";
+  return medal && rank > 0 ? (
+    <span className={`flex size-7 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold tabular ${medal}`}>{rank}</span>
+  ) : (
+    <span className="flex size-7 items-center justify-center text-xs text-muted-foreground tabular">{rank}</span>
+  );
+}
+
 export function TeamComparison({ rows, teams }: { rows: DailyRow[]; teams: { id: string; name: string }[] }) {
   const by = confirmedBy(rows, "team_id");
   const items = teams.map((t) => ({ key: t.id, label: t.name, value: by.get(t.id) ?? 0 }));
@@ -167,22 +177,23 @@ export function AgencyTiles({ rows, today, employees, pendingApprovals }: { rows
   const sellersMonth = new Set(filterRows(rows, startOfMonth(today), today).filter((r) => r.status === "bestaetigt").map((r) => r.user_id));
   const newOnes = employees.filter((e) => e.created_at.slice(0, 10) >= addDays(today, -30));
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <StatTile label="Aktive Mitarbeiter" value={formatNumber(active.length)} sub={`${formatNumber(sellersMonth.size)} mit Leistung im Monat`} icon={UserCheck} />
-      <StatTile label="Neue Mitarbeiter" value={formatNumber(newOnes.length)} sub="in den letzten 30 Tagen" icon={UserPlus} />
-      <StatTile label="Offene Freigaben" value={formatNumber(pendingApprovals)} sub={<Link className="hover:underline" href="/leistungen/freigaben">Zur Freigabe →</Link>} icon={Clock} tone={pendingApprovals > 0 ? "warning" : "default"} />
-      <StatTile label="Agentur heute" value={formatNumber(summarize(filterRows(rows, today, today)).confirmed)} sub="bestätigt" icon={CalendarDays} />
+    <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <StatTile label="Aktive Mitarbeiter" value={formatNumber(active.length)} sub={`${formatNumber(sellersMonth.size)} mit Leistung im Monat`} icon={UserCheck} accent="emerald" />
+      <StatTile label="Neue Mitarbeiter" value={formatNumber(newOnes.length)} sub="in den letzten 30 Tagen" icon={UserPlus} accent="violet" />
+      <StatTile label="Offene Freigaben" value={formatNumber(pendingApprovals)} sub={<Link className="hover:underline" href="/leistungen/freigaben">Zur Freigabe →</Link>} icon={Clock} tone={pendingApprovals > 0 ? "warning" : "default"} accent="amber" />
+      <StatTile label="Agentur heute" value={formatNumber(summarize(filterRows(rows, today, today)).confirmed)} sub="bestätigt" icon={CalendarDays} accent="cyan" />
     </div>
   );
 }
 
 export function RankBadge({ rank, total }: { rank: number | null; total: number }) {
   return (
-    <Card className="flex items-center gap-4 p-5">
-      <span className="flex size-12 items-center justify-center rounded-full bg-accent text-accent-foreground"><Trophy className="size-5" /></span>
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dein Rang (Monat)</p>
-        <p className="text-2xl font-semibold tabular">{rank ? `${rank}.` : "–"} <span className="text-sm font-normal text-muted-foreground">{rank ? `von ${total}` : "noch keine bestätigte Leistung"}</span></p>
+    <Card className="group flex items-center gap-4 overflow-hidden p-5">
+      <span aria-hidden className="pointer-events-none absolute -left-8 -top-8 size-28 rounded-full bg-[#fbc94a] opacity-20 blur-2xl" />
+      <span className="relative flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fde68a] via-[#fbc94a] to-[#d97706] text-[#3b2503] shadow-[0_10px_30px_-8px_#fbc94a] ring-1 ring-white/30 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110"><Trophy className="size-6" /></span>
+      <div className="relative">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dein Rang (Monat)</p>
+        <p className="font-display text-3xl font-extrabold tabular">{rank ? <span className="bg-gradient-to-r from-[#fde68a] to-[#fbc94a] bg-clip-text text-transparent">{rank}.</span> : "–"} <span className="text-sm font-normal text-muted-foreground">{rank ? `von ${total}` : "noch keine bestätigte Leistung"}</span></p>
       </div>
     </Card>
   );

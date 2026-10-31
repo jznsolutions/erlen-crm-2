@@ -8,10 +8,11 @@ import { addDays, daysBetweenInclusive, isPeriodKey, PERIOD_LABELS, periodRange,
 import { getSetupStatus } from "@/lib/setup";
 import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
 import { getDaily, getProducts, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
-import { filterRows } from "@/lib/metrics";
-import { formatDate, formatRelative } from "@/lib/format";
+import { filterRows, summarize } from "@/lib/metrics";
+import { DashboardHero, type HeroStat } from "@/components/dashboard/hero";
+import { formatDate, formatNumber, formatRelative } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, PageHeader } from "@/components/ui/misc";
+import { Alert } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/filters";
 import {
@@ -94,12 +95,38 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <FilterSelect param="zeitraum" label="Zeitraum Verlauf" value={period} options={(["woche", "monat", "30tage", "90tage", "vormonat"] as PeriodKey[]).map((p) => ({ value: p, label: PERIOD_LABELS[p] }))} />
   );
 
+  // Kurzzahlen für den Begrüßungsbereich: Agentur bzw. eigene Leistung
+  const heroRows = kind === "agentur" ? rows : ownRows;
+  const heroToday = summarize(filterRows(heroRows, today, today)).confirmed;
+  const heroMonthRows = filterRows(heroRows, startOfMonth(today), today);
+  const heroMonth = summarize(heroMonthRows);
+  const heroStats: HeroStat[] = canPerf
+    ? [
+        { label: "Heute", value: formatNumber(heroToday), hint: "bestätigt" },
+        { label: "Monat", value: formatNumber(heroMonth.confirmed), hint: heroMonth.pending ? `+ ${formatNumber(heroMonth.pending)} offen` : "bestätigt" },
+        rankInfo?.rank
+          ? { label: "Rang", value: `${rankInfo.rank}.`, hint: `von ${rankInfo.total}` }
+          : kind === "agentur"
+            ? { label: "Verkäufer", value: formatNumber(new Set(heroMonthRows.filter((r) => r.status === "bestaetigt").map((r) => r.user_id)).size), hint: "aktiv im Monat" }
+            : { label: "Aktive Tage", value: formatNumber(heroMonth.activeDays), hint: "im Monat" },
+      ]
+    : [];
+  const heroMessage =
+    heroToday > 0
+      ? `Stark – heute ${kind === "agentur" ? "schon" : "hast du schon"} ${formatNumber(heroToday)} bestätigte Abschlüsse. Weiter so!`
+      : liveCompetitions.length
+        ? `${liveCompetitions.length === 1 ? "Ein Wettbewerb läuft" : `${liveCompetitions.length} Wettbewerbe laufen`} – jeder Abschluss zählt.`
+        : "Neuer Tag, neue Abschlüsse. Los geht’s!";
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`${greeting()}, ${user.firstName}`}
-        description={`${user.role.name} · ${formatDate(today)}`}
-        actions={user.permissions.has("performance.create") ? <Button asChild><Link href="/leistungen/neu">Leistung erfassen</Link></Button> : undefined}
+      <DashboardHero
+        greeting={greeting()}
+        name={user.firstName}
+        subtitle={`${user.role.name} · ${new Intl.DateTimeFormat("de-DE", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Berlin" }).format(new Date())}`}
+        message={heroMessage}
+        stats={heroStats}
+        canCreate={user.permissions.has("performance.create")}
       />
 
       {pendingUpdates ? (

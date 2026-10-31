@@ -7,8 +7,8 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function EmptyState({ icon: Icon, title, description, action, className }: { icon?: React.ComponentType<{ className?: string }>; title: string; description?: string; action?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-center", className)}>
-      {Icon ? <Icon className="size-8 text-muted-foreground/60" /> : null}
+    <div className={cn("flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-6 py-10 text-center", className)}>
+      {Icon ? <span className="mb-1 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#4f8bff]/20 to-[#a855f7]/20 ring-1 ring-white/10"><Icon className="size-6 text-[#c7cfff]" /></span> : null}
       <p className="font-medium">{title}</p>
       {description ? <p className="max-w-sm text-sm text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
@@ -26,7 +26,7 @@ const alertStyles = {
 export function Alert({ tone = "info", title, children, className }: { tone?: keyof typeof alertStyles; title?: string; children?: React.ReactNode; className?: string }) {
   const { cls, Icon } = alertStyles[tone];
   return (
-    <div role={tone === "danger" ? "alert" : "status"} className={cn("flex gap-3 rounded-lg border px-4 py-3 text-sm", cls, className)}>
+    <div role={tone === "danger" ? "alert" : "status"} className={cn("flex gap-3 rounded-xl border px-4 py-3 text-sm backdrop-blur", cls, className)}>
       <Icon className="mt-0.5 size-4 shrink-0" />
       <div className="space-y-1">
         {title ? <p className="font-medium">{title}</p> : null}
@@ -40,8 +40,9 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <div className="animate-rise mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl"><span className="text-gradient">{title}</span></h1>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl"><span className="text-gradient">{title}</span></h1>
+        <div aria-hidden className="mt-2 h-1 w-16 rounded-full bg-[image:var(--brand-gradient)] shadow-[0_0_16px_#7c5cff99]" />
+        {description ? <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </div>
