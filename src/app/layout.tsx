@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: { default: "ERLEN Vertriebsagentur", template: "%s · ERLEN" },
   description: "ERLEN Vertriebsagentur – Karriere im Vertrieb mit leistungsabhängigem Einkommen.",
   applicationName: "ERLEN",
+  // Bestätigung für die Google Search Console (Wert aus „HTML-Tag“, in Vercel als Umgebungsvariable)
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } : undefined,
   appleWebApp: { capable: true, title: "ERLEN", statusBarStyle: "black-translucent" },
 };
 
