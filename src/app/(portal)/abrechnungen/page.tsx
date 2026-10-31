@@ -57,7 +57,8 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
         actions={
           manage ? (
             <div className="flex flex-wrap gap-2">
-              <Button asChild><Link href="/abrechnungen/neu?art=gutschrift"><FilePlus2 />Gutschrift erstellen</Link></Button>
+              <Button asChild><Link href="/abrechnungen/monatsabschluss"><FilePlus2 />Monatsabschluss</Link></Button>
+              <Button asChild variant="secondary"><Link href="/abrechnungen/neu?art=gutschrift"><FilePlus2 />Gutschrift erstellen</Link></Button>
               <Button asChild variant="secondary"><Link href="/abrechnungen/neu?art=abrechnung"><FilePlus2 />Abrechnung erstellen</Link></Button>
               <StatementUploadDialog employees={employees} />
               <Button asChild variant="ghost"><a href="#belegnummern">Nummern einstellen</a></Button>

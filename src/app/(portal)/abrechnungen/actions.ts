@@ -10,6 +10,7 @@ import { renderStatementPdf } from "@/lib/statement-pdf";
 import { ITEM_CATEGORIES } from "@/lib/commission";
 import { sendEmail, statementEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/env";
+import { buildMonthPlan } from "@/lib/month-close";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -336,4 +337,71 @@ export async function saveStatementDefaults(_: ActionResult | null, fd: FormData
   if (b.error) return fromDbError(b.error);
   revalidatePath("/abrechnungen");
   return { ok: true, message: "Voreinstellungen gespeichert." };
+}
+
+const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+/** Monatsabschluss: für die gewählten Mitarbeiter Provisionsabrechnung und Gutschrift erstellen und veröffentlichen. */
+export async function runMonthClose(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requirePermission("statements.manage");
+  const parsed = z
+    .object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Ungültiger Monat"), retention_rate: z.coerce.number().min(0).max(100) })
+    .safeParse(formToObject(fd));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const users = fd.getAll("user_ids").map(String).filter((x) => uuid.safeParse(x).success);
+  if (!users.length) return { ok: false, error: "Bitte mindestens einen Mitarbeiter auswählen." };
+  const { month, retention_rate: retention } = parsed.data;
+  const [y, m] = month.split("-").map(Number);
+  const from = `${month}-01`;
+  const to = `${month}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, "0")}`;
+  const label = `${MONTH_NAMES[m - 1]} ${y}`;
+
+  const supabase = await createClient();
+  const { data: people } = await supabase.from("profiles").select("id, first_name, last_name").in("id", users);
+  const done: string[] = [];
+  const failed: string[] = [];
+  for (const p of people ?? []) {
+    const name = `${p.first_name} ${p.last_name}`;
+    try {
+      let plan = await buildMonthPlan(supabase, { id: p.id, name }, from, to, retention);
+      if (plan.gutschriftExists) throw new Error("für diesen Monat gibt es schon eine Gutschrift");
+      // 1. Provisionsabrechnung (Einzelaufstellung)
+      if (plan.abrechnung.length) {
+        const { data: abId, error } = await supabase.rpc("statement_create", {
+          p_user: p.id, p_kind: "abrechnung", p_title: `Provisionsabrechnung ${label}`, p_from: from, p_to: to,
+          p_items: plan.abrechnung, p_note: null as unknown as string, p_retention_rate: 0,
+        });
+        if (error) throw new Error(error.message.replace(/^[A-Z_]+: /, ""));
+        const { error: pe } = await supabase.rpc("statement_publish", { p_id: abId, p_storage_path: null as unknown as string, p_file_name: null as unknown as string });
+        if (pe) throw new Error(pe.message);
+        const fail = await renderAndStore(supabase, abId, false);
+        if (fail) throw new Error(fail);
+        plan = await buildMonthPlan(supabase, { id: p.id, name }, from, to, retention);
+      }
+      // 2. Gutschrift (übernimmt die Abrechnung, Einbehalt Vormonat, Differenz- und Vermittlungsprovision, Abzüge)
+      if (!plan.gutschrift.some((i) => i.category !== "abzug" && i.unit_cents !== 0)) {
+        done.push(`${name} (nur Abrechnung)`);
+        continue;
+      }
+      const { data: gsId, error: ge } = await supabase.rpc("statement_create", {
+        p_user: p.id, p_kind: "gutschrift", p_title: `Gutschrift ${label}`, p_from: from, p_to: to,
+        p_items: plan.gutschrift, p_note: null as unknown as string, p_retention_rate: retention,
+      });
+      if (ge) throw new Error(ge.message.replace(/^[A-Z_]+: /, ""));
+      const { error: gpe } = await supabase.rpc("statement_publish", { p_id: gsId, p_storage_path: null as unknown as string, p_file_name: null as unknown as string });
+      if (gpe) throw new Error(gpe.message);
+      const fail = await renderAndStore(supabase, gsId, true);
+      if (fail) throw new Error(fail);
+      done.push(name);
+    } catch (e) {
+      failed.push(`${name}: ${(e as Error).message}`);
+    }
+  }
+  revalidatePath("/abrechnungen");
+  if (failed.length && !done.length) return { ok: false, error: `Nichts erstellt. ${failed.join(" · ")}` };
+  return {
+    ok: true,
+    message: `${done.length} Mitarbeiter abgerechnet.${failed.length ? ` Nicht erstellt: ${failed.join(" · ")}` : ""}`,
+    data: { done, failed },
+  };
 }

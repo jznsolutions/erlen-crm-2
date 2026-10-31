@@ -4,6 +4,9 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 01.11.2026
 
+* „Passwort vergessen“ über den eigenen Mailversand (Outlook), Link nur per Knopf einlösbar
+* Monatsabschluss: Provisionsabrechnungen und Gutschriften für alle ausgewählten Mitarbeiter in einem Durchgang
+
 * Start-Checkliste für neue Mitarbeiter (Dashboard, Stand im Profil, Pflicht-Unterlagen einstellbar)
 
 ## Erweiterung 31.10.2026

@@ -178,3 +178,20 @@ test("Stornobehalt 0 % erscheint nicht in der Gutschrift", async ({ page }) => {
   await page.getByRole("button", { name: "Gutschrift erstellen & veröffentlichen" }).click();
   await expect(page.getByText("Gutschrift erstellt und veröffentlicht.")).toBeVisible();
 });
+
+test("Monatsabschluss erstellt Abrechnung und Gutschrift für ausgewählte Mitarbeiter", async ({ page }) => {
+  await login(page, "admin");
+  await page.goto("/abrechnungen/monatsabschluss");
+  await expect(page.getByRole("heading", { name: /Vorschau/ })).toBeVisible();
+  await page.getByLabel("Alle auswählen").uncheck();
+  await page.getByLabel("Maier, Mia abrechnen").check();
+  await page.getByLabel("Schulz, Emma abrechnen").check();
+  await page.getByRole("button", { name: "Abrechnungen & Gutschriften erstellen" }).click();
+  await expect(page.getByText("2 Mitarbeiter abgerechnet.").first()).toBeVisible({ timeout: 60_000 });
+  // Danach nicht erneut auswählbar
+  await expect(page.locator("tr", { hasText: "Maier, Mia" }).getByText("Gutschrift für den Monat existiert bereits")).toBeVisible();
+  await page.goto("/abrechnungen");
+  const mia = page.locator("tr", { hasText: "Mia Maier" });
+  await expect(mia.filter({ hasText: /^.*Gutschrift/ }).first()).toBeVisible();
+  await expect(mia.filter({ hasText: /Provisionsabrechnung/ }).first()).toBeVisible();
+});
