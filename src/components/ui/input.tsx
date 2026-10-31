@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 const field =
-  "w-full rounded-lg border border-input bg-background/60 px-3 text-sm text-foreground transition-colors hover:border-ring/40 focus-visible:border-ring placeholder:text-muted-foreground/70 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60 aria-[invalid=true]:border-danger";
+  "w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 text-sm text-foreground transition-all hover:border-[#818cf8]/40 focus-visible:border-[#818cf8] focus-visible:bg-white/[0.05] focus-visible:shadow-[0_0_0_4px_#818cf826,0_0_24px_-6px_#7c5cff] focus-visible:outline-none placeholder:text-muted-foreground/70 disabled:opacity-60 aria-[invalid=true]:border-danger";
 
 export function Input({ className, ...props }: React.ComponentProps<"input">) {
   return <input className={cn(field, "h-10", className)} {...props} />;

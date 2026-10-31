@@ -18,7 +18,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="mb-8 flex justify-center">
           <Image src="/erlen-logo.png" alt="ERLEN Vertriebsagentur" width={200} height={56} priority />
         </div>
-        <div className="glass-card rounded-3xl border border-white/10 p-6 shadow-2xl sm:p-8">{children}</div>
+        <div className="relative">
+          <span aria-hidden className="pointer-events-none absolute -inset-6 -z-10 rounded-[2.5rem] bg-[radial-gradient(closest-side,#7c5cff55,transparent)] blur-2xl" />
+          <div className="glass-card rounded-3xl p-6 shadow-2xl sm:p-8">{children}</div>
+        </div>
         <p className="mt-6 text-center text-xs text-white/40">Internes Portal · Zugang nur für eingeladene Mitarbeiter</p>
       </div>
     </div>

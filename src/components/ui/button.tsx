@@ -7,11 +7,11 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_0_0_1px_#ffffff14,0_8px_24px_-8px_#8aa4c866] hover:shadow-[0_0_0_1px_#ffffff26,0_10px_30px_-6px_#8aa4c899]",
-        secondary: "bg-white/[0.04] text-foreground border border-input hover:bg-white/[0.08] hover:border-ring/50",
+        default: "btn-shine bg-[image:var(--brand-gradient)] text-white shadow-[0_0_0_1px_#ffffff1f,0_10px_30px_-10px_#6d5cffaa] hover:brightness-110 hover:shadow-[0_0_0_1px_#ffffff33,0_14px_36px_-8px_#7c5cffcc]",
+        secondary: "bg-white/[0.05] text-foreground border border-white/10 backdrop-blur hover:bg-white/[0.1] hover:border-[#818cf8]/60 hover:shadow-[0_8px_24px_-12px_#818cf880]",
         ghost: "text-foreground hover:bg-white/[0.06]",
-        danger: "bg-danger text-primary-foreground hover:bg-danger/90",
-        success: "bg-success text-primary-foreground hover:bg-success/90",
+        danger: "bg-gradient-to-r from-[#ff5f6d] to-[#ff7b86] text-white shadow-[0_10px_30px_-12px_#ff5f6daa] hover:brightness-110",
+        success: "bg-gradient-to-r from-[#10b981] to-[#34e3a0] text-[#04130c] shadow-[0_10px_30px_-12px_#34e3a0aa] hover:brightness-110",
         link: "text-info underline-offset-4 hover:underline px-0",
       },
       size: {

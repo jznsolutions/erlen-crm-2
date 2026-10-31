@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CheckCircle2, Percent, TriangleAlert, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -101,11 +102,11 @@ export default async function StornoPage({ searchParams }: { searchParams: Promi
       />
       <PerformanceFilterBar f={f} employees={scoped.length > 1 || f.userId ? employees : undefined} products={products} teams={teams} roles={roles} showStatus={false} />
       <p className="-mt-4 text-xs text-muted-foreground">{formatDate(f.from)} – {formatDate(f.to)} · Werte ab {formatPercent1(WARN)} sind rot markiert</p>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="Storniert" value={formatNumber(s.cancelled)} />
-        <StatTile label="Stornoquote" value={s.cancellationRate === null ? "–" : formatPercent1(s.cancellationRate)} />
-        <StatTile label="Bestätigt (netto)" value={formatNumber(s.confirmed)} />
-        <StatTile label="Höchste Quote" value={worstProduct ? formatPercent1(worstProduct[1].rate!) : "–"} sub={worstProduct ? productName.get(worstProduct[0]) : "kein Storno"} />
+      <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="Storniert" value={formatNumber(s.cancelled)} icon={Undo2} accent="pink" />
+        <StatTile label="Stornoquote" value={s.cancellationRate === null ? "–" : formatPercent1(s.cancellationRate)} icon={Percent} accent="violet" />
+        <StatTile label="Bestätigt (netto)" value={formatNumber(s.confirmed)} icon={CheckCircle2} accent="emerald" />
+        <StatTile label="Höchste Quote" value={worstProduct ? formatPercent1(worstProduct[1].rate!) : "–"} sub={worstProduct ? productName.get(worstProduct[0]) : "kein Storno"} icon={TriangleAlert} accent="amber" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <StornoTable title="Nach Abschlussmonat" items={[...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([k, v]) => ({ key: k, label: monthLabel(k), s: v }))} />

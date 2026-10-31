@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inbox } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
+import { addDays, todayBerlin } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, EmptyState, PageHeader } from "@/components/ui/misc";
 import { ApplicantBoard, type BoardApplicant } from "@/components/applicants/board";
@@ -12,7 +13,7 @@ export default async function ApplicantsPage() {
   const supabase = await createClient();
   const [{ data }, { data: bookings }] = await Promise.all([
     supabase.from("applicants").select("id, full_name, email, phone, message, source, status, notes, created_at").order("created_at", { ascending: false }).limit(500),
-    supabase.from("bookings").select("applicant_id, starts_at").eq("status", "gebucht").gte("starts_at", new Date(Date.now() - 86400000).toISOString()).not("applicant_id", "is", null).order("starts_at"),
+    supabase.from("bookings").select("applicant_id, starts_at").eq("status", "gebucht").gte("starts_at", addDays(todayBerlin(), -1)).not("applicant_id", "is", null).order("starts_at"),
   ]);
   const nextBooking = new Map<string, string>();
   for (const b of bookings ?? []) if (b.applicant_id && !nextBooking.has(b.applicant_id)) nextBooking.set(b.applicant_id, b.starts_at);

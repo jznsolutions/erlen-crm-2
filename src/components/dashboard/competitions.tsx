@@ -17,7 +17,11 @@ export function gapToNext(rows: LeaderRow[]): number | null {
   return better ? better.total - me.total + 1 : null;
 }
 
-const MEDAL = ["bg-warning-soft text-warning ring-1 ring-warning/40", "bg-muted text-foreground ring-1 ring-white/20", "bg-muted text-foreground"];
+const MEDAL = [
+  "bg-gradient-to-br from-[#fde68a] to-[#d97706] text-[#3b2503] shadow-[0_0_14px_#fbc94a88]",
+  "bg-gradient-to-br from-[#f1f5f9] to-[#94a3b8] text-[#0f172a] shadow-[0_0_12px_#cbd5e166]",
+  "bg-gradient-to-br from-[#fdba74] to-[#9a3412] text-[#2a1205] shadow-[0_0_12px_#fb923c66]",
+];
 
 export function CompetitionsLive({ competitions }: { competitions: LiveCompetition[] }) {
   if (!competitions.length) return null;
