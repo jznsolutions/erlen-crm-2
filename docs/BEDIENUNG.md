@@ -64,7 +64,8 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * Jeder Mitarbeiter findet im Menü **Meine Unterlagen**. Dort: Art wählen (z. B. Gewerbeanmeldung, Führerschein, Personalausweis), optional Bezeichnung und „gültig bis“, dann **Datei auswählen** (PDF/Foto) oder **Foto aufnehmen** → **Hochladen**.
 * Sichtbar nur für den Mitarbeiter selbst und die Verwaltung (Agenturleitung, Administration) – nicht für Teamleiter oder Ausbilder.
 * Die Verwaltung erhält eine Benachrichtigung und findet alle neuen Unterlagen unter **Meine Unterlagen → Zu prüfen** sowie im **Mitarbeiterprofil → Unterlagen**. Dort **Prüfen** (✓) oder **Ablehnen** (✕, mit Grund – der Mitarbeiter wird informiert und lädt neu hoch).
-* Mitarbeiter können eigene Unterlagen löschen, solange sie noch nicht geprüft sind. Abgelaufene Dokumente (Datum „gültig bis“) werden rot markiert.
+* Mitarbeiter können eigene Unterlagen löschen, solange sie noch nicht geprüft sind. Abgelaufene Dokumente (Datum „gültig bis“) werden rot markiert, solche, die in den nächsten 30 Tagen ablaufen, orange.
+* **Automatische Erinnerung:** 30 Tage vor dem „gültig bis“-Datum und nach Ablauf bekommen der Mitarbeiter und die Verwaltung eine Benachrichtigung (auch aufs Handy). Wer schon eine neuere Version hochgeladen hat, wird nicht erinnert. Tipp: Beim Hochladen von Führerschein, Ausweis o. Ä. immer „gültig bis“ ausfüllen.
 * Die Verwaltung kann im Mitarbeiterprofil auch selbst Unterlagen für den Mitarbeiter hochladen.
 
 ## Benachrichtigungen aufs Handy (Push)
