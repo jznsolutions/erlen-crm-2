@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { cronSecret, sendDueReminders } from "@/lib/booking";
 import { deliverPendingPush } from "@/lib/push";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,16 @@ async function handle(request: NextRequest) {
   }
   try {
     const sent = await sendDueReminders();
+    // Wettbewerbe: Platzierungen prüfen und bei Änderungen benachrichtigen (vor der Push-Zustellung)
+    const competition = await createAdminClient()
+      .rpc("competition_watch")
+      .then((r) => (r.error ? 0 : (r.data ?? 0)));
     // Nachzustellen, falls die Sofortzustellung einer Push-Benachrichtigung ausgefallen ist
     const pushed = await deliverPendingPush().catch((e) => {
       console.error("[cron] push", (e as Error).message);
       return 0;
     });
-    return NextResponse.json({ ok: true, reminders: sent, pushed });
+    return NextResponse.json({ ok: true, reminders: sent, competition, pushed });
   } catch (e) {
     console.error("[cron]", (e as Error).message);
     return NextResponse.json({ ok: false }, { status: 500 });
