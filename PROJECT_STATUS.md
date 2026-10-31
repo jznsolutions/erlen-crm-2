@@ -4,6 +4,7 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 01.11.2026
 
+* Storno-Übersicht (Quote nach Monat, Produkt, Team, Mitarbeiter; letzte Stornierungen mit Grund)
 * Leistungs-Import aus Excel/CSV mit Vorschau, Zeilenprüfung und Duplikatschutz
 * Zwei-Faktor-Anmeldung (Authenticator-App) – freiwillig im Profil, pro Rolle verpflichtend einstellbar, Durchsetzung auch in der Datenbank, Zurücksetzen durch die Administration
 

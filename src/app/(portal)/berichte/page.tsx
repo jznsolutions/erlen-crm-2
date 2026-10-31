@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Download, Undo2 } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { getDaily, getProducts, getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filtersToQuery, parsePerformanceFilters } from "@/lib/performance-filters";
@@ -42,7 +42,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         title="Berichte & Auswertungen"
         description={user.permissions.has("reports.read.all") ? "Agenturweite Auswertung." : "Auswertung deines Verantwortungsbereichs."}
-        actions={user.permissions.has("reports.export") ? <Button asChild variant="secondary"><a href={`/api/export/leistungen?${filtersToQuery(f)}`}><Download />CSV-Export</a></Button> : undefined}
+        actions={
+          <>
+            <Button asChild variant="secondary"><Link href={`/berichte/storno?${filtersToQuery(f)}`}><Undo2 />Storno-Übersicht</Link></Button>
+            {user.permissions.has("reports.export") ? <Button asChild variant="secondary"><a href={`/api/export/leistungen?${filtersToQuery(f)}`}><Download />CSV-Export</a></Button> : null}
+          </>
+        }
       />
       <PerformanceFilterBar f={f} employees={scoped.length > 1 || f.userId ? employees : undefined} products={products} teams={teams} roles={roles} />
       <p className="-mt-4 text-xs text-muted-foreground">{formatDate(f.from)} – {formatDate(f.to)} · {scoped.length} Mitarbeiter im Filter · Leistungswerte = bestätigte Leistungen</p>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { achievement, confirmedBy, dailySeries, expectedShare, rank, summarize, type DailyRow } from "@/lib/metrics";
+import { achievement, confirmedBy, dailySeries, expectedShare, rank, stornoBy, summarize, type DailyRow } from "@/lib/metrics";
 
 const row = (day: string, status: DailyRow["status"], quantity: number, user = "u1", product = "p1"): DailyRow => ({
   day, status, quantity, user_id: user, product_id: product, team_id: "t1", records: 1,
@@ -56,5 +56,15 @@ describe("Kennzahlen", () => {
     expect(achievement(5, 0)).toBeNull();
     expect(expectedShare("2026-10-01", "2026-10-31", "2026-10-16")).toBeCloseTo(16 / 31);
     expect(expectedShare("2026-10-01", "2026-10-31", "2026-11-02")).toBe(1);
+  });
+});
+
+describe("Stornoquote", () => {
+  it("rechnet storniert / (bestätigt + storniert) je Schlüssel", () => {
+    const r = (user: string, status: DailyRow["status"], q: number) => row("2026-10-01", status, q, user);
+    const m = stornoBy([r("a", "bestaetigt", 3), r("a", "storniert", 1), r("b", "eingereicht", 5), r("c", "storniert", 2)], (x) => x.user_id);
+    expect(m.get("a")).toEqual({ confirmed: 3, cancelled: 1, rate: 0.25 });
+    expect(m.has("b")).toBe(false);
+    expect(m.get("c")?.rate).toBe(1);
   });
 });

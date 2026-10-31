@@ -121,3 +121,21 @@ export function expectedShare(from: string, to: string, today: string): number {
   const elapsed = eachDay(from, today).length;
   return elapsed / total;
 }
+
+export type StornoStat = { confirmed: number; cancelled: number; rate: number | null };
+
+/** Bestätigte und stornierte Mengen je Schlüssel; Quote = storniert / (bestätigt + storniert). */
+export function stornoBy(rows: DailyRow[], keyOf: (r: DailyRow) => string): Map<string, StornoStat> {
+  const m = new Map<string, StornoStat>();
+  for (const r of rows) {
+    if (r.status !== "bestaetigt" && r.status !== "storniert") continue;
+    const k = keyOf(r);
+    const s = m.get(k) ?? { confirmed: 0, cancelled: 0, rate: null };
+    if (r.status === "bestaetigt") s.confirmed += Number(r.quantity);
+    else s.cancelled += Number(r.quantity);
+    const base = s.confirmed + s.cancelled;
+    s.rate = base > 0 ? s.cancelled / base : null;
+    m.set(k, s);
+  }
+  return m;
+}
