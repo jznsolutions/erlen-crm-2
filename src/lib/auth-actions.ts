@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { publicEnv } from "@/lib/env";
-import { serverEnv } from "@/lib/env.server";
+import { publicEnv, siteUrl } from "@/lib/env";
+import { secretKey, serverEnv } from "@/lib/env.server";
+import { emailProvider, passwordResetEmail, sendEmail } from "@/lib/email";
 import { email, passwordSchema } from "@/lib/validation";
 import { hashToken } from "@/lib/tokens";
 import { safeRedirectPath } from "@/lib/redirect";
@@ -62,10 +63,24 @@ export async function requestPasswordReset(_: ActionResult | null, fd: FormData)
   if (!(await allowed("reset", 5, 3600))) {
     return { ok: false, error: "Zu viele Anfragen. Bitte versuche es später erneut." };
   }
-  const supabase = await createClient();
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${publicEnv.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/passwort-zuruecksetzen`,
-  });
+  if (emailProvider() && secretKey()) {
+    // Eigener Versand über euer Postfach (Outlook/SMTP) – keine Supabase-E-Mail-Einrichtung nötig
+    const admin = createAdminClient();
+    const { data: profile } = await admin.from("profiles").select("first_name, status").eq("email", parsed.data.email).maybeSingle();
+    if (profile?.status === "aktiv") {
+      const { data, error } = await admin.auth.admin.generateLink({ type: "recovery", email: parsed.data.email });
+      const tokenHash = data?.properties?.hashed_token;
+      if (!error && tokenHash) {
+        const link = `${siteUrl()}/passwort-link?token_hash=${encodeURIComponent(tokenHash)}`;
+        await sendEmail({ to: parsed.data.email, ...passwordResetEmail({ firstName: profile.first_name, link }) });
+      } else console.error("[passwort]", error?.message);
+    }
+  } else {
+    const supabase = await createClient();
+    await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+      redirectTo: `${publicEnv.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/passwort-zuruecksetzen`,
+    });
+  }
   // Immer gleiche Antwort – verrät nicht, ob ein Konto existiert
   return { ok: true, message: "Falls ein Konto existiert, wurde eine E-Mail mit einem Link versendet." };
 }
@@ -120,4 +135,14 @@ export async function acceptInvitation(_: ActionResult | null, fd: FormData): Pr
   const supabase = await createClient();
   await supabase.auth.signInWithPassword({ email: invitation.email, password: parsed.data.password });
   redirect("/dashboard?willkommen=1");
+}
+
+/** Einmal-Link aus der „Passwort vergessen“-Mail einlösen (erst auf Knopfdruck – E-Mail-Virenscanner öffnen Links sonst vorab). */
+export async function confirmPasswordLink(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const tokenHash = z.string().min(10).max(200).safeParse(fd.get("token_hash"));
+  if (!tokenHash.success) return { ok: false, error: "Der Link ist ungültig. Bitte fordere einen neuen an." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash.data });
+  if (error) return { ok: false, error: "Der Link ist abgelaufen oder wurde schon benutzt. Bitte fordere einen neuen an." };
+  redirect("/passwort-zuruecksetzen");
 }

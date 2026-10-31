@@ -5,7 +5,7 @@ import { isPortalConfigured, supabasePublicKey, supabaseUrl } from "@/lib/env";
 // Öffentliche Website (indexierbar)
 const WEBSITE_PATHS = ["/", "/termin", "/impressum", "/datenschutz", "/robots.txt", "/sitemap.xml"];
 // Ohne Anmeldung erreichbar
-const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen", "/einladung", "/auth", "/api/public", "/datenschutz", "/impressum", "/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/demo", "/einrichtung", "/termin", "/api/cron", "/api/push/deliver", "/sw.js"];
+const PUBLIC_PATHS = ["/login", "/passwort-vergessen", "/passwort-zuruecksetzen", "/passwort-link", "/einladung", "/auth", "/api/public", "/datenschutz", "/impressum", "/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/demo", "/einrichtung", "/termin", "/api/cron", "/api/push/deliver", "/sw.js"];
 
 /** Erneuert die Sitzung und leitet nicht angemeldete Benutzer auf die Login-Seite. */
 export async function updateSession(request: NextRequest) {

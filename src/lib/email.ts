@@ -230,3 +230,15 @@ export function applicationEmails(opts: { name: string; email: string; phone: st
   };
   return { applicant, team };
 }
+
+export function passwordResetEmail(opts: { firstName: string; link: string }): Omit<EmailMessage, "to"> {
+  return {
+    subject: "Neues Passwort für das ERLEN-Portal",
+    text: `Hallo ${opts.firstName},\n\ndu hast ein neues Passwort für das ERLEN-Portal angefordert. Über diesen Link legst du es fest (1 Stunde gültig, nur einmal verwendbar):\n${opts.link}\n\nFalls du das nicht warst, ignoriere diese E-Mail einfach – dein Passwort bleibt unverändert.\n\nDein ERLEN-Team`,
+    html: layout(
+      "Neues Passwort festlegen",
+      `Hallo ${esc(opts.firstName)},<br><br>du hast ein neues Passwort für das ERLEN-Portal angefordert.<br><br><span style="color:#7d8aa5;font-size:13px">Der Button ist 1 Stunde gültig und nur einmal verwendbar. Falls du das nicht warst, ignoriere diese E-Mail – dein Passwort bleibt unverändert.</span>`,
+      { label: "Neues Passwort festlegen", href: opts.link },
+    ),
+  };
+}
