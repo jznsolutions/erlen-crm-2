@@ -15,8 +15,10 @@ test.describe("Öffentliche Website", () => {
     const loginRes = await request.get("/login");
     expect(loginRes.headers()["x-robots-tag"]).toContain("noindex");
     const robots = await (await request.get("/robots.txt")).text();
-    expect(robots).toContain("Disallow: /");
-    expect(robots).toContain("Allow: /$");
+    expect(robots).toContain("Disallow: /api/");
+    expect(robots).toContain("Disallow: /einrichtung");
+    // Logo, Symbole und Terminseite müssen für Google lesbar sein
+    expect(robots).not.toMatch(/^Disallow: \/$/m);
   });
 
   test("Fremde ohne Konto landen beim Portal auf dem Login und können sich nicht registrieren", async ({ page }) => {
