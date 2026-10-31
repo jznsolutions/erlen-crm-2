@@ -4,7 +4,7 @@ import { Megaphone } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dashboardKind } from "@/lib/permissions";
-import { addDays, isPeriodKey, PERIOD_LABELS, periodRange, startOfMonth, todayBerlin, type PeriodKey } from "@/lib/dates";
+import { addDays, daysBetweenInclusive, isPeriodKey, PERIOD_LABELS, periodRange, startOfMonth, todayBerlin, type PeriodKey } from "@/lib/dates";
 import { getSetupStatus } from "@/lib/setup";
 import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
 import { getDaily, getProducts, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
@@ -18,6 +18,8 @@ import {
   AgencyTiles, KpiRow, MemberTable, type MoneyKpis, ProductCard, RankBadge, TargetsCard, TeamComparison, TrainingCard, TrendCard, type TrainingRow,
 } from "@/components/dashboard/sections";
 import type { TargetProgress } from "@/components/dashboard/targets";
+import { CompetitionsLive, type LiveCompetition } from "@/components/dashboard/competitions";
+import { AutoRefresh } from "@/components/auto-refresh";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -70,6 +72,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     if (data) rankInfo = { rank: data.find((d) => d.is_me)?.rank ?? null, total: data.length };
   }
 
+  // Laufende Wettbewerbe mit Live-Rangliste
+  const liveCompetitions: LiveCompetition[] = [];
+  if (user.permissions.has("rankings.read")) {
+    const { data: comps } = await supabase.from("competitions").select("id, title, ends_on, starts_on, product_id, team_id").eq("is_active", true).lte("starts_on", today).gte("ends_on", today).order("ends_on").limit(4);
+    for (const c of comps ?? []) {
+      const r = await supabase.rpc("get_leaderboard", { p_from: c.starts_on, p_to: today, p_product_id: c.product_id ?? undefined, p_team_id: c.team_id ?? undefined });
+      if (r.error) continue; // z. B. Teamwettbewerb eines anderen Teams
+      liveCompetitions.push({
+        id: c.id,
+        title: c.title,
+        ends_on: c.ends_on,
+        daysLeft: daysBetweenInclusive(today, c.ends_on) - 1,
+        unit: c.product_id ? products.find((p) => p.id === c.product_id)?.unit_label : undefined,
+        rows: (r.data ?? []).map((x) => ({ ...x, rank: Number(x.rank), total: Number(x.total) })),
+      });
+    }
+  }
+
   const periodFilter = (
     <FilterSelect param="zeitraum" label="Zeitraum Verlauf" value={period} options={(["woche", "monat", "30tage", "90tage", "vormonat"] as PeriodKey[]).map((p) => ({ value: p, label: PERIOD_LABELS[p] }))} />
   );
@@ -100,6 +120,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           ))}
         </Alert>
       ) : null}
+
+      <CompetitionsLive competitions={liveCompetitions} />
+      {liveCompetitions.length ? <AutoRefresh seconds={120} /> : null}
 
       {kind === "agentur" ? (
         <AgencyDashboard money={money} rows={rows} today={today} chart={chart} products={products} employees={employees} teams={teams} targets={targets} periodFilter={periodFilter} />

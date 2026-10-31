@@ -161,14 +161,14 @@ isOneToOne: false
                   ]
                 },"competitions": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"description": string | null,"ends_on": string,"id": string,"is_active": boolean,"product_id": string | null,"starts_on": string,"team_id": string | null,"title": string
+                    "created_at": string,"created_by": string | null,"description": string | null,"ends_on": string,"finished_notified_at": string | null,"id": string,"is_active": boolean,"product_id": string | null,"starts_on": string,"team_id": string | null,"title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on": string,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on": string,"team_id"?: string | null,"title": string
+                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on": string,"finished_notified_at"?: string | null,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on": string,"team_id"?: string | null,"title": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on"?: string,"team_id"?: string | null,"title"?: string
+                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string,"finished_notified_at"?: string | null,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on"?: string,"team_id"?: string | null,"title"?: string
                   }
                   Relationships: [
                     {
@@ -1350,6 +1350,9 @@ isOneToOne: false
                            },
 "competition_upsert":
 { Args: { "p_description": string,"p_ends_on": string,"p_id": string,"p_is_active": boolean,"p_product": string,"p_starts_on": string,"p_team": string,"p_title": string }; Returns: string
+                           },
+"competition_watch":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "course_assign":
 { Args: { "p_course": string,"p_due_on"?: string,"p_user": string }; Returns: undefined

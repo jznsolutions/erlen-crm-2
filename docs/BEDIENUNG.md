@@ -114,6 +114,8 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 ## Ziele, Rankings, Wettbewerbe
 * **Ziele & Rankings → Ziel anlegen**: für Person, Team oder Agentur, optional je Produkt, täglich/wöchentlich/monatlich.
 * **Verwaltung → Wettbewerbe**: zeitlich begrenzte Challenges.
+* **Live auf dem Dashboard:** Laufende Wettbewerbe erscheinen oben auf dem Dashboard mit Treppchen (Platz 1–3), dem eigenen Platz und „Noch X bis Platz Y“. Die Seite aktualisiert sich alle 2 Minuten von selbst.
+* **Benachrichtigungen (auch aufs Handy):** „Du bist auf Platz 1“, „Du wurdest überholt“ (wer einen Platz unter den ersten 3 verliert) und nach Ende das Ergebnis an die ersten 3. Geprüft wird alle 5 Minuten über die Automatik (Termine → „Erinnerungen & Push aktivieren“ muss eingerichtet sein).
 * **Verwaltung → Einstellungen**: Rankings an/aus und für welche Rollen sichtbar.
 
 ## ERLEN Academy
