@@ -129,6 +129,7 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 
 ## Berichte & Export
 **Berichte**: Filter nach Zeitraum, Team, Rolle, Mitarbeiter, Produkt, Status → Kennzahlen, Verlauf, Produkt-/Teamvergleich, Tabelle je Mitarbeiter. **CSV-Export** öffnet sich in Excel (deutsche Spaltentrennung).
+* **Storno-Übersicht:** **Berichte → Storno-Übersicht**. Zeigt, wie viele bestätigte Abschlüsse nachträglich storniert wurden – nach Abschlussmonat, Produkt, Team und Mitarbeiter, plus die letzten Stornierungen mit Grund. Quote = storniert ÷ (bestätigt + storniert); ab 15 % rot markiert. Standard-Zeitraum: letzte 90 Tage.
 
 ## Bewerber
 **Bewerber** zeigt Bewerbungen von der Website (nach Anbindung, siehe `WEBSITE_INTEGRATION.md`). Status pflegen, Notizen, **Einladen** oder löschen.
