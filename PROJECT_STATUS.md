@@ -4,6 +4,7 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 
 ## Erweiterung 01.11.2026
 
+* Datenschutz-Leitfaden (`docs/DATENSCHUTZ_AVV_ANLEITUNG.md`): AVV-Fundstellen, Checkliste, Vorlage Verarbeitungsverzeichnis
 * Monatsbericht als PDF: automatisch per E-Mail am Monatsanfang, Abruf unter Berichte
 * Erinnerung an ablaufende Unterlagen (30 Tage vorher und nach Ablauf, an Person und Verwaltung)
 * Bewerber-Pipeline als Kanban-Tafel (inkl. Schritt „Probetag“, Termin auf der Karte, Ziehen/Pfeile)
@@ -92,7 +93,7 @@ Stand: 30.10.2026 · Branch `feature/crm-fundament`
 ## Bekannte Einschränkungen / noch nicht umgesetzt
 
 * **Nicht produktiv geschaltet:** Supabase-Projekt, Vercel-Projekt und Domain müssen von dir angelegt werden (Anleitung vorhanden). CI-Workflow ist angelegt, aber noch nicht auf GitHub gelaufen.
-* **Rechtliches:** Datenschutzhinweise/Impressum sind Vorlagen; AV-Verträge, Verarbeitungsverzeichnis und Information der Mitarbeitenden stehen aus. Keine Aussage zur DSGVO-Konformität ohne Prüfung.
+* **Rechtliches:** Datenschutzhinweise/Impressum sind Vorlagen; AV-Verträge, Verarbeitungsverzeichnis und Information der Mitarbeitenden stehen aus (Anleitung: `docs/DATENSCHUTZ_AVV_ANLEITUNG.md`). Keine Aussage zur DSGVO-Konformität ohne Prüfung.
 * **E-Mail:** Einladungen und Hinweise auf neue Abrechnungen werden per E-Mail versendet, sobald SMTP (oder Resend) in Vercel eingetragen ist. Übrige Benachrichtigungen sind In-App. „Passwort vergessen“ benötigt dieselben SMTP-Daten in Supabase.
 * **Abrechnungen:** PDFs sind eine Arbeitshilfe; steuerliche Pflichtangaben/Gutschriftverfahren mit der Steuerberatung abstimmen.
 * **Nicht umgesetzt (bewusst als spätere Erweiterung):** Abschlusszertifikate, Leistungsabzeichen/Badges, automatische Löschjobs (Funktion `purge_applicants` vorhanden, Zeitplan fehlt).
