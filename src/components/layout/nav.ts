@@ -30,6 +30,7 @@ export const NAV: NavSection[] = [
   {
     title: "Verwaltung",
     items: [
+      { href: "/admin/vertraege", label: "Verträge", icon: "FileSignature", any: ["employee_docs.manage"] },
       { href: "/admin/benutzer", label: "Benutzer & Einladungen", icon: "UserPlus", any: ["employees.invite", "roles.assign", "employees.deactivate"] },
       { href: "/admin/rollen", label: "Rollen & Rechte", icon: "ShieldCheck", any: ["roles.assign"] },
       { href: "/admin/produkte", label: "Produkte", icon: "Package", any: ["products.manage"] },

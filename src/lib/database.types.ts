@@ -197,6 +197,64 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"contract_requests": {
+                  Row: {
+                    "document_hash": string | null,"employee_document_id": string | null,"id": string,"requested_at": string,"requested_by": string | null,"signed_at": string | null,"signed_name": string | null,"status": string,"template_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "document_hash"?: string | null,"employee_document_id"?: string | null,"id"?: string,"requested_at"?: string,"requested_by"?: string | null,"signed_at"?: string | null,"signed_name"?: string | null,"status"?: string,"template_id": string,"user_id": string
+                  }
+                  Update: {
+                    "document_hash"?: string | null,"employee_document_id"?: string | null,"id"?: string,"requested_at"?: string,"requested_by"?: string | null,"signed_at"?: string | null,"signed_name"?: string | null,"status"?: string,"template_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "contract_requests_employee_document_id_fkey"
+      columns: ["employee_document_id"]
+isOneToOne: false
+      referencedRelation: "employee_documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "contract_requests_requested_by_fkey"
+      columns: ["requested_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "contract_requests_template_id_fkey"
+      columns: ["template_id"]
+isOneToOne: false
+      referencedRelation: "contract_templates"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "contract_requests_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"contract_templates": {
+                  Row: {
+                    "auto_assign": boolean,"created_at": string,"created_by": string | null,"file_name": string,"id": string,"is_active": boolean,"storage_path": string,"title": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auto_assign"?: boolean,"created_at"?: string,"created_by"?: string | null,"file_name": string,"id"?: string,"is_active"?: boolean,"storage_path": string,"title": string
+                  }
+                  Update: {
+                    "auto_assign"?: boolean,"created_at"?: string,"created_by"?: string | null,"file_name"?: string,"id"?: string,"is_active"?: boolean,"storage_path"?: string,"title"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "contract_templates_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"course_access": {
                   Row: {
                     "course_id": string,"created_at": string,"id": string,"is_mandatory": boolean,"role_id": string | null,"team_id": string | null,"user_id": string | null
@@ -1459,6 +1517,21 @@ isOneToOne: false
                            },
 "competition_watch":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"contract_request_create":
+{ Args: { "p_template": string,"p_user": string }; Returns: string
+                           },
+"contract_request_withdraw":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"contract_sign_complete":
+{ Args: { "p_document_hash": string,"p_document_path": string,"p_request": string,"p_signed_name": string,"p_size": number }; Returns: string
+                           },
+"contract_template_register":
+{ Args: { "p_auto_assign": boolean,"p_file_name": string,"p_storage_path": string,"p_title": string }; Returns: string
+                           },
+"contract_template_update":
+{ Args: { "p_auto_assign": boolean,"p_id": string,"p_is_active": boolean }; Returns: undefined
                            },
 "course_assign":
 { Args: { "p_course": string,"p_due_on"?: string,"p_user": string }; Returns: undefined
