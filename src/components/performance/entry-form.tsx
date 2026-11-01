@@ -1,10 +1,20 @@
 "use client";
 import { useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/forms";
+import { toast } from "sonner";
 import { confetti } from "@/lib/confetti";
 import { Alert } from "@/components/ui/misc";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
 import { createPerformance } from "@/app/(portal)/leistungen/actions";
+import { QuickEntry } from "@/components/performance/quick-entry";
+import { addDays } from "@/lib/dates";
+import type { ParsedEntry } from "@/lib/voice-entry";
+
+/** Wert in ein (unkontrolliertes) Formularfeld schreiben */
+function setField(id: string, value: string) {
+  const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+  if (el) el.value = value;
+}
 
 type Option = { id: string; label: string };
 type Product = { id: string; name: string; unit_label: string; requires_external_ref: boolean };
@@ -32,7 +42,20 @@ export function PerformanceEntryForm({
   const product = allowed.find((p) => p.id === productId);
   const forOther = userId !== defaultUserId;
 
+  const fillFrom = (p: ParsedEntry) => {
+    if (p.productId) {
+      if (allowed.some((a) => a.id === p.productId)) setChosen(p.productId);
+      else toast.error("Dieses Produkt ist für die Person nicht freigeschaltet.");
+    }
+    if (p.quantity) setField("quantity", String(p.quantity));
+    if (p.ref) setField("external_ref", p.ref);
+    if (p.daysAgo !== undefined) setField("occurred_on", addDays(today, -p.daysAgo));
+    if (p.note) setField("note", p.note);
+  };
+
   return (
+    <div className="space-y-5">
+    {allowed.length ? <QuickEntry products={allowed} onParsed={fillFrom} /> : null}
     <ActionForm key={key} action={createPerformance} onSuccess={() => {
       setKey((k) => k + 1);
       confetti();
@@ -94,5 +117,6 @@ export function PerformanceEntryForm({
         </>
       )}
     </ActionForm>
+    </div>
   );
 }

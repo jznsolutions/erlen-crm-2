@@ -10,6 +10,7 @@ import { OnboardingChecklist, type OnboardingItem } from "@/components/onboardin
 import { getDaily, getProducts, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { filterRows, summarize } from "@/lib/metrics";
 import { DashboardHero, type HeroStat } from "@/components/dashboard/hero";
+import { OpenContracts } from "@/components/contracts/open-contracts";
 import { CareerLadder, type CareerProgress } from "@/components/career/ladder";
 import { formatDate, formatNumber, formatRelative } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -141,6 +142,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           Für neue Funktionen muss die Datenbank einmalig erweitert werden. <Link className="font-medium underline" href="/einrichtung">Jetzt auf der Einrichtungsseite einspielen</Link> – bestehende Daten bleiben erhalten.
         </Alert>
       ) : null}
+      <OpenContracts userId={user.id} />
       {onboardingOpen ? <OnboardingChecklist items={onboarding} /> : null}
       {params.willkommen ? (
         <Alert tone="success" title="Willkommen im ERLEN-Portal!">

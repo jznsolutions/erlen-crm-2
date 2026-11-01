@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
+import { OpenContracts } from "@/components/contracts/open-contracts";
 import { DocUploader } from "@/components/unterlagen/uploader";
 import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
 
@@ -29,6 +30,7 @@ export default async function DocumentsUploadPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader title="Meine Unterlagen" description="Lade hier Dokumente und Fotos hoch, z. B. Gewerbeanmeldung, Führerschein oder Ausweis. Nur du und die Verwaltung können sie sehen." />
+      <div className="mb-6"><OpenContracts userId={user.id} /></div>
       {manage ? (
         <Card>
           <CardHeader><div><CardTitle>Zu prüfen</CardTitle><CardDescription>Von Mitarbeitern hochgeladene Unterlagen, die noch nicht geprüft wurden.</CardDescription></div></CardHeader>

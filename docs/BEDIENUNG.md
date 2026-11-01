@@ -54,6 +54,12 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 * **Termine** im Portal: anstehende Gespräche, Absagen (Bewerber wird informiert), Erreichbarkeit je Wochentag, Dauer, Vorlaufzeit, gesperrte Zeiten (Urlaub).
 * Jede Buchung erscheint auch unter **Bewerber**.
 
+## Verträge digital unterschreiben
+* **Verwaltung → Verträge:** Vertragsvorlage als PDF hochladen (z. B. Handelsvertretervertrag). Mit „Allen neuen Mitarbeitenden automatisch …“ bekommt jede neue Person den Vertrag beim ersten Anmelden zum Unterschreiben. Einzelne Personen: **Vertrag zuweisen**.
+* Die Person bekommt eine Benachrichtigung (auch aufs Handy) und sieht auf dem Dashboard „Vertrag wartet auf deine Unterschrift“. Sie öffnet den Vertrag als PDF, tippt ihren Namen, **unterschreibt mit Finger oder Maus** und bestätigt, dass sie ihn gelesen hat.
+* Ergebnis: ein PDF mit dem Vertrag und einer **Unterschriftsseite** (Unterschrift, Name, Zeitpunkt, Prüfsumme der Vorlage). Es liegt automatisch unter **Meine Unterlagen** (Art: Vertrag) – bei der Person und im Mitarbeiterprofil. Die Verwaltung wird benachrichtigt; unter **Verträge** sieht sie alle Status und kann offene Anfragen zurückziehen.
+* Hinweis: Das ist eine einfache elektronische Signatur. Ob sie für euren Vertrag ausreicht, bitte rechtlich prüfen lassen.
+
 ## Start-Checkliste für neue Mitarbeiter
 * Auf dem **Dashboard** sehen Mitarbeiter „**Dein Start bei ERLEN**“ mit allem, was noch fehlt: Profilbild, Telefonnummer, Anschrift, IBAN, Steuernummer/USt-IdNr., Pflicht-Unterlagen, Pflichtschulungen – und als Empfehlung Push-Benachrichtigungen. Jeder Punkt hat einen Knopf **„Erledigen“**, der direkt an die richtige Stelle führt.
 * Die Checkliste verschwindet automatisch, sobald alle Pflichtpunkte erledigt sind.
@@ -117,6 +123,7 @@ Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Perso
 * **Verwaltung → Produkte**: Produkte/Leistungsarten anlegen (Name, Einheit wie „Verträge“ oder „Leads“). „Vorgangs-ID ist Pflicht“ verhindert Doppelerfassungen.
 * Leistungen erfassen: **Leistung erfassen** (Mitarbeitende selbst oder Führungskraft für Teammitglieder).
 * **Viele auf einmal aus Excel:** **Leistungen → Importieren** → „Vorlage herunterladen“ (oder eigene Liste mit den Spalten **Mitarbeiter** (E-Mail oder Mitarbeiter-ID), **Produkt**, **Datum**, **Menge**, optional **Vorgangs-ID**, **Notiz**) → Datei wählen → **Datei prüfen**. Die Vorschau zeigt jede Zeile mit „OK“ oder dem Fehler (z. B. unbekannter Mitarbeiter). Erst **… Leistungen importieren** speichert – fehlerhafte Zeilen werden übersprungen, gleiche Vorgangs-IDs nie doppelt übernommen. Excel (.xlsx) und CSV, bis 2.000 Zeilen.
+* **Schnelleingabe per Sprache oder Text:** oben im Formular „Leistung erfassen“ auf das **Mikrofon** tippen und sagen, z. B. „Zwei Glasfaser, Vorgang 12345, gestern“ (oder einfach so eintippen) → **Übernehmen**. Produkt, Menge, Vorgangs-ID, Datum (heute/gestern/vorgestern) und eine Notiz („Notiz: …“) werden ausgefüllt – bitte kurz prüfen und absenden. Das Mikrofon erscheint in Chrome, Edge und Safari (iPhone/iPad); die Spracherkennung übernimmt der Browser (Google bzw. Apple).
 * Prüfen: **Freigaben** – bestätigen, ablehnen (mit Begründung) oder mehrere auf einmal bestätigen.
 * Bestätigte Fehler: in **Leistungen** → **Stornieren** (z. B. Widerruf) oder **Korrigieren** (falsche Menge/Datum/Produkt). Alles wird protokolliert (Klick auf das Datum zeigt den Verlauf).
 * Welche Zahl was bedeutet, steht in `KENNZAHLEN.md`.
