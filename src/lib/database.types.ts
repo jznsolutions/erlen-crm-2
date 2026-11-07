@@ -471,14 +471,14 @@ isOneToOne: true
                   ]
                 },"employee_details": {
                   Row: {
-                    "entry_date": string | null,"partner_status": Database["public"]['Enums']["partner_status"],"phone": string | null,"recruited_by": string | null,"sales_region": string | null,"sales_start_date": string | null,"updated_at": string,"user_id": string
+                    "entry_date": string | null,"partner_seller_id": string | null,"partner_status": Database["public"]['Enums']["partner_status"],"phone": string | null,"recruited_by": string | null,"sales_region": string | null,"sales_start_date": string | null,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "entry_date"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"recruited_by"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id": string
+                    "entry_date"?: string | null,"partner_seller_id"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"recruited_by"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id": string
                   }
                   Update: {
-                    "entry_date"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"recruited_by"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id"?: string
+                    "entry_date"?: string | null,"partner_seller_id"?: string | null,"partner_status"?: Database["public"]['Enums']["partner_status"],"phone"?: string | null,"recruited_by"?: string | null,"sales_region"?: string | null,"sales_start_date"?: string | null,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -1735,6 +1735,17 @@ isOneToOne: false
 { Args: { "p_user"?: string }; Returns: {
               "done": boolean,"key": string,"label": string,"link": string,"required": boolean,"sort": number
             }[]
+                           },
+"partner_seller_set":
+{ Args: { "p_user": string,"p_value": string }; Returns: undefined
+                           },
+"partner_sync_apply":
+{ Args: { "p_rows": Json }; Returns: {
+              "action": string,"idx": number,"message": string
+            }[]
+                           },
+"partner_sync_settings_save":
+{ Args: { "p_value": Json }; Returns: undefined
                            },
 "performance_correct":
 { Args: { "p_id": string,"p_occurred_on": string,"p_product": string,"p_quantity": number,"p_reason": string }; Returns: string
