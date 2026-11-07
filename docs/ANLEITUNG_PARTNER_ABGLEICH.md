@@ -1,5 +1,45 @@
 # Abgleich mit dem Partner-CRM (ohne Schnittstelle)
 
+Es gibt zwei Wege – je nachdem, was das Partner-CRM zeigt:
+
+* **A) Übersicht je Verkäufer (Screenshot)** – der Normalfall: Das Partner-CRM zeigt je Verkäufer nur Zahlen (Gesamt, Qualifiziert, Anzahl Module …). → unten „Teil A“.
+* **B) Auftragsliste** – falls es eine Liste mit Auftragsnummern gibt. → „Teil B“.
+
+# Teil A: Übersicht je Verkäufer (jeden Morgen, ca. 2 Minuten)
+
+Das Partner-CRM zeigt je Verkäufer, wie viele Leads **qualifiziert** sind, aufgeteilt nach **Modul-Kategorie** (Dachfläche), z. B. „15-39 Module · 50 %“ mit „2 / 2“. Die **erste Zahl** (qualifiziert) wird vergütet. Leads werden oft erst nach 1–2 Wochen qualifiziert – deshalb jeden Morgen den aktuellen Stand hochladen. Das Portal bucht **nur den Unterschied** zum letzten Mal:
+
+| Gestern | Heute | Was das Portal macht |
+|---|---|---|
+| 3 | 7 | 4 neue Leads, bestätigt, mit heutigem Datum |
+| 7 | 7 | nichts (derselbe Screenshot zweimal schadet nicht) |
+| 7 | 6 | 1 Lead wird storniert |
+
+## Einmalig vorbereiten
+
+1. **Administration → Produkte**: je Modul-Kategorie ein Produkt anlegen, z. B. „Lead bis 14 Module“, „Lead 15-39 Module“, „Lead ab 40 Module“, jeweils mit der passenden Provision.
+2. Datenbank-Update auf `/einrichtung` einspielen (falls das Portal darauf hinweist).
+
+## Jeden Morgen
+
+1. Im Partner-CRM die Karte eines Verkäufers **aufklappen**, so weit scrollen, dass Name **und** „Anzahl Module“ zu sehen sind (gern auch zwei Bilder) → **Screenshot**. Das für alle Verkäufer wiederholen.
+2. Im Portal (Handy oder PC): **Leistungen → Abgleich Partner-CRM** → **Screenshots auswählen** → alle Bilder von heute auf einmal markieren. Am PC geht auch Strg+V oder Hineinziehen.
+3. Kurz prüfen: Verkäufer richtig erkannt? Zahlen richtig? (Gelb markierte Zahlen bitte anschauen – alle Zahlen kann man direkt korrigieren.)
+4. **Beim ersten Mal**: Modul-Kategorien den Produkten zuordnen. Wurden die bisherigen Leads schon von Hand erfasst, den Haken „nur als Startwert merken“ setzen.
+5. **Übernehmen** – fertig. Die Verkäufer sehen ihre Leads sofort in Ranking, Zielen und Provision.
+
+Die Bilder werden kostenlos **im Browser** gelesen und nirgendwohin geschickt; übernommen werden nur Verkäufer, Kategorie und Anzahl.
+
+**Wichtig:** Das funktioniert, wenn die Zahlen im Partner-CRM **Gesamtzahlen seit Beginn** sind. Zeigt das Partner-CRM nur den aktuellen Monat (Zahlen fallen am Monatsanfang auf 0), würde das Portal am Monatsanfang alles stornieren – die Vorschau zeigt das vorher rot („Storno“) an. In dem Fall bitte melden, dann wird das umgestellt.
+
+## Vertriebspartner erfassen selbst nichts
+
+Vertriebspartner, Ausbilder und Teamleiter können vorerst **keine eigenen Leistungen** mehr eintragen – das läuft komplett über den Abgleich. Wieder einschalten: **Administration → Rollen** → bei der Rolle „Eigene Leistungen erfassen“ anhaken.
+
+# Teil B: Auftragsliste (Kopieren/Einfügen)
+
+Im Abgleich oben auf **„Auftragsliste (Kopieren/Einfügen)“** umschalten.
+
 Eure Verkäufer arbeiten mit der Laufliste im CRM des Partners. Damit niemand Aufträge doppelt eintippen muss, übernimmt die Leitung die Liste regelmäßig (z. B. täglich oder 2× pro Woche) ins Portal – in zwei Minuten.
 
 ## So geht’s

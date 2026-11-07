@@ -681,6 +681,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"partner_lead_counts": {
+                  Row: {
+                    "category": string,"qualified": number,"total": number | null,"updated_at": string,"updated_by": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category": string,"qualified": number,"total"?: number | null,"updated_at"?: string,"updated_by"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "category"?: string,"qualified"?: number,"total"?: number | null,"updated_at"?: string,"updated_by"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "partner_lead_counts_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "partner_lead_counts_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"performance_adjustments": {
                   Row: {
                     "action": string,"actor_id": string | null,"changes": Json | null,"created_at": string,"from_status": Database["public"]['Enums']["performance_status"] | null,"id": string,"reason": string | null,"record_id": string,"replacement_record_id": string | null,"to_status": Database["public"]['Enums']["performance_status"] | null
@@ -1734,6 +1760,11 @@ isOneToOne: false
 "onboarding_status":
 { Args: { "p_user"?: string }; Returns: {
               "done": boolean,"key": string,"label": string,"link": string,"required": boolean,"sort": number
+            }[]
+                           },
+"partner_counts_apply":
+{ Args: { "p_rows": Json }; Returns: {
+              "added": number,"cancelled": number,"idx": number,"message": string
             }[]
                            },
 "partner_seller_set":

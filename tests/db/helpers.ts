@@ -109,3 +109,13 @@ export async function expectDbError(db: Db, sql: string, params: unknown[] = [],
   await db.query("release savepoint e");
   throw new Error(`Fehler erwartet, aber erfolgreich: ${sql}`);
 }
+
+/** Selbsterfassung der Vertriebsrollen ein-/ausschalten (seit dem Partner-Abgleich standardmäßig aus). */
+export async function setSelfRecording(db: Db, on: boolean) {
+  const roles = "('vertriebspartner', 'ausbilder', 'teamleiter')";
+  if (on) {
+    await db.query(`insert into public.role_permissions (role_id, permission_key) select id, 'performance.create' from public.roles where key in ${roles} on conflict do nothing`);
+  } else {
+    await db.query(`delete from public.role_permissions where permission_key = 'performance.create' and role_id in (select id from public.roles where key in ${roles})`);
+  }
+}

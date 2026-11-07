@@ -1,25 +1,33 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getSetting, getVisibleEmployees } from "@/lib/queries";
 import { todayBerlin } from "@/lib/dates";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, PageHeader } from "@/components/ui/misc";
 import { PartnerSync } from "@/components/partner-sync/partner-sync";
+import { PartnerCounts } from "@/components/partner-sync/partner-counts";
 import type { ColumnMap, Target } from "@/lib/partner-sync";
 
 export const metadata: Metadata = { title: "Abgleich Partner-CRM" };
 
-export default async function PartnerSyncPage() {
-  const user = await requirePermission("performance.approve");
+type Saved = { columns?: ColumnMap; status_map?: Record<string, Target>; product_map?: Record<string, string>; category_map?: Record<string, string> };
+
+export default async function PartnerSyncPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
+  const mode = params.modus === "liste" ? "liste" : "uebersicht";
+  await requirePermission("performance.approve");
   const supabase = await createClient();
-  const [employees, products, saved, { data: details, error }] = await Promise.all([
+  const [employees, products, saved, { data: details, error }, { data: prev, error: prevError }] = await Promise.all([
     getVisibleEmployees(),
     getProducts(),
-    getSetting<{ columns?: ColumnMap; status_map?: Record<string, Target>; product_map?: Record<string, string> }>("partner_sync"),
+    getSetting<Saved>("partner_sync"),
     supabase.from("employee_details").select("user_id, partner_seller_id"),
+    supabase.from("partner_lead_counts").select("user_id, category, qualified, updated_at"),
   ]);
-  if (error || !saved) {
+  if (error || prevError || !saved) {
     return (
       <div>
         <PageHeader title="Abgleich Partner-CRM" />
@@ -29,17 +37,34 @@ export default async function PartnerSyncPage() {
   }
   const sellerId = new Map((details ?? []).map((d) => [d.user_id, d.partner_seller_id]));
   const people = employees
-    .filter((e) => e.status === "aktiv" && e.id !== user.id)
+    .filter((e) => e.status === "aktiv")
     .map((e) => ({ id: e.id, first_name: e.first_name, last_name: e.last_name, partner_seller_id: sellerId.get(e.id) ?? null }));
+  const activeProducts = products.filter((p) => p.is_active).map((p) => ({ id: p.id, name: p.name }));
+  const tab = (key: string, label: string) => (
+    <Link
+      href={key === "uebersicht" ? "/leistungen/partner-abgleich" : `/leistungen/partner-abgleich?modus=${key}`}
+      className={cn("rounded-full px-4 py-1.5 text-sm font-medium transition", mode === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5")}
+    >
+      {label}
+    </Link>
+  );
   return (
     <div className="space-y-6">
       <PageHeader
         title="Abgleich Partner-CRM"
-        description="Auftragsliste aus dem Partner-CRM kopieren und hier einfügen – das Portal legt neue Aufträge an, bestätigt aktivierte und storniert stornierte. Ohne Abtippen."
+        description="Jeden Morgen die Screenshots der Verkäufer-Übersicht hochladen – das Portal bucht automatisch nur die neu qualifizierten Leads je Modul-Kategorie."
       />
+      <div className="flex flex-wrap gap-1 rounded-full border border-white/10 p-1 w-fit">
+        {tab("uebersicht", "Übersicht je Verkäufer (Screenshot)")}
+        {tab("liste", "Auftragsliste (Kopieren/Einfügen)")}
+      </div>
       <Card>
         <CardContent className="pt-5">
-          <PartnerSync people={people} products={products.map((p) => ({ id: p.id, name: p.name }))} saved={saved} today={todayBerlin()} />
+          {mode === "uebersicht" ? (
+            <PartnerCounts people={people} products={activeProducts} categoryMap={saved.category_map ?? {}} prev={prev ?? []} />
+          ) : (
+            <PartnerSync people={people} products={activeProducts} saved={saved} today={todayBerlin()} />
+          )}
         </CardContent>
       </Card>
     </div>

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fromDbError, type ActionResult } from "@/lib/actions";
+import { getSetting } from "@/lib/queries";
 
 const text = z.string().max(200);
 const mappingSchema = z.object({
@@ -19,8 +20,9 @@ export async function savePartnerMapping(raw: unknown): Promise<ActionResult> {
   const p = mappingSchema.safeParse(raw);
   if (!p.success) return { ok: false, error: "Ungültige Zuordnung." };
   const supabase = await createClient();
+  const current = (await getSetting<Record<string, unknown>>("partner_sync")) ?? {};
   const { error } = await supabase.rpc("partner_sync_settings_save", {
-    p_value: { columns: p.data.columns, status_map: p.data.status, product_map: p.data.products },
+    p_value: { ...current, columns: p.data.columns, status_map: p.data.status, product_map: p.data.products },
   });
   if (error) return fromDbError(error);
   const problems: string[] = [];
@@ -60,4 +62,58 @@ export async function runPartnerSync(raw: unknown): Promise<{ ok: true; outcomes
   }
   revalidatePath("/", "layout");
   return { ok: true, outcomes: (data ?? []) as SyncOutcome[] };
+}
+
+const countsSchema = z.object({
+  category_map: z.record(text, z.string().max(40)),
+  rows: z
+    .array(
+      z.object({
+        user_id: z.string().uuid(),
+        seller_name: text,
+        category: z.string().trim().min(1).max(40),
+        product_id: z.string().uuid(),
+        qualified: z.number().int().min(0).max(100000),
+        total: z.number().int().min(0).max(100000).nullable(),
+        start_only: z.boolean(),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+
+export type CountOutcome = { idx: number; added: number; cancelled: number; message: string | null };
+
+/** Leads aus der Partner-Übersicht übernehmen: nur die Differenz zum letzten Stand wird gebucht. */
+export async function applyPartnerCounts(raw: unknown): Promise<{ ok: true; outcomes: CountOutcome[] } | { ok: false; error: string }> {
+  await requirePermission("performance.approve");
+  const p = countsSchema.safeParse(raw);
+  if (!p.success) return { ok: false, error: "Bitte alle Verkäufer, Produkte und Zahlen ausfüllen." };
+  const supabase = await createClient();
+
+  // Zuordnung Kategorie → Produkt merken
+  const current = (await getSetting<Record<string, unknown>>("partner_sync")) ?? {};
+  const saved = (current.category_map ?? {}) as Record<string, string>;
+  await supabase.rpc("partner_sync_settings_save", { p_value: { ...current, category_map: { ...saved, ...p.data.category_map } } });
+
+  // Name im Partner-CRM beim Mitarbeiter merken (nur wenn dort noch nichts steht)
+  const ids = [...new Set(p.data.rows.map((r) => r.user_id))];
+  const { data: details } = await supabase.from("employee_details").select("user_id, partner_seller_id").in("user_id", ids);
+  const has = new Set((details ?? []).filter((d) => d.partner_seller_id).map((d) => d.user_id));
+  for (const r of p.data.rows) {
+    if (r.seller_name && !has.has(r.user_id)) {
+      has.add(r.user_id);
+      await supabase.rpc("partner_seller_set", { p_user: r.user_id, p_value: r.seller_name });
+    }
+  }
+
+  const { data, error } = await supabase.rpc("partner_counts_apply", {
+    p_rows: p.data.rows.map((r) => ({ user_id: r.user_id, category: r.category, product_id: r.product_id, qualified: r.qualified, total: r.total, start_only: r.start_only })),
+  });
+  if (error) {
+    const e = fromDbError(error);
+    return { ok: false, error: e.ok ? "Fehler" : e.error };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, outcomes: (data ?? []) as CountOutcome[] };
 }

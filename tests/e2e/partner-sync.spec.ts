@@ -35,6 +35,7 @@ test("Abgleich Partner-CRM: Liste einfügen, zuordnen, abgleichen – und beim z
   await login(page, "leitung");
   await page.goto("/leistungen");
   await page.getByRole("link", { name: "Abgleich Partner-CRM" }).click();
+  await page.getByRole("link", { name: "Auftragsliste (Kopieren/Einfügen)" }).click();
   await page.getByLabel("Kopierte Liste aus dem Partner-CRM").fill(list("Aktiviert"));
   await page.getByRole("button", { name: "Liste prüfen" }).click();
 
@@ -82,7 +83,7 @@ test("Screenshot der Partner-Liste wird kostenlos im Browser gelesen", async ({ 
 
   const [{ id: p3 }] = await sql("select id from public.profiles where email = 'partner3@erlen.local'");
   await login(page, "leitung");
-  await page.goto("/leistungen/partner-abgleich");
+  await page.goto("/leistungen/partner-abgleich?modus=liste");
   await page.waitForLoadState("networkidle"); // Seite muss bedienbar sein, bevor die Datei gewählt wird
   await page.getByLabel("Screenshot auswählen").setInputFiles({ name: "liste.png", mimeType: "image/png", buffer: png });
   await expect(page.getByLabel("Spalte Auftragsnummer")).toHaveValue("Auftragsnummer", { timeout: 90_000 });
