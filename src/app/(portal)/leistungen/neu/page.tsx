@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
-import { getProducts, getVisibleEmployees } from "@/lib/queries";
+import { getProducts, getProductVariants, getVisibleEmployees } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { todayBerlin } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Leistung erfassen" };
 
 export default async function NewPerformancePage() {
   const user = await requirePermission("performance.create", "performance.update");
-  const products = await getProducts();
+  const [products, variants] = await Promise.all([getProducts(), getProductVariants()]);
   const canOthers = user.permissions.has("performance.update");
   const employees = canOthers
     ? (await getVisibleEmployees())
@@ -43,6 +43,7 @@ export default async function NewPerformancePage() {
               today={todayBerlin()}
               canApproveOthers={user.permissions.has("performance.approve")}
               clearance={clearance}
+              variants={variants}
             />
           </CardContent>
         </Card>

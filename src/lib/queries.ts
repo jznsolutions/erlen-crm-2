@@ -11,6 +11,15 @@ export const getProducts = cache(async (includeInactive = false) => {
   return data ?? [];
 });
 
+/** Provisionsstufen (Varianten) der Produkte, z. B. PV-Lead „bis 14 Module“. Leer vor dem Datenbank-Update. */
+export const getProductVariants = cache(async (includeInactive = false) => {
+  const supabase = await createClient();
+  let q = supabase.from("product_variants").select("id, product_id, name, sort_order, is_active").order("sort_order").order("name");
+  if (!includeInactive) q = q.eq("is_active", true);
+  const { data } = await q;
+  return data ?? [];
+});
+
 export const getVisibleTeams = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.from("teams").select("id, name, parent_team_id, is_active, description").order("name");

@@ -21,6 +21,7 @@ export const roleKey = z.enum(["vertriebspartner", "ausbilder", "teamleiter", "a
 export const performanceCreateSchema = z.object({
   user_id: uuid,
   product_id: uuid,
+  variant_id: optionalUuid,
   occurred_on: isoDate,
   quantity: intRange(1, 1000, "Menge zwischen 1 und 1000"),
   external_ref: optionalText(120),

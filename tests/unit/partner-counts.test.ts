@@ -52,8 +52,42 @@ describe("Partner-Übersicht (Screenshot je Verkäufer)", () => {
     ]);
   });
 
+  it("Name und „Team …“ in getrennten Zeilen", () => {
+    expect(parseCountLines(["Partner D2D", "Lena Schulz", "Team Erlen", "3:3:0:0:100%", "15-39 Module", "2 / 2"], people)).toEqual([
+      { name: "Lena Schulz", categories: [{ label: "15-39", qualified: 2, total: 2 }] },
+    ]);
+  });
+
   it("Karte ohne Namen (abgeschnitten) und Kategorie ohne lesbare Zahl", () => {
     expect(parseCountLines(["15-39 Module 50%", "", "x"], people)).toEqual([{ name: "", categories: [{ label: "15-39", qualified: null, total: null }] }]);
     expect(normCategory("≥ 40")).toBe(">=40");
+  });
+});
+
+import { matchVariant, moduleRange, splitTarget } from "@/lib/partner-counts";
+
+describe("Modul-Kategorie → Provisionsstufe", () => {
+  const options = [
+    { value: "p:v1", label: "PV-Lead – bis 14 Module", productId: "p", variantId: "v1", name: "bis 14 Module" },
+    { value: "p:v2", label: "PV-Lead – 15-39 Module", productId: "p", variantId: "v2", name: "15 - 39 Module" },
+    { value: "p:v3", label: "PV-Lead – ab 40 Module", productId: "p", variantId: "v3", name: "ab 40 Modulen" },
+    { value: "g:", label: "Glasfaser", productId: "g", variantId: null, name: "Glasfaser" },
+  ];
+  it("versteht übliche Schreibweisen", () => {
+    expect(moduleRange("<15")).toEqual([0, 14]);
+    expect(moduleRange("bis zu 14 Modulen")).toEqual([0, 14]);
+    expect(moduleRange("15-39")).toEqual([15, 39]);
+    expect(moduleRange(">39")).toEqual([40, Infinity]);
+    expect(moduleRange("ab 40 Module")).toEqual([40, Infinity]);
+    expect(moduleRange("Glasfaser")).toBeNull();
+  });
+  it("ordnet die Kategorien aus dem Screenshot automatisch zu", () => {
+    expect(matchVariant("<15", options)).toBe("p:v1");
+    expect(matchVariant("1-14", options)).toBe("p:v1");
+    expect(matchVariant("15-39", options)).toBe("p:v2");
+    expect(matchVariant(">39", options)).toBe("p:v3");
+    expect(matchVariant("abc", options)).toBeNull();
+    expect(splitTarget("p:v2")).toEqual({ product_id: "p", variant_id: "v2" });
+    expect(splitTarget("g")).toEqual({ product_id: "g", variant_id: null });
   });
 });

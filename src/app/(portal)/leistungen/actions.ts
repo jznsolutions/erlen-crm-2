@@ -20,6 +20,7 @@ export async function createPerformance(_: ActionResult | null, fd: FormData): P
     p_note: d.note,
     p_submit: d.submit,
     p_confirm_duplicate: d.confirm_duplicate,
+    p_variant: (d.variant_id ?? null) as string,
   });
   if (error) return fromDbError(error);
   const { data: rec } = await supabase.from("performance_records").select("status").eq("id", data).maybeSingle();

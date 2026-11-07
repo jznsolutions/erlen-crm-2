@@ -7,7 +7,7 @@ import { Alert } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox, Input, Select } from "@/components/ui/input";
 import { formatDate } from "@/lib/format";
-import { guessCardSeller } from "@/lib/partner-counts";
+import { guessCardSeller, matchVariant, splitTarget, type VariantOption } from "@/lib/partner-counts";
 import type { Person } from "@/lib/partner-sync";
 import { applyPartnerCounts, type CountOutcome } from "@/app/(portal)/leistungen/partner-abgleich/actions";
 
@@ -15,9 +15,12 @@ type Prev = { user_id: string; category: string; qualified: number; updated_at: 
 type Card = { key: string; name: string; user_id: string; categories: { label: string; qualified: string; total: number | null }[] };
 type Row = { card: Card; label: string; user_id: string; qualified: number | null; total: number | null; prev: Prev | undefined; delta: number };
 
-export function PartnerCounts({ people, products, categoryMap, prev }: { people: Person[]; products: { id: string; name: string }[]; categoryMap: Record<string, string>; prev: Prev[] }) {
+export function PartnerCounts({ people, options, categoryMap, prev }: { people: Person[]; options: VariantOption[]; categoryMap: Record<string, string>; prev: Prev[] }) {
   const [cards, setCards] = useState<Card[] | null>(null);
-  const [catMap, setCatMap] = useState<Record<string, string>>(categoryMap);
+  // Ältere Zuordnungen enthalten nur die Produkt-ID → „Produkt-ID:“
+  const [catMap, setCatMap] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(categoryMap).map(([k, v]) => [k, v && !v.includes(":") ? `${v}:` : v]).filter(([, v]) => options.some((o) => o.value === v))),
+  );
   const [startOnly, setStartOnly] = useState(false);
   const [reading, setReading] = useState<{ image: number; of: number; p: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +45,7 @@ export function PartnerCounts({ people, products, categoryMap, prev }: { people:
       const labels = new Set(found.flatMap((c) => c.categories.map((k) => k.label)));
       setCatMap((m) => {
         const next = { ...m };
-        for (const l of labels) if (next[l] === undefined) next[l] = products.find((p) => p.name.replace(/\s+/g, "").includes(l))?.id ?? "";
+        for (const l of labels) if (!next[l]) next[l] = matchVariant(l, options) ?? "";
         return next;
       });
       setCards((old) => [
@@ -101,7 +104,7 @@ export function PartnerCounts({ people, products, categoryMap, prev }: { people:
       setError(null);
       const res = await applyPartnerCounts({
         category_map: catMap,
-        rows: rows.map((r) => ({ user_id: r.user_id, seller_name: r.card.name, category: r.label, product_id: catMap[r.label], qualified: r.qualified, total: r.total, start_only: startOnly })),
+        rows: rows.map((r) => ({ user_id: r.user_id, seller_name: r.card.name, category: r.label, ...splitTarget(catMap[r.label]), qualified: r.qualified, total: r.total, start_only: startOnly })),
       });
       if (res.ok) {
         setOutcomes({ rows, res: res.outcomes });
@@ -165,15 +168,15 @@ export function PartnerCounts({ people, products, categoryMap, prev }: { people:
       {cards?.length ? (
         <>
           <section className="space-y-2">
-            <h3 className="font-semibold">Welches Produkt ist welche Modul-Kategorie?</h3>
-            <p className="text-sm text-muted-foreground">Einmalig zuordnen – die Provision je Lead kommt aus dem Produkt. Fehlt eines? Unter <Link href="/admin/produkte" className="underline">Produkte</Link> anlegen.</p>
+            <h3 className="font-semibold">Welche Provisionsstufe ist welche Modul-Kategorie?</h3>
+            <p className="text-sm text-muted-foreground">Wird automatisch erkannt, wenn die Stufen nach Modulen benannt sind (z. B. „bis 14 Module“) – sonst einmal zuordnen. Stufen anlegen unter <Link href="/admin/produkte" className="underline">Produkte</Link>, Beträge unter <Link href="/admin/provisionen" className="underline">Provisionen</Link>.</p>
             <div className="grid gap-3 sm:grid-cols-3">
               {labels.map((l) => (
                 <label key={l} className="text-sm">
                   <span className="mb-1 block">{l} Module</span>
                   <Select value={catMap[l] ?? ""} onChange={(e) => setCatMap({ ...catMap, [l]: e.target.value })} aria-label={`Produkt ${l}`}>
                     <option value="">– bitte wählen –</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </Select>
                 </label>
               ))}

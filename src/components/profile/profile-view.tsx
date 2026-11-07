@@ -5,7 +5,7 @@ import type { CurrentUser } from "@/lib/auth";
 import { addDays, startOfMonth, todayBerlin } from "@/lib/dates";
 import { formatDate, formatDateTime, formatDecimal, formatNumber } from "@/lib/format";
 import { filterRows, summarize } from "@/lib/metrics";
-import { getDaily, getProducts, getRoles, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
+import { getDaily, getProducts, getProductVariants, getRoles, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
 import { signedUrl } from "@/lib/storage";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
 import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
 import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
 import { formatCents } from "@/lib/format";
-import { levelForRole } from "@/lib/commission";
+import { levelForRole, levelRateLines } from "@/lib/commission";
 import {
   EditEmployeeDialog, EndMembershipButton, ManagerForm, OwnProfileForm, PermissionForm, RecruiterForm, RoleForm, StatusButtons, TeamAssignForm, TrainingNoteForm,
 } from "./admin-forms";
@@ -141,7 +141,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
     supabase.from("user_products").select("product_id").eq("user_id", userId).then((r) => (r.data ?? []).map((x) => x.product_id)),
     canBilling || canCommission ? supabase.from("employee_billing").select("*").eq("user_id", userId).maybeSingle().then((r) => r.data) : Promise.resolve(null),
     supabase.from("commission_levels").select("id, key, name, is_active").not("key", "is", null).order("sort_order").then((r) => r.data ?? []),
-    supabase.from("commission_rates").select("level_id, product_id, amount_cents").then((r) => r.data ?? []),
+    supabase.from("commission_rates").select("level_id, product_id, variant_id, amount_cents").then((r) => r.data ?? []),
     canExtras ? supabase.from("statement_extras").select("id, description, amount_cents, recurring, is_active, note").eq("user_id", userId).order("created_at").then((r) => (r.data ?? []).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) }))) : Promise.resolve([]),
   ]);
   // Abzeichen und aktuelle Serie (nach dem Datenbank-Update verfügbar)
@@ -154,7 +154,8 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   // Stufe: individuelle Zuordnung, sonst aus der Rolle
   const manualLevel = levels.find((l) => l.id === billing?.commission_level_id);
   const level = manualLevel ?? levels.find((l) => l.key === levelForRole(profile.roles?.key));
-  const levelRates = new Map(rates.filter((r) => r.level_id === level?.id).map((r) => [r.product_id, r.amount_cents]));
+  const variants = await getProductVariants();
+  const rateLines = levelRateLines(products.filter((p) => userProducts.includes(p.id)), variants, rates, level?.id, true);
   const allRoles = await getRoles();
   const roleNames = new Map(allRoles.map((r) => [r.id, r.name]));
   const teamNames = new Map((memberships ?? []).map((m) => [m.team_id, m.teams?.name ?? "Team"]));
@@ -297,8 +298,8 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
               )}
               {level ? (
                 <ul className="divide-y rounded-lg border text-sm">
-                  {products.filter((p) => userProducts.includes(p.id)).map((p) => (
-                    <li key={p.id} className="flex justify-between px-3 py-2"><span>{p.name}</span><span className="money tabular font-medium">{levelRates.has(p.id) ? `${formatCents(levelRates.get(p.id)!)} je Einheit` : "–"}</span></li>
+                  {rateLines.map((r) => (
+                    <li key={r.key} className="flex justify-between px-3 py-2"><span>{r.name}</span><span className="money tabular font-medium">{r.cents > 0 ? `${formatCents(r.cents)} je Einheit` : "–"}</span></li>
                   ))}
                 </ul>
               ) : null}

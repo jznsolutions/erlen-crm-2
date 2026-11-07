@@ -17,15 +17,16 @@ Das Partner-CRM zeigt je Verkäufer, wie viele Leads **qualifiziert** sind, aufg
 
 ## Einmalig vorbereiten
 
-1. **Administration → Produkte**: je Modul-Kategorie ein Produkt anlegen, z. B. „Lead bis 14 Module“, „Lead 15-39 Module“, „Lead ab 40 Module“, jeweils mit der passenden Provision.
-2. Datenbank-Update auf `/einrichtung` einspielen (falls das Portal darauf hinweist).
+1. **Verwaltung → Produkte**: ein Produkt „PV-Lead“ anlegen und darunter drei **Provisionsstufen** hinzufügen: „bis 14 Module“, „15-39 Module“, „ab 40 Module“. Die Zahlen im Namen genügen – der Abgleich ordnet die Kategorien aus dem Screenshot dann automatisch zu.
+2. **Verwaltung → Provisionen**: in den drei Zeilen „PV-Lead – …“ die Beträge je Rang eintragen und speichern.
+3. Datenbank-Update auf `/einrichtung` einspielen (falls das Portal darauf hinweist).
 
 ## Jeden Morgen
 
 1. Im Partner-CRM die Karte eines Verkäufers **aufklappen**, so weit scrollen, dass Name **und** „Anzahl Module“ zu sehen sind (gern auch zwei Bilder) → **Screenshot**. Das für alle Verkäufer wiederholen.
 2. Im Portal (Handy oder PC): **Leistungen → Abgleich Partner-CRM** → **Screenshots auswählen** → alle Bilder von heute auf einmal markieren. Am PC geht auch Strg+V oder Hineinziehen.
 3. Kurz prüfen: Verkäufer richtig erkannt? Zahlen richtig? (Gelb markierte Zahlen bitte anschauen – alle Zahlen kann man direkt korrigieren.)
-4. **Beim ersten Mal**: Modul-Kategorien den Produkten zuordnen. Wurden die bisherigen Leads schon von Hand erfasst, den Haken „nur als Startwert merken“ setzen.
+4. **Beim ersten Mal**: prüfen, ob die Modul-Kategorien den richtigen Provisionsstufen zugeordnet sind (passiert automatisch). Das Produkt wird für die Verkäufer automatisch freigeschaltet. Wurden die bisherigen Leads schon von Hand erfasst, den Haken „nur als Startwert merken“ setzen.
 5. **Übernehmen** – fertig. Die Verkäufer sehen ihre Leads sofort in Ranking, Zielen und Provision.
 
 Die Bilder werden kostenlos **im Browser** gelesen und nirgendwohin geschickt; übernommen werden nur Verkäufer, Kategorie und Anzahl.
