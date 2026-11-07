@@ -13,23 +13,12 @@ import {
   distinctValues, findHeader, guessColumns, guessSeller, guessTarget, parsePastedTable, planRows,
   SYNC_FIELDS, TARGET_LABELS, type ColumnMap, type Mapping, type Person, type SyncField, type Target,
 } from "@/lib/partner-sync";
-import { readPartnerScreenshot, runPartnerSync, savePartnerMapping, type SyncOutcome } from "@/app/(portal)/leistungen/partner-abgleich/actions";
+import { runPartnerSync, savePartnerMapping, type SyncOutcome } from "@/app/(portal)/leistungen/partner-abgleich/actions";
 
 type Saved = { columns?: ColumnMap; status_map?: Record<string, Target>; product_map?: Record<string, string> };
 const ACTION_LABEL: Record<string, string> = { angelegt: "Neu angelegt", bestaetigt: "Bestätigt", storniert: "Storniert", unveraendert: "Unverändert", uebersprungen: "Übersprungen", fehler: "Fehler" };
 
-/** Bild verkleinern (max. 1600 px, JPEG), damit es schnell und günstig gelesen werden kann. */
-async function shrink(file: File): Promise<string> {
-  const img = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(img.width * scale);
-  c.height = Math.round(img.height * scale);
-  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-  return c.toDataURL("image/jpeg", 0.85);
-}
-
-export function PartnerSync({ people, products, saved, today, aiAvailable }: { people: Person[]; products: { id: string; name: string }[]; saved: Saved; today: string; aiAvailable: boolean }) {
+export function PartnerSync({ people, products, saved, today }: { people: Person[]; products: { id: string; name: string }[]; saved: Saved; today: string }) {
   const [raw, setRaw] = useState("");
   const [table, setTable] = useState<string[][] | null>(null);
   const [headerIdx, setHeaderIdx] = useState(0);
@@ -40,7 +29,7 @@ export function PartnerSync({ people, products, saved, today, aiAvailable }: { p
   const [outcomes, setOutcomes] = useState<SyncOutcome[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const [reading, startReading] = useTransition();
+  const [reading, setReading] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const headers = table?.[headerIdx] ?? [];
 
@@ -107,21 +96,28 @@ export function PartnerSync({ people, products, saved, today, aiAvailable }: { p
       else setError(r.error);
     });
 
-  const onScreenshot = (file: File) =>
-    startReading(async () => {
-      setError(null);
-      try {
-        const dataUrl = await shrink(file);
-        const r = await readPartnerScreenshot(dataUrl);
-        if (!r.ok) return setError(r.error);
-        const tsv = [r.headers, ...r.rows].map((row) => row.join("\t")).join("\n");
-        setRaw(tsv);
-        analyse(tsv);
-        toast.success(`${r.rows.length} Zeilen aus dem Screenshot gelesen – bitte prüfen.`);
-      } catch {
-        setError("Das Bild konnte nicht gelesen werden.");
+  /** Screenshot im Browser auslesen (kostenlos, das Bild verlässt den Rechner nicht). */
+  const onScreenshot = async (file: Blob) => {
+    if (reading !== null) return;
+    setError(null);
+    setReading(0);
+    try {
+      const { readTableFromImage } = await import("@/lib/partner-ocr-browser");
+      const t = await readTableFromImage(file, (p) => setReading(p));
+      if (t.length < 2) {
+        setError("Im Bild wurde keine Tabelle erkannt. Tipp: Liste im Partner-CRM groß anzeigen (Strg + Plus) und nur die Tabelle ausschneiden.");
+        return;
       }
-    });
+      const tsv = t.map((row) => row.join("\t")).join("\n");
+      setRaw(tsv);
+      analyse(tsv);
+      toast.success(`${t.length - 1} Zeilen aus dem Screenshot gelesen – bitte Auftragsnummern kurz prüfen.`);
+    } catch {
+      setError("Das Bild konnte nicht gelesen werden.");
+    } finally {
+      setReading(null);
+    }
+  };
 
   if (outcomes) {
     const count = (a: string) => outcomes.filter((o) => o.action === a).length;
@@ -155,6 +151,12 @@ export function PartnerSync({ people, products, saved, today, aiAvailable }: { p
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           onPaste={(e) => {
+            const img = [...e.clipboardData.files].find((f) => f.type.startsWith("image/"));
+            if (img) {
+              e.preventDefault();
+              void onScreenshot(img);
+              return;
+            }
             const t = e.clipboardData.getData("text/plain");
             if (t) {
               e.preventDefault();
@@ -162,21 +164,28 @@ export function PartnerSync({ people, products, saved, today, aiAvailable }: { p
               analyse(t);
             }
           }}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            const img = [...e.dataTransfer.files].find((f) => f.type.startsWith("image/"));
+            if (img) {
+              e.preventDefault();
+              void onScreenshot(img);
+            }
+          }}
           rows={6}
-          placeholder="Im Partner-CRM die Auftragsliste markieren (Strg+A) und kopieren (Strg+C) – dann hier klicken und einfügen (Strg+V)."
+          placeholder="Im Partner-CRM die Auftragsliste markieren (Strg+A) und kopieren (Strg+C) – dann hier klicken und einfügen (Strg+V). Oder einen Screenshot hier einfügen bzw. hineinziehen."
           aria-label="Kopierte Liste aus dem Partner-CRM"
           className="font-mono text-xs"
         />
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => analyse(raw)} disabled={!raw.trim()}><ClipboardPaste />Liste prüfen</Button>
-          {aiAvailable ? (
-            <>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Screenshot auswählen" onChange={(e) => e.target.files?.[0] && onScreenshot(e.target.files[0])} />
-              <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={reading}>{reading ? <Loader2 className="animate-spin" /> : <ImageUp />}Screenshot hochladen</Button>
-            </>
-          ) : null}
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Screenshot auswählen" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onScreenshot(f); }} />
+          <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={reading !== null}>
+            {reading !== null ? <Loader2 className="animate-spin" /> : <ImageUp />}
+            {reading !== null ? `Bild wird gelesen … ${Math.round(reading * 100)} %` : "Screenshot hochladen"}
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground">Datenschutz: Die Liste wird in deinem Browser ausgewertet. Ans Portal gehen nur Auftragsnummer, Verkäufer, Produkt, Datum und Status – Kundennamen, Adressen und Telefonnummern werden nicht übernommen.</p>
+        <p className="text-xs text-muted-foreground">Datenschutz und Kosten: Liste und Screenshots werden kostenlos in deinem Browser ausgewertet – das Bild wird nirgendwohin geschickt. Ans Portal gehen nur Auftragsnummer, Verkäufer, Produkt, Datum und Status – Kundennamen, Adressen und Telefonnummern werden nicht übernommen.</p>
       </div>
 
       {error ? <Alert tone="danger">{error}</Alert> : null}

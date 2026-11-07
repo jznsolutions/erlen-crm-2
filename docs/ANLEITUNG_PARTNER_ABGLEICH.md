@@ -28,14 +28,26 @@ Ab dem zweiten Mal ist alles gespeichert: **einfügen → Abgleich starten**, fe
 
 Fehlerhafte Zeilen (z. B. unbekannter Verkäufer) werden übersprungen und angezeigt – der Rest wird trotzdem übernommen.
 
-## Alternative: Screenshot (z. B. am Handy)
+## Alternative: Screenshot (kostenlos)
 
-Lässt sich die Liste nicht als Tabelle kopieren, auf **Screenshot hochladen** tippen. Die KI liest die Liste aus dem Bild (dafür muss der KI-Schlüssel eingerichtet sein, siehe `ANLEITUNG_KI_TRAINER.md`; ca. wenige Cent pro Bild). Danach wie oben prüfen und abgleichen. Spalten mit Kundendaten lässt die KI weg; das Bild wird nicht gespeichert.
+Lässt sich die Liste nicht kopieren, einfach ein Bildschirmfoto der Liste machen:
+
+1. Im Partner-CRM die Liste öffnen.
+2. **Windows:** `Windows + Umschalt + S` drücken und die Tabelle mit der Maus umrahmen. **Mac:** `Cmd + Umschalt + 4`. **Handy:** normaler Screenshot.
+3. Im Portal unter **Leistungen → Abgleich Partner-CRM** ins große Feld klicken und **Strg + V** drücken. Oder das Bild hineinziehen, oder auf **Screenshot hochladen** klicken.
+4. Nach einigen Sekunden steht die Liste da. Danach wie oben prüfen und **Abgleich starten**.
+
+Die Texterkennung läuft **kostenlos direkt im Browser**. Es gibt keinen KI-Dienst, keinen Schlüssel und keine Kosten pro Bild. Das Bild verlässt den Rechner nicht und wird nicht gespeichert.
+
+Tipps für gute Erkennung:
+* Die Tabelle möglichst groß anzeigen (`Strg + Plus`) und nur die Tabelle ausschneiden.
+* Bei langen Listen mehrere Screenshots nacheinander abgleichen. Doppelte Zeilen schaden nicht.
+* In der Vorschau kurz die **Auftragsnummern** prüfen. Eine falsch gelesene Ziffer würde sonst als neuer Auftrag angelegt. Kopieren und Einfügen ist immer genauer als ein Screenshot.
 
 ## Datenschutz
 
 * Die kopierte Liste wird **im Browser** ausgewertet. Ans Portal gehen nur Auftragsnummer, Verkäufer, Produkt, Datum und Status – **Kundennamen, Adressen und Telefonnummern werden nicht übertragen und nicht gespeichert.**
-* Beim Screenshot wird das Bild zur Auswertung an Anthropic übertragen (siehe Datenschutz-Leitfaden).
+* Auch Screenshots werden **im Browser** gelesen. Das Bild wird an niemanden übertragen.
 * Bitte im Partnervertrag prüfen, ob ihr eure Auftragsdaten in eigene Systeme übernehmen dürft (für die eigene Provisionsabrechnung üblicherweise unproblematisch).
 
 ## Tipps

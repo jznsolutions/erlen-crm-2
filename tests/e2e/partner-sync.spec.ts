@@ -69,6 +69,34 @@ test("Abgleich Partner-CRM: Liste einfügen, zuordnen, abgleichen – und beim z
   expect(await sql("select count(*)::int c from public.performance_records where external_ref like $1", [`PS${stamp}-%`])).toEqual([{ c: 2 }]);
 });
 
+test("Screenshot der Partner-Liste wird kostenlos im Browser gelesen", async ({ page, browser }) => {
+  test.setTimeout(120_000);
+  // Partner-CRM-Liste nachbauen und abfotografieren (wie ein echter Screenshot)
+  const shot = await browser.newPage({ viewport: { width: 1100, height: 320 } });
+  await shot.setContent(`<style>body{font:14px Arial,sans-serif;margin:16px;color:#222}td,th{padding:8px 18px;text-align:left;border-bottom:1px solid #ddd}th{background:#f3f4f6}</style>
+    <h3>Meine Aufträge</h3><table><tr><th>Auftragsnummer</th><th>Kunde</th><th>Verkäufer</th><th>Tarif</th><th>Status</th><th>Erstellt am</th></tr>
+    <tr><td>${ref(7)}</td><td>Max Kundenmann</td><td>TEST-11</td><td>Strom Basis</td><td>Aktiviert</td><td>${de(3)}</td></tr>
+    <tr><td>${ref(8)}</td><td>Erika Kundenfrau</td><td>TEST-11</td><td>Strom Basis</td><td>In Bearbeitung</td><td>${de(2)}</td></tr></table>`);
+  const png = await shot.screenshot();
+  await shot.close();
+
+  const [{ id: p3 }] = await sql("select id from public.profiles where email = 'partner3@erlen.local'");
+  await login(page, "leitung");
+  await page.goto("/leistungen/partner-abgleich");
+  await page.waitForLoadState("networkidle"); // Seite muss bedienbar sein, bevor die Datei gewählt wird
+  await page.getByLabel("Screenshot auswählen").setInputFiles({ name: "liste.png", mimeType: "image/png", buffer: png });
+  await expect(page.getByLabel("Spalte Auftragsnummer")).toHaveValue("Auftragsnummer", { timeout: 90_000 });
+  await page.getByLabel("Produkt Strom Basis").selectOption({ label: "Strom" });
+  await page.getByLabel("Verkäufer TEST-11").selectOption(p3);
+  await expect(page.getByText("2 bereit")).toBeVisible();
+  await expect(page.getByRole("cell", { name: ref(7) })).toBeVisible();
+  await expect(page.getByRole("cell", { name: ref(8) })).toBeVisible();
+  await page.getByRole("button", { name: /Abgleich starten/ }).click();
+  await expect(page.getByTestId("sync-result")).toContainText("2 neu");
+  const rows = await sql("select external_ref, status from public.performance_records where external_ref in ($1, $2) order by external_ref", [ref(7), ref(8)]);
+  expect(rows.map((r) => [r.external_ref, r.status])).toEqual([[ref(7), "bestaetigt"], [ref(8), "eingereicht"]]);
+});
+
 test("Vertriebspartner haben keinen Zugriff auf den Abgleich", async ({ page }) => {
   await login(page, "partner1");
   await page.goto("/leistungen/partner-abgleich");

@@ -7,7 +7,8 @@ const isDev = process.env.NODE_ENV !== "production";
 // (Datei-Uploads/-Downloads über signierte URLs).
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // 'wasm-unsafe-eval': nur WebAssembly (kostenlose Texterkennung für Screenshots im Browser)
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${supabaseUrl}`,
   `media-src 'self' blob: ${supabaseUrl}`,

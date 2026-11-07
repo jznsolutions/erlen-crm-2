@@ -3,10 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { fromDbError, type ActionResult } from "@/lib/actions";
-import { readTableFromScreenshot } from "@/lib/partner-screenshot";
-import { trainerAvailable } from "@/lib/sales-trainer";
 
 const text = z.string().max(200);
 const mappingSchema = z.object({
@@ -63,15 +60,4 @@ export async function runPartnerSync(raw: unknown): Promise<{ ok: true; outcomes
   }
   revalidatePath("/", "layout");
   return { ok: true, outcomes: (data ?? []) as SyncOutcome[] };
-}
-
-/** Screenshot der Partner-Liste mit KI auslesen (ohne Kundendaten). */
-export async function readPartnerScreenshot(dataUrl: string): Promise<{ ok: true; headers: string[]; rows: string[][] } | { ok: false; error: string }> {
-  const user = await requirePermission("performance.approve");
-  if (!trainerAvailable()) return { ok: false, error: "Für Screenshots muss zuerst der KI-Schlüssel eingerichtet sein (siehe Anleitung KI-Trainer)." };
-  const m = typeof dataUrl === "string" ? dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/) : null;
-  if (!m || m[2].length > 1_400_000) return { ok: false, error: "Bitte ein Bild (PNG/JPG) wählen – höchstens ca. 1 MB nach dem Verkleinern." };
-  const { data: allowed } = await createAdminClient().rpc("rate_limit_hit", { p_key: `screenshot:${user.id}`, p_window_seconds: 3600, p_max: 60 });
-  if (allowed === false) return { ok: false, error: "Zu viele Screenshots in dieser Stunde. Bitte später erneut versuchen." };
-  return readTableFromScreenshot(m[1] as "image/jpeg" | "image/png" | "image/webp", m[2]);
 }
