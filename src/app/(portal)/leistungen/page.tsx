@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, Clock, Database, Download, Plus, TrendingUp, Undo2, Upload } from "lucide-react";
+import { CheckCircle2, Clock, Database, Download, Plus, RefreshCw, TrendingUp, Undo2, Upload } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getVisibleEmployees } from "@/lib/queries";
@@ -63,6 +63,9 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
           <>
             {user.permissions.has("reports.export") ? (
               <Button asChild variant="secondary"><a href={`/api/export/leistungen?${qs}`}><Download />CSV-Export</a></Button>
+            ) : null}
+            {user.permissions.has("performance.approve") ? (
+              <Button asChild variant="secondary"><Link href="/leistungen/partner-abgleich"><RefreshCw />Abgleich Partner-CRM</Link></Button>
             ) : null}
             {user.permissions.has("performance.update") ? (
               <Button asChild variant="secondary"><Link href="/leistungen/import"><Upload />Importieren</Link></Button>
