@@ -42,3 +42,27 @@ export function statementTotals(lines: { total: number; category: ItemCategory }
   const vat = Math.round((net * vatRate) / 100);
   return { subtotal, retention, afterRetention, deductions, net, vat, gross: net + vat };
 }
+
+type RateRow = { level_id: string; product_id: string; variant_id?: string | null; amount_cents: number };
+
+/**
+ * Sätze einer Stufe als Liste: je Provisionsstufe eines Produkts (Satz der Stufe, sonst des Produkts),
+ * bei Produkten ohne Stufen der Produktsatz. Ohne Satz → nicht enthalten.
+ */
+export function levelRateLines(
+  products: { id: string; name: string; unit_label: string }[],
+  variants: { id: string; product_id: string; name: string }[],
+  rates: RateRow[],
+  levelId: string | undefined,
+  includeEmpty = false,
+): { key: string; productId: string; name: string; unit: string; cents: number }[] {
+  const own = rates.filter((r) => r.level_id === levelId);
+  const find = (p: string, v: string | null) => own.find((r) => r.product_id === p && (r.variant_id ?? null) === v)?.amount_cents;
+  return products.flatMap((p) => {
+    const vs = variants.filter((v) => v.product_id === p.id);
+    const lines = vs.length
+      ? vs.map((v) => ({ key: `${p.id}:${v.id}`, productId: p.id, name: `${p.name} – ${v.name}`, unit: p.unit_label, cents: Number(find(p.id, v.id) ?? find(p.id, null) ?? 0) }))
+      : [{ key: `${p.id}:`, productId: p.id, name: p.name, unit: p.unit_label, cents: Number(find(p.id, null) ?? 0) }];
+    return includeEmpty ? lines : lines.filter((l) => l.cents > 0);
+  });
+}

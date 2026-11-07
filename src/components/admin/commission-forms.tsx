@@ -1,60 +1,30 @@
 "use client";
-import { ActionForm, ConfirmAction, SubmitButton } from "@/components/forms";
-import { Button } from "@/components/ui/button";
-import { Field, Input, Select } from "@/components/ui/input";
-import { deleteRate, saveOverheadMode, saveRate } from "@/app/(portal)/admin/provisionen/actions";
-import { Trash2 } from "lucide-react";
+import { ActionForm, SubmitButton } from "@/components/forms";
+import { Field, Input } from "@/components/ui/input";
+import { saveOverheadMode, saveRateRow } from "@/app/(portal)/admin/provisionen/actions";
 import { LEVELS } from "@/lib/commission";
 
 
 const euro = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
 
-/** Neue Zeile: Produkt | Stufe | Provision */
-export function AddRateForm({ products }: { products: { id: string; name: string }[] }) {
+/** Zeile der Provisionstabelle: Produkt bzw. Provisionsstufe × Ränge */
+export function RateMatrixRow({ productId, variantId, label, sub, cents }: { productId: string; variantId: string | null; label: string; sub: string; cents: Record<string, number | undefined> }) {
   return (
-    <ActionForm action={saveRate} resetOnSuccess className="grid gap-3 sm:grid-cols-[1.4fr_1fr_1fr_auto] sm:items-end">
-      {({ fieldErrors }) => (
-        <>
-          <Field label="Produkt" htmlFor="r-product" error={fieldErrors.product_id}>
-            <Select id="r-product" name="product_id" required defaultValue="">
-              <option value="" disabled>Produkt wählen …</option>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </Select>
-          </Field>
-          <Field label="Stufe" htmlFor="r-level" error={fieldErrors.level}>
-            <Select id="r-level" name="level" required defaultValue="">
-              <option value="" disabled>Stufe wählen …</option>
-              {LEVELS.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
-            </Select>
-          </Field>
-          <Field label="Provision (€ je Einheit)" htmlFor="r-amount" error={fieldErrors.amount}>
-            <Input id="r-amount" name="amount" inputMode="decimal" placeholder="z. B. 30,00" required className="text-right tabular" />
-          </Field>
-          <SubmitButton>Hinzufügen</SubmitButton>
-        </>
-      )}
+    <ActionForm action={saveRateRow} className="grid gap-2 px-4 py-3 sm:grid-cols-[1.3fr_repeat(4,1fr)_auto] sm:items-center">
+      <input type="hidden" name="product_id" value={productId} />
+      <input type="hidden" name="variant_id" value={variantId ?? ""} />
+      <div><p className="font-medium">{label}</p><p className="text-xs text-muted-foreground">{sub}</p></div>
+      {LEVELS.map((l) => (
+        <label key={l.key} className="flex items-center gap-2 sm:block">
+          <span className="w-28 shrink-0 text-xs text-muted-foreground sm:hidden">{l.label}</span>
+          <span className="relative block w-full">
+            <Input name={l.key} aria-label={`Provision ${label} ${l.label}`} defaultValue={cents[l.key] !== undefined ? euro(cents[l.key]!) : ""} placeholder="–" inputMode="decimal" className="h-9 pr-7 text-right tabular" />
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
+          </span>
+        </label>
+      ))}
+      <SubmitButton size="sm" variant="secondary" pendingText="…">Speichern</SubmitButton>
     </ActionForm>
-  );
-}
-
-/** Bestehende Zeile mit änderbarem Betrag. */
-export function RateRow({ productId, productName, unit, level, cents }: { productId: string; productName: string; unit: string; level: string; cents: number }) {
-  const label = LEVELS.find((l) => l.key === level)?.label ?? level;
-  return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-2.5 sm:grid-cols-[1.4fr_1fr_1fr_auto]">
-      <div><p className="font-medium">{productName}</p><p className="text-xs text-muted-foreground">je Einheit ({unit})</p></div>
-      <p className="text-sm sm:order-none">{label}</p>
-      <ActionForm action={saveRate} className="flex items-center gap-2">
-        <input type="hidden" name="product_id" value={productId} />
-        <input type="hidden" name="level" value={level} />
-        <div className="relative w-full">
-          <Input name="amount" aria-label={`Provision ${productName} ${label}`} defaultValue={euro(cents)} inputMode="decimal" className="h-9 pr-7 text-right tabular" />
-          <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
-        </div>
-        <SubmitButton size="sm" variant="secondary" pendingText="…">Speichern</SubmitButton>
-      </ActionForm>
-      <ConfirmAction action={deleteRate} hidden={{ product_id: productId, level }} title="Provision entfernen?" description={`${productName} · ${label}`} confirmLabel="Entfernen" tone="danger" trigger={<Button size="icon-sm" variant="ghost" aria-label={`${productName} ${label} entfernen`}><Trash2 /></Button>} />
-    </div>
   );
 }
 

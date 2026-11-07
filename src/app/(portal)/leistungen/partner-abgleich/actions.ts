@@ -65,7 +65,7 @@ export async function runPartnerSync(raw: unknown): Promise<{ ok: true; outcomes
 }
 
 const countsSchema = z.object({
-  category_map: z.record(text, z.string().max(40)),
+  category_map: z.record(text, z.string().max(80)),
   rows: z
     .array(
       z.object({
@@ -73,6 +73,7 @@ const countsSchema = z.object({
         seller_name: text,
         category: z.string().trim().min(1).max(40),
         product_id: z.string().uuid(),
+        variant_id: z.string().uuid().nullable(),
         qualified: z.number().int().min(0).max(100000),
         total: z.number().int().min(0).max(100000).nullable(),
         start_only: z.boolean(),
@@ -108,7 +109,7 @@ export async function applyPartnerCounts(raw: unknown): Promise<{ ok: true; outc
   }
 
   const { data, error } = await supabase.rpc("partner_counts_apply", {
-    p_rows: p.data.rows.map((r) => ({ user_id: r.user_id, category: r.category, product_id: r.product_id, qualified: r.qualified, total: r.total, start_only: r.start_only })),
+    p_rows: p.data.rows.map((r) => ({ user_id: r.user_id, category: r.category, product_id: r.product_id, variant_id: r.variant_id, qualified: r.qualified, total: r.total, start_only: r.start_only })),
   });
   if (error) {
     const e = fromDbError(error);

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formToObject, fromDbError, fromZodError, type ActionResult } from "@/lib/actions";
-import { checkbox, intRange, isoDate, optionalText, optionalUuid, roleKey } from "@/lib/validation";
+import { checkbox, intRange, isoDate, optionalText, optionalUuid, roleKey, uuid } from "@/lib/validation";
 import { PERMISSIONS } from "@/lib/permissions";
 
 const ok = (message: string): ActionResult => {
@@ -42,6 +42,48 @@ export async function saveProduct(_: ActionResult | null, fd: FormData): Promise
     p_requires_external_ref: d.requires_external_ref, p_is_active: d.is_active, p_sort_order: d.sort_order,
   });
   return error ? fromDbError(error) : ok("Produkt gespeichert.");
+}
+
+/** Produkt endgültig löschen (nur ohne erfasste Leistungen). */
+export async function deleteProduct(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const id = uuid.safeParse(fd.get("id"));
+  if (!id.success) return { ok: false, error: "Ungültiges Produkt" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("product_delete", { p_id: id.data });
+  return error ? fromDbError(error) : ok("Produkt gelöscht.");
+}
+
+const variantSchema = z.object({
+  id: optionalUuid,
+  product_id: uuid,
+  name: z.string().trim().min(1, "Bitte einen Namen eingeben, z. B. „bis 14 Module“").max(80),
+  sort_order: intRange(0, 1000).default(0),
+  is_active: checkbox,
+});
+
+/** Provisionsstufe eines Produkts anlegen/umbenennen (z. B. „bis 14 Module“). */
+export async function saveVariant(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const obj = formToObject(fd);
+  if (!obj.id) obj.is_active = "on";
+  const parsed = variantSchema.safeParse(obj);
+  if (!parsed.success) return fromZodError(parsed.error);
+  const d = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("product_variant_upsert", {
+    p_id: (d.id ?? null) as string, p_product: d.product_id, p_name: d.name, p_sort_order: d.sort_order, p_is_active: d.is_active,
+  });
+  return error ? fromDbError(error) : ok(d.id ? "Provisionsstufe gespeichert." : "Provisionsstufe hinzugefügt – Beträge jetzt unter „Provisionen“ eintragen.");
+}
+
+export async function deleteVariant(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  await requireUser();
+  const id = uuid.safeParse(fd.get("id"));
+  if (!id.success) return { ok: false, error: "Ungültige Provisionsstufe" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("product_variant_delete", { p_id: id.data });
+  return error ? fromDbError(error) : ok("Provisionsstufe gelöscht.");
 }
 
 export async function saveSettings(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

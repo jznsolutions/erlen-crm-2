@@ -18,6 +18,7 @@ function setField(id: string, value: string) {
 
 type Option = { id: string; label: string };
 type Product = { id: string; name: string; unit_label: string; requires_external_ref: boolean };
+type Variant = { id: string; product_id: string; name: string };
 
 export function PerformanceEntryForm({
   employees,
@@ -26,6 +27,7 @@ export function PerformanceEntryForm({
   today,
   canApproveOthers,
   clearance,
+  variants = [],
 }: {
   employees: Option[] | null; // null = nur für sich selbst
   products: Product[];
@@ -33,6 +35,7 @@ export function PerformanceEntryForm({
   today: string;
   canApproveOthers: boolean;
   clearance: Record<string, string[]>; // freigeschaltete Produkte je Mitarbeiter
+  variants?: Variant[]; // Provisionsstufen, z. B. „bis 14 Module“
 }) {
   const [userId, setUserId] = useState(defaultUserId);
   const allowed = products.filter((p) => clearance[userId]?.includes(p.id));
@@ -40,6 +43,7 @@ export function PerformanceEntryForm({
   const productId = allowed.some((p) => p.id === chosen) ? chosen : (allowed[0]?.id ?? "");
   const [key, setKey] = useState(0);
   const product = allowed.find((p) => p.id === productId);
+  const productVariants = variants.filter((v) => v.product_id === productId);
   const forOther = userId !== defaultUserId;
 
   const fillFrom = (p: ParsedEntry) => {
@@ -83,6 +87,14 @@ export function PerformanceEntryForm({
                 {allowed.length === 0 ? <option value="">Kein Produkt freigeschaltet</option> : null}
               </Select>
             </Field>
+            {productVariants.length ? (
+              <Field label="Provisionsstufe" htmlFor="variant_id" error={fieldErrors.variant_id}>
+                <Select id="variant_id" name="variant_id" key={productId} defaultValue="" required>
+                  <option value="" disabled>Bitte wählen …</option>
+                  {productVariants.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                </Select>
+              </Field>
+            ) : null}
             <Field label="Datum" htmlFor="occurred_on" error={fieldErrors.occurred_on}>
               <Input id="occurred_on" name="occurred_on" type="date" defaultValue={today} max={today} required />
             </Field>

@@ -13,8 +13,8 @@
 * Neue Produkte sind zunächst für niemanden freigeschaltet.
 
 ## Provisionen
-1. Produkte unter **Verwaltung → Produkte** anlegen – sie stehen danach bei den Provisionen zur Auswahl.
-2. **Verwaltung → Provisionen → Provision hinzufügen:** Produkt wählen, Stufe wählen (**Vertriebspartner, Ausbilder, Teamleiter, Agentur**), Provision in Euro je bestätigter Einheit eintragen → **Hinzufügen**. Beträge lassen sich in der Liste direkt ändern oder entfernen.
+1. Produkte unter **Verwaltung → Produkte** anlegen. Braucht ein Produkt **mehrere Provisionen** (z. B. PV-Lead nach Anzahl Module), direkt darunter **Provisionsstufen** hinzufügen: „bis 14 Module“, „15-39 Module“, „ab 40 Module“.
+2. **Verwaltung → Provisionen:** Tabelle mit einer Zeile je Produkt bzw. Provisionsstufe und einer Spalte je Rang (**Vertriebspartner, Ausbilder, Teamleiter, Agentur**) → Beträge in Euro je bestätigter Einheit eintragen → **Speichern** (je Zeile). Leeres Feld = keine Provision.
 3. Die Stufe eines Mitarbeiters ergibt sich aus seiner Rolle; abweichend im **Mitarbeiterprofil → Produkte & Provision** einstellbar.
 4. Die Stufe **Agentur** ist euer Erlös je Einheit – daraus berechnet das Dashboard den **Umsatz**.
 5. **Vermittlungsprovision & Overhead** (unten auf der Provisionen-Seite, feste Beträge je bestätigter Einheit, für alle Produkte):
@@ -120,7 +120,7 @@ Ablauf wie in euren bisherigen Vorlagen – erst die **Provisionsabrechnung** (E
 Mitarbeiterprofil → **Verwaltung → Konto → Konto deaktivieren**. Die Person verliert sofort alle Zugriffe. Später kann das Konto reaktiviert oder nach Ablauf der Aufbewahrungsfrist anonymisiert werden („Daten löschen (DSGVO)“).
 
 ## Produkte und Kennzahlen
-* **Verwaltung → Produkte**: Produkte/Leistungsarten anlegen (Name, Einheit wie „Verträge“ oder „Leads“). „Vorgangs-ID ist Pflicht“ verhindert Doppelerfassungen.
+* **Verwaltung → Produkte**: Produkte/Leistungsarten anlegen (Name, Einheit wie „Verträge“ oder „Leads“). „Vorgangs-ID ist Pflicht“ verhindert Doppelerfassungen. Darunter optional **Provisionsstufen** (eigene Provision je Stufe, z. B. nach Modulen). **Löschen** (Papierkorb) entfernt ein Produkt endgültig – solange noch keine Leistungen dazu erfasst sind; sonst inaktiv schalten. Leistungen zählen in Ranking und Zielen beim Produkt, die Provision richtet sich nach der Stufe.
 * Leistungen erfassen: **Leistung erfassen** (Mitarbeitende selbst oder Führungskraft für Teammitglieder).
 * **Viele auf einmal aus Excel:** **Leistungen → Importieren** → „Vorlage herunterladen“ (oder eigene Liste mit den Spalten **Mitarbeiter** (E-Mail oder Mitarbeiter-ID), **Produkt**, **Datum**, **Menge**, optional **Vorgangs-ID**, **Notiz**) → Datei wählen → **Datei prüfen**. Die Vorschau zeigt jede Zeile mit „OK“ oder dem Fehler (z. B. unbekannter Mitarbeiter). Erst **… Leistungen importieren** speichert – fehlerhafte Zeilen werden übersprungen, gleiche Vorgangs-IDs nie doppelt übernommen. Excel (.xlsx) und CSV, bis 2.000 Zeilen.
 * **Schnelleingabe per Sprache oder Text:** oben im Formular „Leistung erfassen“ auf das **Mikrofon** tippen und sagen, z. B. „Zwei Glasfaser, Vorgang 12345, gestern“ (oder einfach so eintippen) → **Übernehmen**. Produkt, Menge, Vorgangs-ID, Datum (heute/gestern/vorgestern) und eine Notiz („Notiz: …“) werden ausgefüllt – bitte kurz prüfen und absenden. Das Mikrofon erscheint in Chrome, Edge und Safari (iPhone/iPad); die Spracherkennung übernimmt der Browser (Google bzw. Apple).

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getProducts, getSetting, getVisibleEmployees } from "@/lib/queries";
+import { getProducts, getProductVariants, getSetting, getVisibleEmployees } from "@/lib/queries";
 import { todayBerlin } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,9 +20,10 @@ export default async function PartnerSyncPage({ searchParams }: { searchParams: 
   const mode = params.modus === "liste" ? "liste" : "uebersicht";
   await requirePermission("performance.approve");
   const supabase = await createClient();
-  const [employees, products, saved, { data: details, error }, { data: prev, error: prevError }] = await Promise.all([
+  const [employees, products, variants, saved, { data: details, error }, { data: prev, error: prevError }] = await Promise.all([
     getVisibleEmployees(),
     getProducts(),
+    getProductVariants(),
     getSetting<Saved>("partner_sync"),
     supabase.from("employee_details").select("user_id, partner_seller_id"),
     supabase.from("partner_lead_counts").select("user_id, category, qualified, updated_at"),
@@ -40,6 +41,13 @@ export default async function PartnerSyncPage({ searchParams }: { searchParams: 
     .filter((e) => e.status === "aktiv")
     .map((e) => ({ id: e.id, first_name: e.first_name, last_name: e.last_name, partner_seller_id: sellerId.get(e.id) ?? null }));
   const activeProducts = products.filter((p) => p.is_active).map((p) => ({ id: p.id, name: p.name }));
+  // Auswahl für die Modul-Kategorien: Provisionsstufen der Produkte, sonst das Produkt selbst
+  const options = activeProducts.flatMap((p) => {
+    const own = variants.filter((v) => v.product_id === p.id);
+    return own.length
+      ? own.map((v) => ({ value: `${p.id}:${v.id}`, label: `${p.name} – ${v.name}`, productId: p.id, variantId: v.id as string | null, name: v.name }))
+      : [{ value: `${p.id}:`, label: p.name, productId: p.id, variantId: null, name: p.name }];
+  });
   const tab = (key: string, label: string) => (
     <Link
       href={key === "uebersicht" ? "/leistungen/partner-abgleich" : `/leistungen/partner-abgleich?modus=${key}`}
@@ -61,7 +69,7 @@ export default async function PartnerSyncPage({ searchParams }: { searchParams: 
       <Card>
         <CardContent className="pt-5">
           {mode === "uebersicht" ? (
-            <PartnerCounts people={people} products={activeProducts} categoryMap={saved.category_map ?? {}} prev={prev ?? []} />
+            <PartnerCounts people={people} options={options} categoryMap={saved.category_map ?? {}} prev={prev ?? []} />
           ) : (
             <PartnerSync people={people} products={activeProducts} saved={saved} today={todayBerlin()} />
           )}

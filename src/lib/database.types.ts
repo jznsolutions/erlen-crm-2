@@ -135,14 +135,14 @@ isOneToOne: false
                   ]
                 },"commission_rates": {
                   Row: {
-                    "amount_cents": number,"level_id": string,"product_id": string,"updated_at": string,"updated_by": string | null
+                    "amount_cents": number,"level_id": string,"product_id": string,"updated_at": string,"updated_by": string | null,"variant_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_cents": number,"level_id": string,"product_id": string,"updated_at"?: string,"updated_by"?: string | null
+                    "amount_cents": number,"level_id": string,"product_id": string,"updated_at"?: string,"updated_by"?: string | null,"variant_id"?: string | null
                   }
                   Update: {
-                    "amount_cents"?: number,"level_id"?: string,"product_id"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "amount_cents"?: number,"level_id"?: string,"product_id"?: string,"updated_at"?: string,"updated_by"?: string | null,"variant_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -162,6 +162,12 @@ isOneToOne: false
       columns: ["updated_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "commission_rates_variant_id_fkey"
+      columns: ["variant_id"]
+isOneToOne: false
+      referencedRelation: "product_variants"
       referencedColumns: ["id"]
     }
                   ]
@@ -767,14 +773,14 @@ isOneToOne: false
                   ]
                 },"performance_records": {
                   Row: {
-                    "cancelled_at": string | null,"cancelled_by": string | null,"confirmed_at": string | null,"confirmed_by": string | null,"corrects_record_id": string | null,"created_at": string,"created_by": string,"external_ref": string | null,"id": string,"note": string | null,"occurred_on": string,"product_id": string,"quantity": number,"status": Database["public"]['Enums']["performance_status"],"status_reason": string | null,"submitted_at": string | null,"team_id": string | null,"updated_at": string,"user_id": string
+                    "cancelled_at": string | null,"cancelled_by": string | null,"confirmed_at": string | null,"confirmed_by": string | null,"corrects_record_id": string | null,"created_at": string,"created_by": string,"external_ref": string | null,"id": string,"note": string | null,"occurred_on": string,"product_id": string,"quantity": number,"status": Database["public"]['Enums']["performance_status"],"status_reason": string | null,"submitted_at": string | null,"team_id": string | null,"updated_at": string,"user_id": string,"variant_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancelled_at"?: string | null,"cancelled_by"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"corrects_record_id"?: string | null,"created_at"?: string,"created_by": string,"external_ref"?: string | null,"id"?: string,"note"?: string | null,"occurred_on": string,"product_id": string,"quantity": number,"status"?: Database["public"]['Enums']["performance_status"],"status_reason"?: string | null,"submitted_at"?: string | null,"team_id"?: string | null,"updated_at"?: string,"user_id": string
+                    "cancelled_at"?: string | null,"cancelled_by"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"corrects_record_id"?: string | null,"created_at"?: string,"created_by": string,"external_ref"?: string | null,"id"?: string,"note"?: string | null,"occurred_on": string,"product_id": string,"quantity": number,"status"?: Database["public"]['Enums']["performance_status"],"status_reason"?: string | null,"submitted_at"?: string | null,"team_id"?: string | null,"updated_at"?: string,"user_id": string,"variant_id"?: string | null
                   }
                   Update: {
-                    "cancelled_at"?: string | null,"cancelled_by"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"corrects_record_id"?: string | null,"created_at"?: string,"created_by"?: string,"external_ref"?: string | null,"id"?: string,"note"?: string | null,"occurred_on"?: string,"product_id"?: string,"quantity"?: number,"status"?: Database["public"]['Enums']["performance_status"],"status_reason"?: string | null,"submitted_at"?: string | null,"team_id"?: string | null,"updated_at"?: string,"user_id"?: string
+                    "cancelled_at"?: string | null,"cancelled_by"?: string | null,"confirmed_at"?: string | null,"confirmed_by"?: string | null,"corrects_record_id"?: string | null,"created_at"?: string,"created_by"?: string,"external_ref"?: string | null,"id"?: string,"note"?: string | null,"occurred_on"?: string,"product_id"?: string,"quantity"?: number,"status"?: Database["public"]['Enums']["performance_status"],"status_reason"?: string | null,"submitted_at"?: string | null,"team_id"?: string | null,"updated_at"?: string,"user_id"?: string,"variant_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -819,6 +825,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "performance_records_variant_id_fkey"
+      columns: ["variant_id"]
+isOneToOne: false
+      referencedRelation: "product_variants"
+      referencedColumns: ["id"]
     }
                   ]
                 },"permissions": {
@@ -834,6 +846,26 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"product_variants": {
+                  Row: {
+                    "created_at": string,"id": string,"is_active": boolean,"name": string,"product_id": string,"sort_order": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"product_id": string,"sort_order"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"product_id"?: string,"sort_order"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "product_variants_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"products": {
                   Row: {
@@ -1532,6 +1564,9 @@ isOneToOne: false
 "commission_rate_set":
 { Args: { "p_amount_cents": number,"p_level_key": string,"p_product": string }; Returns: undefined
                            },
+"commission_rates_row_save":
+{ Args: { "p_product": string,"p_rates": Json,"p_variant": string }; Returns: undefined
+                           },
 "commission_rates_save":
 { Args: { "p_rates": Json }; Returns: undefined
                            },
@@ -1782,7 +1817,7 @@ isOneToOne: false
 { Args: { "p_id": string,"p_occurred_on": string,"p_product": string,"p_quantity": number,"p_reason": string }; Returns: string
                            },
 "performance_create":
-{ Args: { "p_confirm_duplicate"?: boolean,"p_external_ref"?: string,"p_note"?: string,"p_occurred_on": string,"p_product": string,"p_quantity": number,"p_submit"?: boolean,"p_user": string }; Returns: string
+{ Args: { "p_confirm_duplicate"?: boolean,"p_external_ref"?: string,"p_note"?: string,"p_occurred_on": string,"p_product": string,"p_quantity": number,"p_submit"?: boolean,"p_user": string,"p_variant"?: string }; Returns: string
                            },
 "performance_daily":
 { Args: { "p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string,"p_user_ids"?: (string)[] }; Returns: {
@@ -1795,8 +1830,17 @@ isOneToOne: false
 "performance_update_draft":
 { Args: { "p_external_ref"?: string,"p_id": string,"p_note"?: string,"p_occurred_on": string,"p_product": string,"p_quantity": number }; Returns: undefined
                            },
+"product_delete":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
 "product_upsert":
 { Args: { "p_description": string,"p_id": string,"p_is_active": boolean,"p_name": string,"p_requires_external_ref": boolean,"p_sort_order"?: number,"p_unit_label": string }; Returns: string
+                           },
+"product_variant_delete":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"product_variant_upsert":
+{ Args: { "p_id": string,"p_is_active"?: boolean,"p_name": string,"p_product": string,"p_sort_order"?: number }; Returns: string
                            },
 "purge_applicants":
 { Args: { "p_days"?: number }; Returns: number

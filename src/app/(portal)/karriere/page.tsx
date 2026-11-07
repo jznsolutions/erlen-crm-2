@@ -12,8 +12,8 @@ import { StatTile } from "@/components/dashboard/stat";
 import { ReferralShare } from "@/components/career/referral-share";
 import { CareerLadder, type CareerProgress } from "@/components/career/ladder";
 import { IncomeCalculator } from "@/components/career/income-calculator";
-import { getProducts } from "@/lib/queries";
-import { levelForRole } from "@/lib/commission";
+import { getProducts, getProductVariants } from "@/lib/queries";
+import { levelForRole, levelRateLines } from "@/lib/commission";
 
 export const metadata: Metadata = { title: "Karriere & Empfehlen" };
 
@@ -26,14 +26,13 @@ export default async function CareerPage() {
     supabase.rpc("career_progress", {}),
     supabase.from("commission_levels").select("id, key, name").not("key", "is", null),
     supabase.from("employee_billing").select("commission_level_id").eq("user_id", user.id).maybeSingle(),
-    supabase.from("commission_rates").select("level_id, product_id, amount_cents"),
+    supabase.from("commission_rates").select("level_id, product_id, variant_id, amount_cents"),
     getProducts(),
   ]);
+  const variants = await getProductVariants();
   // Eigene Provisionsstufe: individuelle Zuordnung, sonst aus der Rolle
   const level = (levels ?? []).find((l) => l.id === billing?.commission_level_id) ?? (levels ?? []).find((l) => l.key === levelForRole(user.role.key));
-  const ownRates = products
-    .map((p) => ({ productId: p.id, name: p.name, unit: p.unit_label, cents: Number((rates ?? []).find((r) => r.level_id === level?.id && r.product_id === p.id)?.amount_cents ?? 0) }))
-    .filter((r) => r.cents > 0);
+  const ownRates = levelRateLines(products, variants, rates ?? [], level?.id).map((r) => ({ productId: r.key, name: r.name, unit: r.unit, cents: r.cents }));
   if (error || !code) {
     return (
       <div>
