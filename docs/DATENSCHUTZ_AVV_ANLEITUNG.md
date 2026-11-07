@@ -16,7 +16,6 @@ Diese Anleitung zeigt, **welche Dienste** im ERLEN-Portal personenbezogene Daten
 | **Anthropic (Claude)** – nur wenn der KI-Verkaufstrainer eingerichtet ist | Antworten des KI-Kunden und Bewertung | Text der Übungsgespräche (keine echten Kundendaten eingeben); gespeichert wird im Portal nur Note/Feedback | **Ja** – DPA laut Anthropic Teil der kommerziellen API-Bedingungen, prüfen und ablegen |
 | **Push-Dienste** von Apple, Google, Mozilla | Mitteilungen aufs Handy | Nur verschlüsselte Nachrichten an eine Geräte-Adresse; die Dienste können den Inhalt nicht lesen (Web-Push-Verschlüsselung) | In der Regel nein (kein Auftrag an ERLEN) – in der Datenschutzerklärung erwähnen |
 | **Spracherkennung des Browsers** (Google bei Chrome/Edge, Apple bei Safari) | Leistungserfassung per Sprache (freiwillig) | Gesprochener Text der Erfassung | Nein (Dienst des Browsers) – Mitarbeitende informieren; wer das nicht möchte, tippt |
-| **Abgleich Partner-CRM** (Screenshot-Variante) | Auftragsliste aus Screenshot lesen | Bild der Liste geht an Anthropic; übernommen werden nur Auftragsnr., Verkäufer, Produkt, Datum, Status | über den Anthropic-DPA abgedeckt; beim Kopieren/Einfügen verlassen Kundendaten den Browser nicht |
 | **Google Search Console** | Sichtbarkeit der Website bei Google | Nur Daten über die öffentliche Website (Suchanfragen, Klicks) – **keine** Portal-Daten | Nein |
 | **GitHub** | Quellcode | Kein Personenbezug (keine echten Daten im Code) | Nein |
 

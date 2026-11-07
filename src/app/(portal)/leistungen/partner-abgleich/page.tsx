@@ -3,14 +3,12 @@ import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getSetting, getVisibleEmployees } from "@/lib/queries";
 import { todayBerlin } from "@/lib/dates";
-import { trainerAvailable } from "@/lib/sales-trainer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, PageHeader } from "@/components/ui/misc";
 import { PartnerSync } from "@/components/partner-sync/partner-sync";
 import type { ColumnMap, Target } from "@/lib/partner-sync";
 
 export const metadata: Metadata = { title: "Abgleich Partner-CRM" };
-export const maxDuration = 120;
 
 export default async function PartnerSyncPage() {
   const user = await requirePermission("performance.approve");
@@ -41,7 +39,7 @@ export default async function PartnerSyncPage() {
       />
       <Card>
         <CardContent className="pt-5">
-          <PartnerSync people={people} products={products.map((p) => ({ id: p.id, name: p.name }))} saved={saved} today={todayBerlin()} aiAvailable={trainerAvailable()} />
+          <PartnerSync people={people} products={products.map((p) => ({ id: p.id, name: p.name }))} saved={saved} today={todayBerlin()} />
         </CardContent>
       </Card>
     </div>
