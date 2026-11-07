@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { login } from "./helpers";
+import { login, setSelfRecording } from "./helpers";
+
+// Prüft die Produktfreigabe über die Selbsterfassung (standardmäßig aus, unter Administration → Rollen wählbar)
+test.beforeAll(async () => setSelfRecording(true));
+test.afterAll(async () => setSelfRecording(false));
+
 
 /** Einladungslink ermitteln: aus der versendeten E-Mail (E2E_MAIL_DIR, lokaler SMTP-Empfänger) oder aus der Anzeige. */
 async function invitationLink(page: Page, email: string): Promise<string> {

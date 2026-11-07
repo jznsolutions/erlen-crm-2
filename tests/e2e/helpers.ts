@@ -25,3 +25,16 @@ export async function login(page: Page, user: string, password = PASSWORD) {
 export async function logout(page: Page) {
   await page.context().clearCookies();
 }
+
+/** Selbsterfassung der Vertriebsrollen ein-/ausschalten (seit dem Partner-Abgleich standardmäßig aus). */
+export async function setSelfRecording(on: boolean) {
+  const db = new pg.Client({ connectionString: process.env.TEST_DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres" });
+  await db.connect();
+  const roles = "('vertriebspartner', 'ausbilder', 'teamleiter')";
+  await db.query(
+    on
+      ? `insert into public.role_permissions (role_id, permission_key) select id, 'performance.create' from public.roles where key in ${roles} on conflict do nothing`
+      : `delete from public.role_permissions where permission_key = 'performance.create' and role_id in (select id from public.roles where key in ${roles})`,
+  );
+  await db.end();
+}

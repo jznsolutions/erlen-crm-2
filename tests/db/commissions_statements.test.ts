@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { close, connect, expectDbError, ids, one, type Db } from "./helpers";
+import { close, connect, expectDbError, ids, one, setSelfRecording, type Db } from "./helpers";
 import { createOrg, insertRecord, type Org } from "./fixtures";
 
 let db: Db;
@@ -8,9 +8,14 @@ let o: Org;
 
 beforeAll(async () => {
   db = await connect();
+  // prüft den Ablauf mit eingeschalteter Selbsterfassung (unter Administration → Rollen wählbar)
+  await setSelfRecording(db, true);
   o = await createOrg(db);
 });
-afterAll(async () => close(db));
+afterAll(async () => {
+  await setSelfRecording(db, false);
+  await close(db);
+});
 
 async function scenario(fn: () => Promise<void>) {
   await db.query("savepoint sc");

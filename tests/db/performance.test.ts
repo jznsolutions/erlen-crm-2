@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { close, connect, expectDbError, one, type Db } from "./helpers";
+import { close, connect, expectDbError, one, setSelfRecording, type Db } from "./helpers";
 import { createOrg, type Org } from "./fixtures";
 
 let db: Db;
@@ -7,9 +7,14 @@ let o: Org;
 
 beforeAll(async () => {
   db = await connect();
+  // prüft den Ablauf mit eingeschalteter Selbsterfassung (unter Administration → Rollen wählbar)
+  await setSelfRecording(db, true);
   o = await createOrg(db);
 });
-afterAll(async () => close(db));
+afterAll(async () => {
+  await setSelfRecording(db, false);
+  await close(db);
+});
 
 /** Führt mehrere Schritte nacheinander als verschiedene Benutzer aus; alles wird am Ende verworfen. */
 async function scenario(fn: () => Promise<void>) {

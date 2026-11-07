@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import pg from "pg";
-import { login } from "./helpers";
+import { login, setSelfRecording } from "./helpers";
+
+// Prüft die Selbsterfassung durch Vertriebspartner (standardmäßig aus, unter Administration → Rollen wählbar)
+test.beforeAll(async () => setSelfRecording(true));
+test.afterAll(async () => setSelfRecording(false));
+
 
 const DB = process.env.TEST_DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const ref = `Q${Date.now().toString().slice(-7)}`;

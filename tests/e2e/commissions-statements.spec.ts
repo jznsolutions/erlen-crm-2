@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { login, logout } from "./helpers";
+import { login, logout, setSelfRecording } from "./helpers";
+
+// Prüft die Selbsterfassung durch Vertriebspartner (standardmäßig aus, unter Administration → Rollen wählbar)
+test.beforeAll(async () => setSelfRecording(true));
+test.afterAll(async () => setSelfRecording(false));
+
 
 test("Leistungserfassung zeigt nur freigeschaltete Produkte", async ({ page }) => {
   await login(page, "partner4");
