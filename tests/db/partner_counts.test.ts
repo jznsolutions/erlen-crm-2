@@ -52,6 +52,15 @@ describe("Leads aus der Partner-Übersicht (Differenz je Screenshot)", () => {
     expect(await count(o.partner2, "bestaetigt")).toBe(1);
   });
 
+  it("eigene Leads der Leitung zählen sofort – keine manuelle Freigabe", async () => {
+    const r = await asUserKeep(db, o.agenturleiter, () => apply([row(o.agenturleiter, "15-39", 2)]));
+    expect(r[0]).toMatchObject({ added: 2, cancelled: 0, message: null });
+    expect(await count(o.agenturleiter, "bestaetigt")).toBe(2);
+    const r2 = await asUserKeep(db, o.agenturleiter, () => apply([row(o.agenturleiter, "15-39", 1)]));
+    expect(r2[0]).toMatchObject({ added: 0, cancelled: 1 });
+    expect(await count(o.agenturleiter, "storniert")).toBe(1);
+  });
+
   it("Fehler je Zeile; nur mit Freigaberecht", async () => {
     const r = await asUser(db, o.agenturleiter, () => apply([row(o.inaktiv, "15-39", 1), row(o.partner3, "", 1)]));
     expect(r.map((x) => x.added)).toEqual([0, 0]);
