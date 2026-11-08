@@ -23,6 +23,8 @@ import {
 import type { TargetProgress } from "@/components/dashboard/targets";
 import { CompetitionsLive, type LiveCompetition } from "@/components/dashboard/competitions";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { getAreaContext } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -42,10 +44,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const loadFrom = [chart.from, addDays(today, -89), startOfMonth(today)].sort()[0];
 
   const canPerf = user.permissions.has("performance.read.self");
-  const [rows, products, targets, employees, teams, training, announcements, myTeams] = await Promise.all([
-    canPerf ? getDaily(loadFrom, today) : Promise.resolve([]),
+  // Bereich (Glasfaser/Leads): alle Zahlen dieser Seite gelten nur für den gewählten Bereich
+  const { areas, current: area } = await getAreaContext(user);
+  const areaId = area?.id;
+  const [rows, allProducts, allTargets, employees, teams, training, announcements, myTeams] = await Promise.all([
+    canPerf ? getDaily(loadFrom, today, { areaId }) : Promise.resolve([]),
     getProducts(),
-    getTargetProgress() as Promise<(TargetProgress & { user_id: string | null; team_id: string | null })[]>,
+    getTargetProgress() as Promise<(TargetProgress & { user_id: string | null; team_id: string | null; area_id?: string | null })[]>,
     kind === "partner" ? Promise.resolve([]) : getVisibleEmployees(),
     kind === "agentur" ? getVisibleTeams() : Promise.resolve([]),
     user.permissions.has("training.read")
@@ -55,7 +60,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     supabase.from("team_memberships").select("team_id").eq("user_id", user.id).eq("member_role", "teamleiter").is("ended_at", null),
   ]);
 
-  const { data: moneyData } = await supabase.rpc("get_money_kpis", { p_from: startOfMonth(today), p_to: today });
+  const products = allProducts.filter((p) => !areaId || p.area_id === areaId);
+  const targets = allTargets.filter((t) => !areaId || t.area_id === areaId);
+  const { data: moneyData } = await supabase.rpc("get_money_kpis", { p_from: startOfMonth(today), p_to: today, p_area_id: areaId });
   const money: MoneyKpis = {
     revenueCents: moneyData?.[0]?.revenue_cents === null || moneyData?.[0]?.revenue_cents === undefined ? null : Number(moneyData[0].revenue_cents),
     ownCommissionCents: moneyData?.[0] ? Number(moneyData[0].own_commission_cents) : null,
@@ -71,16 +78,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   let rankInfo: { rank: number | null; total: number } | null = null;
   if (user.permissions.has("rankings.read") && kind !== "agentur") {
-    const { data } = await supabase.rpc("get_leaderboard", { p_from: startOfMonth(today), p_to: today });
+    const { data } = await supabase.rpc("get_leaderboard", { p_from: startOfMonth(today), p_to: today, p_area_id: areaId });
     if (data) rankInfo = { rank: data.find((d) => d.is_me)?.rank ?? null, total: data.length };
   }
 
   // Laufende Wettbewerbe mit Live-Rangliste
   const liveCompetitions: LiveCompetition[] = [];
   if (user.permissions.has("rankings.read")) {
-    const { data: comps } = await supabase.from("competitions").select("id, title, ends_on, starts_on, product_id, team_id").eq("is_active", true).lte("starts_on", today).gte("ends_on", today).order("ends_on").limit(4);
-    for (const c of comps ?? []) {
-      const r = await supabase.rpc("get_leaderboard", { p_from: c.starts_on, p_to: today, p_product_id: c.product_id ?? undefined, p_team_id: c.team_id ?? undefined });
+    const { data: comps } = await supabase.from("competitions").select("id, title, ends_on, starts_on, product_id, team_id, area_id").eq("is_active", true).lte("starts_on", today).gte("ends_on", today).order("ends_on").limit(4);
+    for (const c of (comps ?? []).filter((x) => !areaId || x.area_id === areaId)) {
+      const r = await supabase.rpc("get_leaderboard", { p_from: c.starts_on, p_to: today, p_product_id: c.product_id ?? undefined, p_team_id: c.team_id ?? undefined, p_area_id: c.area_id ?? undefined });
       if (r.error) continue; // z. B. Teamwettbewerb eines anderen Teams
       liveCompetitions.push({
         id: c.id,
@@ -135,6 +142,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         stats={heroStats}
         canCreate={user.permissions.has("performance.create")}
         streak={streak}
+        areaSwitch={canPerf && areas.length ? <AreaSwitch areas={areas} current={area} /> : null}
       />
 
       {pendingUpdates ? (

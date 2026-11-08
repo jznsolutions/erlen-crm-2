@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Package, Pencil, Plus } from "lucide-react";
 import { requirePermission } from "@/lib/auth";
 import { getProducts, getProductVariants } from "@/lib/queries";
+import { getAreas } from "@/lib/areas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,17 +16,18 @@ export const metadata: Metadata = { title: "Produkte" };
 
 export default async function ProductsPage() {
   await requirePermission("products.manage");
-  const [products, variants] = await Promise.all([getProducts(true), getProductVariants(true)]);
+  const [products, variants, areas] = await Promise.all([getProducts(true), getProductVariants(true), getAreas()]);
+  const areaName = new Map(areas.map((a) => [a.id, a.name]));
   const active = products.filter((x) => x.is_active);
   return (
     <div className="space-y-4">
       <PageHeader
         title="Produkte & Leistungsarten"
-        description="Ein Produkt kann mehrere Provisionsstufen haben, z. B. PV-Lead „bis 14 Module“, „15-39 Module“, „ab 40 Module“ – die Beträge je Rang tragt ihr unter „Provisionen“ ein. Inaktive Produkte bleiben in der Historie erhalten."
-        actions={<ProductDialog trigger={<Button><Plus />Produkt anlegen</Button>} />}
+        description="Jedes Produkt gehört zu einem Bereich (Glasfaser oder Leads) – Zahlen werden nie bereichsübergreifend zusammengezählt. Ein Produkt kann mehrere Provisionsstufen haben, z. B. PV-Lead „bis 14 Module“, „15-39 Module“, „ab 40 Module“ – die Beträge je Rang tragt ihr unter „Provisionen“ ein. Inaktive Produkte bleiben in der Historie erhalten."
+        actions={<ProductDialog areas={areas} trigger={<Button><Plus />Produkt anlegen</Button>} />}
       />
       {products.length === 0 ? <Card><EmptyState icon={Package} title="Noch keine Produkte" className="m-5" /></Card> : null}
-      {products.map((p) => {
+      {[...products].sort((a, b) => areas.findIndex((x) => x.id === a.area_id) - areas.findIndex((x) => x.id === b.area_id)).map((p) => {
         const own = variants.filter((v) => v.product_id === p.id);
         return (
           <Card key={p.id} data-testid="product-card">
@@ -39,8 +41,9 @@ export default async function ProductsPage() {
                     {p.description ? ` · ${p.description}` : ""}
                   </p>
                 </div>
+                <Badge variant="info">{areaName.get(p.area_id) ?? "–"}</Badge>
                 <Badge variant={p.is_active ? "success" : "neutral"}>{p.is_active ? "Aktiv" : "Inaktiv"}</Badge>
-                <ProductDialog product={p} trigger={<Button size="sm" variant="ghost" aria-label={`${p.name} bearbeiten`}><Pencil /></Button>} />
+                <ProductDialog areas={areas} product={p} trigger={<Button size="sm" variant="ghost" aria-label={`${p.name} bearbeiten`}><Pencil /></Button>} />
                 <DeleteProductButton id={p.id} name={p.name} />
               </div>
               <div className="rounded-xl border border-white/10 p-3">

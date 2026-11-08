@@ -14,6 +14,7 @@ const targetSchema = z
     user_id: optionalUuid,
     team_id: optionalUuid,
     product_id: optionalUuid,
+    area_id: optionalUuid,
     period: z.enum(["tag", "woche", "monat", "zeitraum"]),
     starts_on: isoDate,
     ends_on: isoDate,
@@ -40,6 +41,7 @@ export async function saveTarget(_: ActionResult | null, fd: FormData): Promise<
     p_starts_on: d.starts_on,
     p_ends_on: d.ends_on,
     p_target_value: d.target_value,
+    p_area: (d.area_id ?? null) as string,
   });
   if (error) return fromDbError(error);
   revalidatePath("/", "layout");

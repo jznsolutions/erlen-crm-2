@@ -10,7 +10,7 @@ import { endOfMonth, startOfMonth } from "@/lib/dates";
 
 type Opt = { id: string; label: string };
 
-export function TargetDialog({ employees, teams, products, allowAgency, today }: { employees: Opt[]; teams: Opt[]; products: Opt[]; allowAgency: boolean; today: string }) {
+export function TargetDialog({ employees, teams, products, allowAgency, today, area }: { employees: Opt[]; teams: Opt[]; products: Opt[]; allowAgency: boolean; today: string; area?: { id: string; name: string } | null }) {
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<"mitarbeiter" | "team" | "agentur">(employees.length ? "mitarbeiter" : "team");
   return (
@@ -40,8 +40,9 @@ export function TargetDialog({ employees, teams, products, allowAgency, today }:
                     <Select id="t-team" name="team_id">{teams.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</Select>
                   </Field>
                 ) : <div />}
-                <Field label="Produkt" htmlFor="t-product">
-                  <Select id="t-product" name="product_id"><option value="">Alle Produkte</option>{products.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select>
+                {area ? <input type="hidden" name="area_id" value={area.id} /> : null}
+                <Field label="Produkt" htmlFor="t-product" hint={area ? `Bereich ${area.name}` : undefined}>
+                  <Select id="t-product" name="product_id"><option value="">{area ? `Alle Produkte (${area.name})` : "Alle Produkte"}</option>{products.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select>
                 </Field>
                 <Field label="Periode" htmlFor="t-period" hint="Bei Tag/Woche/Monat gilt der Zielwert je Periode.">
                   <Select id="t-period" name="period" defaultValue="monat">

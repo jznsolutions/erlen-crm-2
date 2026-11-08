@@ -9,6 +9,7 @@ import { siteUrl } from "@/lib/env";
 import { todayBerlin } from "@/lib/dates";
 
 export type MonthlyReportData = {
+  area?: string | null;
   from: string;
   to: string;
   prev_from: string;
@@ -72,7 +73,7 @@ export async function renderMonthlyReportPdf(d: MonthlyReportData, agencyName: s
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const logo = await doc.embedPng(Buffer.from(LOGO_DARK_PNG_BASE64, "base64"));
-  doc.setTitle(`Monatsbericht ${monthName(d.from)}`);
+  doc.setTitle(`Monatsbericht ${monthName(d.from)}${d.area ? ` · ${d.area}` : ""}`);
   doc.setAuthor(SITE.legalName);
   doc.setCreator("ERLEN Portal");
 
@@ -125,7 +126,7 @@ export async function renderMonthlyReportPdf(d: MonthlyReportData, agencyName: s
   page.drawImage(logo, { x: R - lw, y: y - 18, width: lw, height: (logo.height / logo.width) * lw });
   text("MONATSBERICHT", L, y, { size: 10, font: bold, color: GRAY });
   y -= 24;
-  text(monthName(d.from), L, y, { size: 22, font: bold });
+  text(`${monthName(d.from)}${d.area ? ` · ${d.area}` : ""}`, L, y, { size: 22, font: bold });
   y -= 16;
   text(`${agencyName} · erstellt am ${new Intl.DateTimeFormat("de-DE").format(new Date())}`, L, y, { size: 9, color: GRAY });
   y -= 30;
@@ -195,29 +196,40 @@ export async function renderMonthlyReportPdf(d: MonthlyReportData, agencyName: s
 }
 
 /** Monatsbericht mit dem Server-Zugang erstellen (Aufrufer prüft vorher die Berechtigung). */
-export async function buildMonthlyReport(month: string): Promise<{ pdf: Uint8Array; data: MonthlyReportData; fileName: string }> {
+export async function buildMonthlyReport(month: string, area?: { id: string; key: string; name: string }): Promise<{ pdf: Uint8Array; data: MonthlyReportData; fileName: string }> {
   const admin = createAdminClient();
   const { from, to } = monthRange(month);
   const [{ data, error }, { data: agency }] = await Promise.all([
-    admin.rpc("monthly_report_data", { p_from: from, p_to: to }),
+    admin.rpc("monthly_report_data", { p_from: from, p_to: to, p_area_id: area?.id }),
     admin.from("organization_settings").select("value").eq("key", "agency").maybeSingle(),
   ]);
   if (error || !data) throw new Error(error?.message ?? "Keine Daten");
   const report = data as unknown as MonthlyReportData;
   const name = (agency?.value as { name?: string } | null)?.name ?? SITE.legalName;
-  return { pdf: await renderMonthlyReportPdf(report, name), data: report, fileName: `ERLEN-Monatsbericht-${month}.pdf` };
+  return { pdf: await renderMonthlyReportPdf(report, name), data: report, fileName: `ERLEN-Monatsbericht-${month}${area ? `-${area.key}` : ""}.pdf` };
 }
 
-function reportEmail(firstName: string, d: MonthlyReportData) {
-  const t = d.totals;
-  const m = monthName(d.from);
-  const lines = [
-    `Bestätigte Abschlüsse: ${num(n(t.confirmed))} (${delta(n(t.confirmed), n(t.prev_confirmed)) || "kein Vormonatswert"})`,
-    `Umsatz (Agentur): ${formatCents(n(t.revenue_cents))}`,
-    `Stornoquote: ${pct(rate(n(t.cancelled), n(t.confirmed)))}`,
-    `Aktive Verkäufer: ${num(n(t.sellers))}`,
-    `Neue Bewerbungen: ${num(n(d.applicants.new))}`,
-  ];
+/** Je Bereich (Glasfaser, Leads …) ein eigener Bericht – Zahlen werden nie bereichsübergreifend summiert. */
+export async function buildMonthlyReports(month: string) {
+  const { data: areas } = await createAdminClient().from("business_areas").select("id, key, name").order("sort_order");
+  if (!areas?.length) return [await buildMonthlyReport(month)];
+  return Promise.all(areas.map((a) => buildMonthlyReport(month, a)));
+}
+
+function reportEmail(firstName: string, reports: MonthlyReportData[]) {
+  const m = monthName(reports[0].from);
+  const lines = reports.flatMap((d) => {
+    const t = d.totals;
+    return [
+      ...(d.area ? [`— ${d.area} —`] : []),
+      `Bestätigte Abschlüsse: ${num(n(t.confirmed))} (${delta(n(t.confirmed), n(t.prev_confirmed)) || "kein Vormonatswert"})`,
+      `Umsatz (Agentur): ${formatCents(n(t.revenue_cents))}`,
+      `Stornoquote: ${pct(rate(n(t.cancelled), n(t.confirmed)))}`,
+      `Aktive Verkäufer: ${num(n(t.sellers))}`,
+      "",
+    ];
+  });
+  lines.push(`Neue Bewerbungen: ${num(n(reports[0].applicants.new))}`);
   return {
     subject: `Monatsbericht ${m}`,
     text: `Hallo ${firstName},\n\nim Anhang findest du den Monatsbericht für ${m}.\n\n${lines.join("\n")}\n\nAlle Details: ${siteUrl()}/berichte\n\nDein ERLEN-Portal`,
@@ -234,10 +246,11 @@ export async function sendMonthlyReport(month: string, recipients?: { email: str
   const admin = createAdminClient();
   const list = recipients ?? (await admin.rpc("monthly_report_recipients")).data ?? [];
   if (!list.length) return 0;
-  const { pdf, data, fileName } = await buildMonthlyReport(month);
+  const reports = await buildMonthlyReports(month);
+  const attachments = reports.map((r) => ({ filename: r.fileName, content: r.pdf, contentType: "application/pdf" }));
   let sent = 0;
   for (const r of list) {
-    const res = await sendEmailResult({ to: r.email, ...reportEmail(r.first_name, data), attachments: [{ filename: fileName, content: pdf, contentType: "application/pdf" }] });
+    const res = await sendEmailResult({ to: r.email, ...reportEmail(r.first_name, reports.map((x) => x.data)), attachments });
     if (res.ok) sent++;
     else console.error("[monatsbericht]", r.email, res.error);
   }

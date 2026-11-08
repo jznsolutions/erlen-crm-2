@@ -3,6 +3,8 @@ import { Trash2 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getTargetProgress, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
+import { getAreaContext } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 import { isPeriodKey, PERIOD_LABELS, periodRange, todayBerlin, type PeriodKey } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,13 +29,18 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   const range = periodRange(period, today);
   const productId = params.produkt && /^[0-9a-f-]{36}$/.test(params.produkt) ? params.produkt : undefined;
 
-  const [targets, products, myTeam, ledTeams] = await Promise.all([
-    getTargetProgress() as Promise<(TargetProgress & { user_id: string | null; team_id: string | null })[]>,
+  const { areas, current: area } = await getAreaContext(user);
+  const areaId = area?.id;
+  const [allTargets, allProducts, myTeam, ledTeams] = await Promise.all([
+    getTargetProgress() as Promise<(TargetProgress & { user_id: string | null; team_id: string | null; area_id?: string | null })[]>,
     getProducts(),
     supabase.from("team_memberships").select("team_id, teams(name)").eq("user_id", user.id).eq("member_role", "mitglied").is("ended_at", null).maybeSingle(),
     supabase.from("team_memberships").select("team_id, teams(name)").eq("user_id", user.id).eq("member_role", "teamleiter").is("ended_at", null),
   ]);
 
+  // Nur der gewählte Bereich (Glasfaser und Leads nie gemeinsam)
+  const targets = allTargets.filter((t) => !areaId || t.area_id === areaId);
+  const products = allProducts.filter((p) => !areaId || p.area_id === areaId);
   const rankingTeams = [
     ...(myTeam.data ? [{ id: myTeam.data.team_id, name: myTeam.data.teams?.name ?? "Mein Team" }] : []),
     ...(ledTeams.data ?? []).map((t) => ({ id: t.team_id, name: t.teams?.name ?? "Team" })),
@@ -43,16 +50,16 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
   const teamBoards: { id: string; name: string; rows: LeaderRow[] | null; error?: string }[] = [];
   let competitions: { id: string; title: string; description: string | null; starts_on: string; ends_on: string; product_id: string | null; rows: LeaderRow[] }[] = [];
   if (user.permissions.has("rankings.read")) {
-    const { data, error } = await supabase.rpc("get_leaderboard", { p_from: range.from, p_to: range.to, p_product_id: productId });
+    const { data, error } = await supabase.rpc("get_leaderboard", { p_from: range.from, p_to: range.to, p_product_id: productId, p_area_id: areaId });
     agency = error ? { error: error.message } : { rows: data ?? [] };
     for (const t of rankingTeams) {
-      const r = await supabase.rpc("get_leaderboard", { p_from: range.from, p_to: range.to, p_product_id: productId, p_team_id: t.id });
+      const r = await supabase.rpc("get_leaderboard", { p_from: range.from, p_to: range.to, p_product_id: productId, p_team_id: t.id, p_area_id: areaId });
       teamBoards.push({ ...t, rows: r.data ?? null, error: r.error?.message });
     }
-    const { data: comps } = await supabase.from("competitions").select("id, title, description, starts_on, ends_on, product_id, team_id").eq("is_active", true).gte("ends_on", today).lte("starts_on", today).order("ends_on");
+    const { data: comps } = await supabase.from("competitions").select("id, title, description, starts_on, ends_on, product_id, team_id, area_id").eq("is_active", true).gte("ends_on", today).lte("starts_on", today).order("ends_on");
     competitions = await Promise.all(
-      (comps ?? []).map(async (c) => {
-        const r = await supabase.rpc("get_leaderboard", { p_from: c.starts_on, p_to: c.ends_on > today ? today : c.ends_on, p_product_id: c.product_id ?? undefined, p_team_id: c.team_id ?? undefined });
+      (comps ?? []).filter((c) => !areaId || c.area_id === areaId).map(async (c) => {
+        const r = await supabase.rpc("get_leaderboard", { p_from: c.starts_on, p_to: c.ends_on > today ? today : c.ends_on, p_product_id: c.product_id ?? undefined, p_team_id: c.team_id ?? undefined, p_area_id: c.area_id ?? undefined });
         return { ...c, rows: r.data ?? [] };
       }),
     );
@@ -88,8 +95,9 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
       <PageHeader
         title="Ziele & Rankings"
         description="Zielerreichung und Bestenlisten basieren ausschließlich auf bestätigten Leistungen."
-        actions={manageData ? <TargetDialog employees={manageData.employees} teams={manageData.teams} products={products.map((p) => ({ id: p.id, label: p.name }))} allowAgency={user.permissions.has("performance.read.all")} today={today} /> : undefined}
+        actions={manageData ? <TargetDialog employees={manageData.employees} teams={manageData.teams} products={products.map((p) => ({ id: p.id, label: p.name }))} allowAgency={user.permissions.has("performance.read.all")} today={today} area={area} /> : undefined}
       />
+      {areas.length ? <AreaSwitch areas={areas} current={area} /> : null}
 
       <section className="grid gap-4 lg:grid-cols-3">
         {groups.map((g) => {

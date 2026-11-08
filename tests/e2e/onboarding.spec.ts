@@ -36,7 +36,9 @@ test("Einladung erstellen, annehmen und Einmaligkeit", async ({ page, browser })
   await page.fill("#i-last", "Neumann");
   await page.fill("#i-email", email);
   await page.selectOption("#i-team", { label: "Team Nord" });
-  await page.getByLabel("Gas").uncheck();
+  // Nur der Bereich Glasfaser wird freigeschaltet (Leads-Produkte wie Gas bleiben gesperrt)
+  await page.getByLabel("Bereich Glasfaser").check();
+  await expect(page.getByLabel("Bereich Leads")).not.toBeChecked();
   await page.getByRole("button", { name: "Einladung per E-Mail senden" }).click();
   const link = await invitationLink(page, email);
 

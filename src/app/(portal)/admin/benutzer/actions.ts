@@ -36,10 +36,10 @@ export async function createInvitation(_: ActionResult | null, fd: FormData): Pr
     if (re) console.error("[einladung] Werber", re.message);
   }
 
-  const products = fd.getAll("product_ids").map(String).filter((x) => uuid.safeParse(x).success);
-  if (products.length && user.permissions.has("products.assign")) {
-    const { error: pe } = await supabase.rpc("invitation_set_products", { p_id: invitationId as string, p_products: products });
-    if (pe) console.error("[einladung] Produkte", pe.message);
+  const areas = fd.getAll("area_ids").map(String).filter((x) => uuid.safeParse(x).success);
+  if (areas.length && user.permissions.has("products.assign")) {
+    const { error: pe } = await supabase.rpc("invitation_set_areas", { p_id: invitationId as string, p_areas: areas });
+    if (pe) console.error("[einladung] Bereiche", pe.message);
   }
 
   const result = await deliver(d.email, d.first_name, `${user.firstName} ${user.lastName}`, token, d.valid_hours);

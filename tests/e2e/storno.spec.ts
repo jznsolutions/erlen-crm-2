@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import pg from "pg";
-import { login } from "./helpers";
+import { chooseArea, login } from "./helpers";
 
 const DB = process.env.TEST_DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const tag = `STORNO-${Date.now()}`;
@@ -34,6 +34,7 @@ test("Storno-Übersicht zeigt Quote und Grund", async ({ page }) => {
   await expect(page).toHaveURL(/\/berichte\/storno/);
   // Zeitraum unabhängig vom Monatsanfang: letzte 90 Tage
   await page.goto("/berichte/storno?zeitraum=90tage");
+  await chooseArea(page, "Leads"); // Gas gehört zum Bereich Leads
   await expect(page.getByRole("heading", { name: "Storno-Übersicht" })).toBeVisible();
   await expect(page.getByText(`Widerruf ${tag}`)).toBeVisible();
   await expect(page.getByText("Mitarbeiter mit Stornos")).toBeVisible();

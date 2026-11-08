@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { buildMonthlyReport, previousMonth } from "@/lib/monthly-report";
 import { todayBerlin } from "@/lib/dates";
+import { getAreaContext } from "@/lib/areas";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Ungültiger Monat" }, { status: 400 });
   }
   try {
-    const { pdf, fileName } = await buildMonthlyReport(month);
+    // Bericht je Bereich: ?bereich=glasfaser|leads, sonst der gewählte Bereich
+    const { current: area } = await getAreaContext(user, request.nextUrl.searchParams.get("bereich"));
+    const { pdf, fileName } = await buildMonthlyReport(month, area ?? undefined);
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",

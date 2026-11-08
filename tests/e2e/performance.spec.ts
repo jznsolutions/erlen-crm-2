@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { login, logout, setSelfRecording } from "./helpers";
+import { chooseArea, login, logout, setSelfRecording } from "./helpers";
 
 // Prüft die Selbsterfassung durch Vertriebspartner (standardmäßig aus, unter Administration → Rollen wählbar)
 test.beforeAll(async () => setSelfRecording(true));
@@ -32,6 +32,7 @@ test("Leistung einreichen, freigeben und stornieren", async ({ page }) => {
   await expect(page.locator("tr", { hasText: ref })).toHaveCount(0);
 
   await page.goto("/leistungen?status=bestaetigt");
+  await chooseArea(page, "Leads"); // Strom gehört zum Bereich Leads
   const confirmed = page.locator("tr", { hasText: ref });
   await expect(confirmed.getByText("Bestätigt")).toBeVisible();
   await confirmed.getByRole("button", { name: "Stornieren" }).click();

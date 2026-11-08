@@ -185,14 +185,15 @@ export async function addTrainingNote(_: ActionResult | null, fd: FormData): Pro
   return error ? fromDbError(error) : done("Notiz gespeichert.");
 }
 
-export async function setUserProducts(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+/** Bereiche freischalten (z. B. Glasfaser, Leads): nur darin können Leistungen gebucht werden. */
+export async function setUserAreas(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   await requireUser();
   const user = uuid.safeParse(fd.get("user_id"));
   if (!user.success) return { ok: false, error: "Ungültiger Benutzer" };
-  const products = fd.getAll("product_ids").map(String).filter((x) => uuid.safeParse(x).success);
+  const areas = fd.getAll("area_ids").map(String).filter((x) => uuid.safeParse(x).success);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("user_products_set", { p_user: user.data, p_products: products });
-  return error ? fromDbError(error) : done("Produktfreigaben gespeichert.");
+  const { error } = await supabase.rpc("user_areas_set", { p_user: user.data, p_areas: areas });
+  return error ? fromDbError(error) : done("Bereichsfreigaben gespeichert.");
 }
 
 export async function setCommissionLevel(_: ActionResult | null, fd: FormData): Promise<ActionResult> {

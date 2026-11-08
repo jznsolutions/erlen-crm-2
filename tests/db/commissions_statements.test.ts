@@ -41,9 +41,9 @@ async function setRates(rates: Record<string, number>) {
 }
 
 describe("Produktfreigaben", () => {
-  it("ohne Freigabe kann keine Leistung erfasst werden", async () => {
+  it("ohne Freigabe des Bereichs kann keine Leistung erfasst werden", async () => {
     await scenario(async () => {
-      await db.query("delete from public.user_products where user_id = $1 and product_id = $2", [o.partner1, o.product]);
+      await db.query("delete from public.user_areas where user_id = $1 and area_id = $2", [o.partner1, o.glasfaser]);
       await as(o.partner1);
       await expectDbError(
         db,

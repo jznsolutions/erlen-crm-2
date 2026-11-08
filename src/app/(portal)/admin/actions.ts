@@ -29,6 +29,7 @@ const productSchema = z.object({
   requires_external_ref: checkbox,
   is_active: checkbox,
   sort_order: intRange(0, 1000).default(0),
+  area_id: uuid,
 });
 
 export async function saveProduct(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
@@ -39,7 +40,7 @@ export async function saveProduct(_: ActionResult | null, fd: FormData): Promise
   const supabase = await createClient();
   const { error } = await supabase.rpc("product_upsert", {
     p_id: (d.id ?? null) as string, p_name: d.name, p_description: (d.description ?? null) as string, p_unit_label: d.unit_label,
-    p_requires_external_ref: d.requires_external_ref, p_is_active: d.is_active, p_sort_order: d.sort_order,
+    p_requires_external_ref: d.requires_external_ref, p_is_active: d.is_active, p_sort_order: d.sort_order, p_area: d.area_id,
   });
   return error ? fromDbError(error) : ok("Produkt gespeichert.");
 }
@@ -111,6 +112,7 @@ const competitionSchema = z
     title: z.string().trim().min(2).max(120),
     description: optionalText(1000),
     product_id: optionalUuid,
+    area_id: optionalUuid,
     team_id: optionalUuid,
     starts_on: isoDate,
     ends_on: isoDate,
@@ -127,6 +129,7 @@ export async function saveCompetition(_: ActionResult | null, fd: FormData): Pro
   const { error } = await supabase.rpc("competition_upsert", {
     p_id: (d.id ?? null) as string, p_title: d.title, p_description: (d.description ?? null) as string, p_product: (d.product_id ?? null) as string,
     p_team: (d.team_id ?? null) as string, p_starts_on: d.starts_on, p_ends_on: d.ends_on, p_is_active: d.is_active,
+    p_area: (d.area_id ?? null) as string,
   });
   return error ? fromDbError(error) : ok("Wettbewerb gespeichert.");
 }

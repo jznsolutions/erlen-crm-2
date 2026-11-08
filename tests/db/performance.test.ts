@@ -215,8 +215,8 @@ describe("Ziele und Rankings", () => {
       await as(o.teamleiterA);
       await db.query(
         `select public.target_upsert(null, 'Monatsziel', 'mitarbeiter', $1, null, null, 'monat',
-           date_trunc('month', private.today_berlin())::date, (date_trunc('month', private.today_berlin()) + interval '1 month - 1 day')::date, 4)`,
-        [o.partner1],
+           date_trunc('month', private.today_berlin())::date, (date_trunc('month', private.today_berlin()) + interval '1 month - 1 day')::date, 4, $2)`,
+        [o.partner1, o.glasfaser],
       );
       await as(o.partner1);
       const pending = await create(o.partner1, 10);

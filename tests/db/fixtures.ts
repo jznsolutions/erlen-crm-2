@@ -48,21 +48,26 @@ export async function createOrg(db: Db) {
   );
 
   const product = (
-    await one<{ id: string }>(db, "insert into public.products (name, unit_label) values ('Glasfaser', 'Verträge') returning id")
+    await one<{ id: string }>(db, "insert into public.products (name, unit_label, area_id) values ('Glasfaser', 'Verträge', (select id from public.business_areas where key = 'glasfaser')) returning id")
   ).id;
   const productRef = (
     await one<{ id: string }>(
       db,
-      "insert into public.products (name, unit_label, requires_external_ref) values ('PV-Leads', 'Leads', true) returning id",
+      "insert into public.products (name, unit_label, requires_external_ref, area_id) values ('PV-Leads', 'Leads', true, (select id from public.business_areas where key = 'leads')) returning id",
     )
   ).id;
 
-  // Produktfreigaben: alle Testpersonen dürfen beide Produkte erfassen
+  // Freigaben: alle Testpersonen dürfen in beiden Bereichen erfassen
   await db.query(
     "insert into public.user_products (user_id, product_id) select p.id, pr.id from public.profiles p cross join public.products pr",
   );
+  await db.query(
+    "insert into public.user_areas (user_id, area_id) select p.id, a.id from public.profiles p cross join public.business_areas a on conflict do nothing",
+  );
 
   return {
+    glasfaser: (await one<{ id: string }>(db, "select id from public.business_areas where key = 'glasfaser'")).id,
+    leads: (await one<{ id: string }>(db, "select id from public.business_areas where key = 'leads'")).id,
     admin, agenturleiter, teamleiterA, teamleiterB, ausbilder,
     partner1, partner2, partner3, partner4, inaktiv,
     alpha, alphaJunior, beta, product, productRef,

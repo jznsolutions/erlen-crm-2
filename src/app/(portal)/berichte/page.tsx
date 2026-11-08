@@ -15,16 +15,20 @@ import { StatTile } from "@/components/dashboard/stat";
 import { TrendChart } from "@/components/charts/trend-chart";
 import { BarList, colorForIndex } from "@/components/charts/bar-list";
 import { PerformanceFilterBar } from "@/components/performance/filter-bar";
+import { getAreaContext } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 
 export const metadata: Metadata = { title: "Berichte" };
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requirePermission("reports.read.team", "reports.read.all");
   const f = parsePerformanceFilters(await searchParams);
-  const [products, employees, teams, roles] = await Promise.all([getProducts(true), getVisibleEmployees(), getVisibleTeams(), getRoles()]);
+  const [allProducts, employees, teams, roles, { areas, current: area }] = await Promise.all([getProducts(true), getVisibleEmployees(), getVisibleTeams(), getRoles(), getAreaContext(user)]);
+  // Nur der gewählte Bereich – Glasfaser und Leads werden nie zusammengezählt
+  const products = allProducts.filter((p) => !area || p.area_id === area.id);
   const scoped = employees.filter((e) => (!f.teamId || e.team_id === f.teamId) && (!f.role || e.role_key === f.role) && (!f.userId || e.id === f.userId));
   const ids = scoped.map((e) => e.id);
-  let rows = ids.length ? await getDaily(f.from, f.to, { userIds: ids, productId: f.productId }) : [];
+  let rows = ids.length ? await getDaily(f.from, f.to, { userIds: ids, productId: f.productId, areaId: area?.id }) : [];
   if (f.status) rows = rows.filter((r) => r.status === f.status);
   const s = summarize(rows);
   const days = daysBetweenInclusive(f.from, f.to);
@@ -53,6 +57,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </>
         }
       />
+      {areas.length ? <AreaSwitch areas={areas} current={area} className="mb-4" /> : null}
       <PerformanceFilterBar f={f} employees={scoped.length > 1 || f.userId ? employees : undefined} products={products} teams={teams} roles={roles} />
       <p className="-mt-4 text-xs text-muted-foreground">{formatDate(f.from)} – {formatDate(f.to)} · {scoped.length} Mitarbeiter im Filter · Leistungswerte = bestätigte Leistungen</p>
       <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

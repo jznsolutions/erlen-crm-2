@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getProducts, getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
+import { getRoles, getVisibleEmployees, getVisibleTeams } from "@/lib/queries";
+import { getAreas } from "@/lib/areas";
 import { emailProvider } from "@/lib/email";
 import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -21,11 +22,11 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
   const user = await requirePermission("employees.invite", "roles.assign", "employees.deactivate");
   const supabase = await createClient();
   const canInvite = user.permissions.has("employees.invite");
-  const [roles, teams, employees, products, { data: invitations }] = await Promise.all([
+  const [roles, teams, employees, areas, { data: invitations }] = await Promise.all([
     getRoles(),
     getVisibleTeams(),
     getVisibleEmployees(),
-    getProducts(),
+    getAreas(),
     canInvite ? supabase.from("invitations").select("id, email, first_name, last_name, role_id, expires_at, accepted_at, revoked_at, created_at, accepted_user_id").order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [] }),
   ]);
   let prefill: { first_name: string; last_name: string; email: string; applicant_id: string; recruiter_id?: string | null } | undefined;
@@ -58,7 +59,7 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
               teams={teams.filter((t) => t.is_active).map((t) => ({ id: t.id, label: t.name }))}
               people={employees.filter((e) => e.status === "aktiv" && e.role_key !== "vertriebspartner").map((e) => ({ id: e.id, label: `${e.last_name}, ${e.first_name} (${e.role_name})` }))}
               recruiters={employees.filter((e) => e.status === "aktiv").map((e) => ({ id: e.id, label: `${e.last_name}, ${e.first_name} (${e.role_name})` }))}
-              products={user.permissions.has("products.assign") ? products.filter((p) => p.is_active).map((p) => ({ id: p.id, label: p.name })) : null}
+              products={user.permissions.has("products.assign") ? areas.map((a) => ({ id: a.id, label: a.name })) : null}
               canAssignRoles={user.permissions.has("roles.assign")}
               prefill={prefill}
             />

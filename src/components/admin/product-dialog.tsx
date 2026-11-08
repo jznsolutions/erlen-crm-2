@@ -3,12 +3,12 @@ import { useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Checkbox, Field, Input } from "@/components/ui/input";
+import { Checkbox, Field, Input, Select } from "@/components/ui/input";
 import { saveProduct } from "@/app/(portal)/admin/actions";
 
-type P = { id: string; name: string; description: string | null; unit_label: string; requires_external_ref: boolean; is_active: boolean; sort_order: number };
+type P = { id: string; name: string; description: string | null; unit_label: string; requires_external_ref: boolean; is_active: boolean; sort_order: number; area_id?: string };
 
-export function ProductDialog({ product, trigger }: { product?: P; trigger: React.ReactNode }) {
+export function ProductDialog({ product, trigger, areas = [] }: { product?: P; trigger: React.ReactNode; areas?: { id: string; name: string }[] }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -21,6 +21,12 @@ export function ProductDialog({ product, trigger }: { product?: P; trigger: Reac
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Name" htmlFor="p-name" error={fieldErrors.name}><Input id="p-name" name="name" defaultValue={product?.name} required /></Field>
                 <Field label="Einheit" htmlFor="p-unit" hint="z. B. Verträge, Leads" error={fieldErrors.unit_label}><Input id="p-unit" name="unit_label" defaultValue={product?.unit_label ?? "Verträge"} required /></Field>
+                <Field label="Bereich" htmlFor="p-area" hint="Glasfaser und Leads werden nie zusammengezählt" className="sm:col-span-2">
+                  <Select id="p-area" name="area_id" defaultValue={product?.area_id ?? ""} required>
+                    <option value="" disabled>Bereich wählen …</option>
+                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </Select>
+                </Field>
                 <Field label="Beschreibung" htmlFor="p-desc" className="sm:col-span-2"><Input id="p-desc" name="description" defaultValue={product?.description ?? ""} /></Field>
                 <Field label="Sortierung" htmlFor="p-sort" hint="Bestimmt Reihenfolge und Diagrammfarbe"><Input id="p-sort" name="sort_order" type="number" min={0} defaultValue={product?.sort_order ?? 0} /></Field>
               </div>

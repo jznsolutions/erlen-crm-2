@@ -6,10 +6,10 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/input";
 import { saveCompetition } from "@/app/(portal)/admin/actions";
 
-type C = { id: string; title: string; description: string | null; product_id: string | null; team_id: string | null; starts_on: string; ends_on: string; is_active: boolean };
+type C = { id: string; title: string; description: string | null; product_id: string | null; area_id?: string | null; team_id: string | null; starts_on: string; ends_on: string; is_active: boolean };
 type Opt = { id: string; label: string };
 
-export function CompetitionDialog({ c, products, teams, trigger, today }: { c?: C; products: Opt[]; teams: Opt[]; trigger: React.ReactNode; today: string }) {
+export function CompetitionDialog({ c, products, teams, trigger, today, areas = [] }: { c?: C; products: (Opt & { area_id?: string })[]; teams: Opt[]; trigger: React.ReactNode; today: string; areas?: { id: string; name: string }[] }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -22,7 +22,8 @@ export function CompetitionDialog({ c, products, teams, trigger, today }: { c?: 
               <Field label="Titel" htmlFor="c-title" error={fieldErrors.title}><Input id="c-title" name="title" defaultValue={c?.title} required /></Field>
               <Field label="Beschreibung" htmlFor="c-desc"><Textarea id="c-desc" name="description" defaultValue={c?.description ?? ""} rows={2} /></Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Produkt" htmlFor="c-prod"><Select id="c-prod" name="product_id" defaultValue={c?.product_id ?? ""}><option value="">Alle Produkte</option>{products.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select></Field>
+                <Field label="Bereich" htmlFor="c-area" hint="Glasfaser und Leads werden nie zusammen gewertet"><Select id="c-area" name="area_id" defaultValue={c?.area_id ?? areas[0]?.id ?? ""} required>{areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
+                <Field label="Produkt" htmlFor="c-prod" hint="optional – sonst alle Produkte des Bereichs"><Select id="c-prod" name="product_id" defaultValue={c?.product_id ?? ""}><option value="">Alle Produkte des Bereichs</option>{areas.length > 1 ? areas.map((a) => <optgroup key={a.id} label={a.name}>{products.filter((p) => p.area_id === a.id).map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</optgroup>) : products.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select></Field>
                 <Field label="Teilnehmer" htmlFor="c-team"><Select id="c-team" name="team_id" defaultValue={c?.team_id ?? ""}><option value="">Gesamte Agentur</option>{teams.map((t) => <option key={t.id} value={t.id}>Team {t.label}</option>)}</Select></Field>
                 <Field label="Beginn" htmlFor="c-start" error={fieldErrors.starts_on}><Input id="c-start" name="starts_on" type="date" defaultValue={c?.starts_on ?? today} required /></Field>
                 <Field label="Ende" htmlFor="c-end" error={fieldErrors.ends_on}><Input id="c-end" name="ends_on" type="date" defaultValue={c?.ends_on} required /></Field>

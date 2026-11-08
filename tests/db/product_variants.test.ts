@@ -77,24 +77,25 @@ describe("Provisionsstufen je Produkt (z. B. PV-Lead nach Modulen)", () => {
     });
   });
 
-  it("Partner-Abgleich bucht mit Provisionsstufe und schaltet das Produkt automatisch frei", async () => {
+  it("Partner-Abgleich bucht mit Provisionsstufe und schaltet den Bereich automatisch frei", async () => {
     await scenario(async () => {
+      await db.query("delete from public.user_areas where user_id = $1", [o.partner1]);
       await as(o.admin);
-      const fresh = (await one<{ id: string }>(db, "select public.product_upsert(null, 'PV Neu', null, 'Leads', false, true) id")).id;
+      const fresh = (await one<{ id: string }>(db, "select public.product_upsert(null, 'PV Neu', null, 'Leads', false, true, 0, $1) id", [o.leads])).id;
       const v = (await one<{ id: string }>(db, "select public.product_variant_upsert(null, $1, '15-39 Module') id", [fresh])).id;
       await as(o.agenturleiter);
       const r = await db.query("select added, message from public.partner_counts_apply($1::jsonb)", [JSON.stringify([{ user_id: o.partner1, category: "15-39", product_id: fresh, variant_id: v, qualified: 2 }])]);
       expect(r.rows[0]).toMatchObject({ added: 2, message: null });
       await db.query("reset role");
       expect((await one<{ c: number }>(db, "select count(*)::int c from public.performance_records where user_id = $1 and variant_id = $2 and status = 'bestaetigt'", [o.partner1, v])).c).toBe(2);
-      expect((await one<{ c: number }>(db, "select count(*)::int c from public.user_products where user_id = $1 and product_id = $2", [o.partner1, fresh])).c).toBe(1);
+      expect((await one<{ c: number }>(db, "select count(*)::int c from public.user_areas where user_id = $1 and area_id = $2", [o.partner1, o.leads])).c).toBe(1);
     });
   });
 
   it("Produkt und Variante löschen – nur solange es keine Leistungen gibt", async () => {
     await scenario(async () => {
       await as(o.admin);
-      const empty = (await one<{ id: string }>(db, "select public.product_upsert(null, 'Testprodukt', null, 'Leads', false, true) id")).id;
+      const empty = (await one<{ id: string }>(db, "select public.product_upsert(null, 'Testprodukt', null, 'Leads', false, true, 0, $1) id", [o.leads])).id;
       const v = (await one<{ id: string }>(db, "select public.product_variant_upsert(null, $1, 'bis 14 Module') id", [empty])).id;
       await db.query("select public.commission_rates_row_save($1, $2, $3)", [empty, v, JSON.stringify({ vertriebspartner: 100 })]);
       await db.query("select public.product_delete($1)", [empty]);

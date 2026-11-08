@@ -5,7 +5,7 @@ import type { DailyRow } from "@/lib/metrics";
 
 export const getProducts = cache(async (includeInactive = false) => {
   const supabase = await createClient();
-  let q = supabase.from("products").select("id, name, unit_label, requires_external_ref, is_active, sort_order, description").order("sort_order").order("name");
+  let q = supabase.from("products").select("id, name, unit_label, requires_external_ref, is_active, sort_order, description, area_id").order("sort_order").order("name");
   if (!includeInactive) q = q.eq("is_active", true);
   const { data } = await q;
   return data ?? [];
@@ -76,7 +76,7 @@ export const getVisibleEmployees = cache(async (): Promise<EmployeeRow[]> => {
 });
 
 /** Tageswerte im Sichtbereich des Betrachters (RLS in der Datenbank). */
-export async function getDaily(from: string, to: string, opts: { userIds?: string[]; teamId?: string; productId?: string } = {}): Promise<DailyRow[]> {
+export async function getDaily(from: string, to: string, opts: { userIds?: string[]; teamId?: string; productId?: string; areaId?: string } = {}): Promise<DailyRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("performance_daily", {
     p_from: from,
@@ -84,6 +84,7 @@ export async function getDaily(from: string, to: string, opts: { userIds?: strin
     p_user_ids: opts.userIds,
     p_team_id: opts.teamId,
     p_product_id: opts.productId,
+    p_area_id: opts.areaId,
   });
   if (error) throw new Error("Leistungsdaten konnten nicht geladen werden.");
   return (data ?? []).map((r) => ({ ...r, quantity: Number(r.quantity), records: Number(r.records) }));
