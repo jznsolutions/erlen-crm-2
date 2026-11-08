@@ -14,6 +14,8 @@ import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { StatTile } from "@/components/dashboard/stat";
 import { PerformanceFilterBar } from "@/components/performance/filter-bar";
+import { getAreaContext } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 
 export const metadata: Metadata = { title: "Storno-Übersicht" };
 
@@ -53,14 +55,16 @@ function StornoTable({ title, description, items }: { title: string; description
 }
 
 export default async function StornoPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  await requirePermission("reports.read.team", "reports.read.all");
+  const user = await requirePermission("reports.read.team", "reports.read.all");
   // Stornos kommen oft Wochen später – Standard: letzte 90 Tage
   const params = await searchParams;
   const f = parsePerformanceFilters({ ...params, zeitraum: params.zeitraum ?? "90tage" });
-  const [products, employees, teams, roles] = await Promise.all([getProducts(true), getVisibleEmployees(), getVisibleTeams(), getRoles()]);
+  const [allProducts, employees, teams, roles, { areas, current: area }] = await Promise.all([getProducts(true), getVisibleEmployees(), getVisibleTeams(), getRoles(), getAreaContext(user)]);
+  // Nur der gewählte Bereich – Glasfaser und Leads werden nie zusammengezählt
+  const products = allProducts.filter((p) => !area || p.area_id === area.id);
   const scoped = employees.filter((e) => (!f.teamId || e.team_id === f.teamId) && (!f.role || e.role_key === f.role) && (!f.userId || e.id === f.userId));
   const ids = scoped.map((e) => e.id);
-  const rows = ids.length ? await getDaily(f.from, f.to, { userIds: ids, productId: f.productId }) : [];
+  const rows = ids.length ? await getDaily(f.from, f.to, { userIds: ids, productId: f.productId, areaId: area?.id }) : [];
   const s = summarize(rows);
 
   const byMonth = stornoBy(rows, (r) => startOfMonth(r.day));
@@ -82,6 +86,7 @@ export default async function StornoPage({ searchParams }: { searchParams: Promi
     .order("cancelled_at", { ascending: false, nullsFirst: false })
     .limit(50);
   if (f.productId) recentQ = recentQ.eq("product_id", f.productId);
+  if (area) recentQ = recentQ.in("product_id", products.length ? products.map((p) => p.id) : ["00000000-0000-0000-0000-000000000000"]);
   if (f.userId || f.teamId || f.role) recentQ = recentQ.in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
   const { data: recent } = await recentQ;
 
@@ -100,6 +105,7 @@ export default async function StornoPage({ searchParams }: { searchParams: Promi
         description="Welche Abschlüsse wurden nachträglich storniert? Zuordnung nach Abschlussdatum; Quote = storniert ÷ (bestätigt + storniert)."
         actions={<Button asChild variant="secondary"><Link href="/berichte">Zu den Berichten</Link></Button>}
       />
+      {areas.length ? <AreaSwitch areas={areas} current={area} className="mb-4" /> : null}
       <PerformanceFilterBar f={f} employees={scoped.length > 1 || f.userId ? employees : undefined} products={products} teams={teams} roles={roles} showStatus={false} />
       <p className="-mt-4 text-xs text-muted-foreground">{formatDate(f.from)} – {formatDate(f.to)} · Werte ab {formatPercent1(WARN)} sind rot markiert</p>
       <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">

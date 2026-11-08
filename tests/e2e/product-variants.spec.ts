@@ -38,6 +38,7 @@ test("Ein Produkt mit mehreren Provisionsstufen: anlegen, Provision je Rang, aut
   await page.getByRole("button", { name: "Produkt anlegen" }).click();
   await page.fill("#p-name", NAME);
   await page.fill("#p-unit", "Leads");
+  await page.locator("#p-area").selectOption({ label: "Leads" });
   await page.getByRole("button", { name: "Speichern" }).click();
   const add = page.getByLabel(`Neue Provisionsstufe für ${NAME}`);
   for (const v of ["bis 14 Module", "15-39 Module", "ab 40 Module"]) {
@@ -93,6 +94,7 @@ test("Ein Produkt mit mehreren Provisionsstufen: anlegen, Provision je Rang, aut
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Produkt anlegen" }).click();
   await page.fill("#p-name", `Löschtest ${stamp}`);
+  await page.locator("#p-area").selectOption({ label: "Glasfaser" });
   await page.getByRole("button", { name: "Speichern" }).click();
   await page.getByRole("button", { name: `Löschtest ${stamp} löschen` }).click();
   await page.getByRole("button", { name: "Endgültig löschen" }).click();

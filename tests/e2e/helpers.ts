@@ -38,3 +38,10 @@ export async function setSelfRecording(on: boolean) {
   );
   await db.end();
 }
+
+/** Bereich (Glasfaser/Leads) über den Umschalter wählen – alle Zahlen gelten danach nur für diesen Bereich. */
+export async function chooseArea(page: Page, name: "Glasfaser" | "Leads") {
+  const radio = page.getByRole("radiogroup", { name: "Bereich" }).getByRole("radio", { name });
+  await radio.click();
+  await expect(radio).toHaveAttribute("aria-checked", "true");
+}

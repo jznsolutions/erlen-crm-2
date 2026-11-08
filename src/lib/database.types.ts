@@ -119,6 +119,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"business_areas": {
+                  Row: {
+                    "created_at": string,"id": string,"key": string,"name": string,"sort_order": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"key": string,"name": string,"sort_order"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"key"?: string,"name"?: string,"sort_order"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"commission_levels": {
                   Row: {
                     "created_at": string,"description": string | null,"id": string,"is_active": boolean,"key": string | null,"name": string,"sort_order": number
@@ -173,17 +187,23 @@ isOneToOne: false
                   ]
                 },"competitions": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"description": string | null,"ends_on": string,"finished_notified_at": string | null,"id": string,"is_active": boolean,"product_id": string | null,"starts_on": string,"team_id": string | null,"title": string
+                    "area_id": string | null,"created_at": string,"created_by": string | null,"description": string | null,"ends_on": string,"finished_notified_at": string | null,"id": string,"is_active": boolean,"product_id": string | null,"starts_on": string,"team_id": string | null,"title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on": string,"finished_notified_at"?: string | null,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on": string,"team_id"?: string | null,"title": string
+                    "area_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on": string,"finished_notified_at"?: string | null,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on": string,"team_id"?: string | null,"title": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string,"finished_notified_at"?: string | null,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on"?: string,"team_id"?: string | null,"title"?: string
+                    "area_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string,"finished_notified_at"?: string | null,"id"?: string,"is_active"?: boolean,"product_id"?: string | null,"starts_on"?: string,"team_id"?: string | null,"title"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "competitions_area_id_fkey"
+      columns: ["area_id"]
+isOneToOne: false
+      referencedRelation: "business_areas"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "competitions_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -535,14 +555,14 @@ isOneToOne: false
                   ]
                 },"invitations": {
                   Row: {
-                    "accepted_at": string | null,"accepted_user_id": string | null,"applicant_id": string | null,"created_at": string,"email": string,"expires_at": string,"first_name": string,"id": string,"invited_by": string | null,"last_name": string,"product_ids": (string)[],"recruited_by": string | null,"revoked_at": string | null,"role_id": string,"supervisor_id": string | null,"team_id": string | null,"token_hash": string,"trainer_id": string | null
+                    "accepted_at": string | null,"accepted_user_id": string | null,"applicant_id": string | null,"area_ids": (string)[],"created_at": string,"email": string,"expires_at": string,"first_name": string,"id": string,"invited_by": string | null,"last_name": string,"product_ids": (string)[],"recruited_by": string | null,"revoked_at": string | null,"role_id": string,"supervisor_id": string | null,"team_id": string | null,"token_hash": string,"trainer_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email": string,"expires_at": string,"first_name": string,"id"?: string,"invited_by"?: string | null,"last_name": string,"product_ids"?: (string)[],"recruited_by"?: string | null,"revoked_at"?: string | null,"role_id": string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash": string,"trainer_id"?: string | null
+                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"area_ids"?: (string)[],"created_at"?: string,"email": string,"expires_at": string,"first_name": string,"id"?: string,"invited_by"?: string | null,"last_name": string,"product_ids"?: (string)[],"recruited_by"?: string | null,"revoked_at"?: string | null,"role_id": string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash": string,"trainer_id"?: string | null
                   }
                   Update: {
-                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"first_name"?: string,"id"?: string,"invited_by"?: string | null,"last_name"?: string,"product_ids"?: (string)[],"recruited_by"?: string | null,"revoked_at"?: string | null,"role_id"?: string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash"?: string,"trainer_id"?: string | null
+                    "accepted_at"?: string | null,"accepted_user_id"?: string | null,"applicant_id"?: string | null,"area_ids"?: (string)[],"created_at"?: string,"email"?: string,"expires_at"?: string,"first_name"?: string,"id"?: string,"invited_by"?: string | null,"last_name"?: string,"product_ids"?: (string)[],"recruited_by"?: string | null,"revoked_at"?: string | null,"role_id"?: string,"supervisor_id"?: string | null,"team_id"?: string | null,"token_hash"?: string,"trainer_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -869,17 +889,23 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"requires_external_ref": boolean,"sort_order": number,"unit_label": string,"updated_at": string
+                    "area_id": string,"created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"requires_external_ref": boolean,"sort_order": number,"unit_label": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"requires_external_ref"?: boolean,"sort_order"?: number,"unit_label"?: string,"updated_at"?: string
+                    "area_id": string,"created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"requires_external_ref"?: boolean,"sort_order"?: number,"unit_label"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"requires_external_ref"?: boolean,"sort_order"?: number,"unit_label"?: string,"updated_at"?: string
+                    "area_id"?: string,"created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"requires_external_ref"?: boolean,"sort_order"?: number,"unit_label"?: string,"updated_at"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "products_area_id_fkey"
+      columns: ["area_id"]
+isOneToOne: false
+      referencedRelation: "business_areas"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"profiles": {
                   Row: {
@@ -1237,17 +1263,23 @@ isOneToOne: false
                   ]
                 },"targets": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"ends_on": string,"id": string,"period": Database["public"]['Enums']["target_period"],"product_id": string | null,"scope": Database["public"]['Enums']["target_scope"],"starts_on": string,"target_value": number,"team_id": string | null,"title": string,"updated_at": string,"user_id": string | null
+                    "area_id": string | null,"created_at": string,"created_by": string | null,"ends_on": string,"id": string,"period": Database["public"]['Enums']["target_period"],"product_id": string | null,"scope": Database["public"]['Enums']["target_scope"],"starts_on": string,"target_value": number,"team_id": string | null,"title": string,"updated_at": string,"user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"ends_on": string,"id"?: string,"period": Database["public"]['Enums']["target_period"],"product_id"?: string | null,"scope": Database["public"]['Enums']["target_scope"],"starts_on": string,"target_value": number,"team_id"?: string | null,"title": string,"updated_at"?: string,"user_id"?: string | null
+                    "area_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"ends_on": string,"id"?: string,"period": Database["public"]['Enums']["target_period"],"product_id"?: string | null,"scope": Database["public"]['Enums']["target_scope"],"starts_on": string,"target_value": number,"team_id"?: string | null,"title": string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"ends_on"?: string,"id"?: string,"period"?: Database["public"]['Enums']["target_period"],"product_id"?: string | null,"scope"?: Database["public"]['Enums']["target_scope"],"starts_on"?: string,"target_value"?: number,"team_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string | null
+                    "area_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"ends_on"?: string,"id"?: string,"period"?: Database["public"]['Enums']["target_period"],"product_id"?: string | null,"scope"?: Database["public"]['Enums']["target_scope"],"starts_on"?: string,"target_value"?: number,"team_id"?: string | null,"title"?: string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "targets_area_id_fkey"
+      columns: ["area_id"]
+isOneToOne: false
+      referencedRelation: "business_areas"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "targets_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -1346,6 +1378,38 @@ isOneToOne: false
     },{
       foreignKeyName: "training_notes_trainee_id_fkey"
       columns: ["trainee_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"user_areas": {
+                  Row: {
+                    "area_id": string,"granted_at": string,"granted_by": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "area_id": string,"granted_at"?: string,"granted_by"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "area_id"?: string,"granted_at"?: string,"granted_by"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_areas_area_id_fkey"
+      columns: ["area_id"]
+isOneToOne: false
+      referencedRelation: "business_areas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_areas_granted_by_fkey"
+      columns: ["granted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_areas_user_id_fkey"
+      columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
@@ -1574,7 +1638,7 @@ isOneToOne: false
 { Args: { "p_ausbilder_cents": number,"p_overhead_mode": string,"p_teamleiter_cents": number,"p_werbung_cents": number }; Returns: undefined
                            },
 "competition_upsert":
-{ Args: { "p_description": string,"p_ends_on": string,"p_id": string,"p_is_active": boolean,"p_product": string,"p_starts_on": string,"p_team": string,"p_title": string }; Returns: string
+{ Args: { "p_area"?: string,"p_description": string,"p_ends_on": string,"p_id": string,"p_is_active": boolean,"p_product": string,"p_starts_on": string,"p_team": string,"p_title": string }; Returns: string
                            },
 "competition_watch":
 { Args: Record<PropertyKey, never>; Returns: number
@@ -1648,6 +1712,11 @@ isOneToOne: false
 "employee_document_review":
 { Args: { "p_id": string,"p_note": string,"p_status": Database["public"]['Enums']["employee_document_status"] }; Returns: undefined
                            },
+"employee_performance":
+{ Args: { "p_area_id": string,"p_from": string,"p_to": string }; Returns: {
+              "active_days": number,"cancelled": number,"first_name": string,"last_name": string,"pending": number,"revenue_cents": number,"role_name": string,"sales": number,"team_name": string,"user_id": string
+            }[]
+                           },
 "employee_set_commission_level":
 { Args: { "p_level": string,"p_user": string }; Returns: undefined
                            },
@@ -1658,12 +1727,12 @@ isOneToOne: false
 { Args: { "p_recruiter": string,"p_user": string }; Returns: undefined
                            },
 "get_leaderboard":
-{ Args: { "p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string }; Returns: {
+{ Args: { "p_area_id"?: string,"p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string }; Returns: {
               "display_name": string,"is_me": boolean,"rank": number,"team_name": string,"total": number,"user_id": string
             }[]
                            },
 "get_money_kpis":
-{ Args: { "p_from": string,"p_to": string }; Returns: {
+{ Args: { "p_area_id"?: string,"p_from": string,"p_to": string }; Returns: {
               "own_commission_cents": number,"revenue_cents": number
             }[]
                            },
@@ -1677,7 +1746,7 @@ isOneToOne: false
                            },
 "get_target_progress":
 { Args: { "p_day"?: string }; Returns: {
-              "actual": number,"period": Database["public"]['Enums']["target_period"],"product_id": string,"scope": Database["public"]['Enums']["target_scope"],"target_id": string,"target_value": number,"team_id": string,"title": string,"user_id": string,"window_end": string,"window_start": string
+              "actual": number,"area_id": string,"period": Database["public"]['Enums']["target_period"],"product_id": string,"scope": Database["public"]['Enums']["target_scope"],"target_id": string,"target_value": number,"team_id": string,"title": string,"user_id": string,"window_end": string,"window_start": string
             }[]
                            },
 "get_training_overview":
@@ -1714,6 +1783,9 @@ isOneToOne: false
                            },
 "invitation_revoke":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"invitation_set_areas":
+{ Args: { "p_areas": (string)[],"p_id": string }; Returns: undefined
                            },
 "invitation_set_products":
 { Args: { "p_id": string,"p_products": (string)[] }; Returns: undefined
@@ -1762,7 +1834,7 @@ isOneToOne: false
 { Args: { "p_month": string }; Returns: boolean
                            },
 "monthly_report_data":
-{ Args: { "p_from": string,"p_to": string }; Returns: Json
+{ Args: { "p_area_id"?: string,"p_from": string,"p_to": string }; Returns: Json
                            },
 "monthly_report_recipients":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -1820,7 +1892,7 @@ isOneToOne: false
 { Args: { "p_confirm_duplicate"?: boolean,"p_external_ref"?: string,"p_note"?: string,"p_occurred_on": string,"p_product": string,"p_quantity": number,"p_submit"?: boolean,"p_user": string,"p_variant"?: string }; Returns: string
                            },
 "performance_daily":
-{ Args: { "p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string,"p_user_ids"?: (string)[] }; Returns: {
+{ Args: { "p_area_id"?: string,"p_from": string,"p_product_id"?: string,"p_team_id"?: string,"p_to": string,"p_user_ids"?: (string)[] }; Returns: {
               "day": string,"product_id": string,"quantity": number,"records": number,"status": Database["public"]['Enums']["performance_status"],"team_id": string,"user_id": string
             }[]
                            },
@@ -1834,7 +1906,7 @@ isOneToOne: false
 { Args: { "p_id": string }; Returns: undefined
                            },
 "product_upsert":
-{ Args: { "p_description": string,"p_id": string,"p_is_active": boolean,"p_name": string,"p_requires_external_ref": boolean,"p_sort_order"?: number,"p_unit_label": string }; Returns: string
+{ Args: { "p_area"?: string,"p_description": string,"p_id": string,"p_is_active": boolean,"p_name": string,"p_requires_external_ref": boolean,"p_sort_order"?: number,"p_unit_label": string }; Returns: string
                            },
 "product_variant_delete":
 { Args: { "p_id": string }; Returns: undefined
@@ -1940,7 +2012,7 @@ isOneToOne: false
 { Args: { "p_id": string }; Returns: undefined
                            },
 "target_upsert":
-{ Args: { "p_ends_on": string,"p_id": string,"p_period": Database["public"]['Enums']["target_period"],"p_product": string,"p_scope": Database["public"]['Enums']["target_scope"],"p_starts_on": string,"p_target_value": number,"p_team": string,"p_title": string,"p_user": string }; Returns: string
+{ Args: { "p_area"?: string,"p_ends_on": string,"p_id": string,"p_period": Database["public"]['Enums']["target_period"],"p_product": string,"p_scope": Database["public"]['Enums']["target_scope"],"p_starts_on": string,"p_target_value": number,"p_team": string,"p_title": string,"p_user": string }; Returns: string
                            },
 "team_assign_member":
 { Args: { "p_includes_subteams"?: boolean,"p_member_role"?: Database["public"]['Enums']["team_member_role"],"p_team": string,"p_user": string }; Returns: string
@@ -1959,6 +2031,9 @@ isOneToOne: false
                            },
 "update_own_profile":
 { Args: { "p_phone": string }; Returns: undefined
+                           },
+"user_areas_set":
+{ Args: { "p_areas": (string)[],"p_user": string }; Returns: undefined
                            },
 "user_products_set":
 { Args: { "p_products": (string)[],"p_user": string }; Returns: undefined

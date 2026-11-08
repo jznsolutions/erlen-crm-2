@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
+import { getAreaContext } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 import { TeamDialog } from "@/components/team-form";
 
 export const metadata: Metadata = { title: "Teams" };
@@ -19,11 +21,12 @@ export default async function TeamsPage() {
   const user = await requirePermission("employees.read.team", "employees.read.all", "teams.manage");
   const supabase = await createClient();
   const today = todayBerlin();
+  const { areas, current: area } = await getAreaContext(user);
   const [teams, employees, { data: leads }, rows] = await Promise.all([
     getVisibleTeams(),
     getVisibleEmployees(),
     supabase.from("team_memberships").select("team_id, user_id, includes_subteams, profiles!team_memberships_user_id_fkey(first_name, last_name)").eq("member_role", "teamleiter").is("ended_at", null),
-    getDaily(startOfMonth(today), today),
+    getDaily(startOfMonth(today), today, { areaId: area?.id }),
   ]);
   const byTeam = confirmedBy(rows, "team_id");
   const canManage = user.permissions.has("teams.manage");
@@ -65,6 +68,7 @@ export default async function TeamsPage() {
         description="Organisationsstruktur, Teamleitungen und Teamleistung im laufenden Monat."
         actions={canManage ? <TeamDialog teams={teams} trigger={<Button><Plus />Team anlegen</Button>} /> : undefined}
       />
+      {areas.length ? <AreaSwitch areas={areas} current={area} className="mb-4" /> : null}
       {teams.length === 0 ? (
         <EmptyState icon={Network} title="Noch keine Teams" description={canManage ? "Lege das erste Team an und ordne Mitarbeiter zu." : "Du bist aktuell keinem Team zugeordnet."} />
       ) : (

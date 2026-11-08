@@ -2,20 +2,21 @@
 import { ActionForm, ConfirmAction, SubmitButton } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/input";
-import { saveBilling, setCommissionLevel, setUserProducts } from "@/app/(portal)/mitarbeiter/actions";
+import { saveBilling, setCommissionLevel, setUserAreas } from "@/app/(portal)/mitarbeiter/actions";
 import { deleteExtra, saveExtra, setCustomerNumber } from "@/app/(portal)/abrechnungen/actions";
 
 type Opt = { id: string; label: string };
 
-export function ProductClearanceForm({ userId, products, granted }: { userId: string; products: Opt[]; granted: string[] }) {
+/** Freischaltung je Bereich (Glasfaser, Leads …) */
+export function AreaClearanceForm({ userId, areas, granted }: { userId: string; areas: Opt[]; granted: string[] }) {
   return (
-    <ActionForm action={setUserProducts} className="space-y-3">
+    <ActionForm action={setUserAreas} className="space-y-3">
       <input type="hidden" name="user_id" value={userId} />
       <div className="flex flex-wrap gap-x-5 gap-y-2">
-        {products.map((p) => (
-          <label key={p.id} className="flex items-center gap-2 text-sm">
-            <Checkbox name="product_ids" value={p.id} defaultChecked={granted.includes(p.id)} />
-            {p.label}
+        {areas.map((a) => (
+          <label key={a.id} className="flex items-center gap-2 text-sm">
+            <Checkbox name="area_ids" value={a.id} defaultChecked={granted.includes(a.id)} aria-label={`Bereich ${a.label}`} />
+            {a.label}
           </label>
         ))}
       </div>

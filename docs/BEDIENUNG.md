@@ -7,10 +7,20 @@
 4. Ist der E-Mail-Versand noch nicht eingerichtet (gelber Hinweis), wird der Link ersatzweise angezeigt. Einrichtung: `docs/EINRICHTUNG_PRODUKTION.md` → „E-Mail-Versand“.
 5. Unter „Einladungen“: **Erneut senden** (neue E-Mail, 3 Tage gültig, der alte Link wird ungültig) oder **Widerrufen**.
 
-## Produkte freischalten
-* Mitarbeitende können nur für **freigeschaltete Produkte** Leistungen erfassen – auch Führungskräfte können für sie nur diese Produkte erfassen.
-* Freischalten: **Mitarbeiterprofil → Produkte & Provision** → Haken setzen → **Freigaben speichern**. Die Person wird benachrichtigt.
-* Neue Produkte sind zunächst für niemanden freigeschaltet.
+## Bereiche: Glasfaser und Leads (strikt getrennt)
+* Jedes Produkt gehört zu genau einem **Bereich** (z. B. **Glasfaser** oder **Leads**), festgelegt unter **Verwaltung → Produkte → Produkt bearbeiten → Bereich**.
+* Zahlen werden **nie bereichsübergreifend** zusammengezählt: Dashboard, Diagramme, Sales, Umsatz, Ranglisten, Ziele, Wettbewerbe, Berichte, Teams, TV-Modus, Monatsbericht und CSV-Export zeigen immer nur einen Bereich.
+* **Umschalter** oben auf der Startseite (und auf den Auswertungsseiten): **Glasfaser | Leads**. Die Auswahl bleibt auf dem Gerät gespeichert. TV-Modus für einen bestimmten Bereich: `/tv?bereich=glasfaser` bzw. `/tv?bereich=leads`.
+* **Ziele und Wettbewerbe** gehören ebenfalls zu einem Bereich („Alle Produkte“ heißt: alle Produkte dieses Bereichs).
+* Der **Monatsbericht** kommt je Bereich als eigenes PDF.
+
+## Bereiche freischalten
+* Mitarbeitende können nur in **freigeschalteten Bereichen** Leistungen haben und erscheinen dort in den Auswertungen.
+* Freischalten: **Mitarbeiterprofil → Bereiche & Provision** → Haken bei **Glasfaser** und/oder **Leads** → **Freigaben speichern**. Die Person wird benachrichtigt. Bei der **Einladung** neuer Mitarbeiter direkt mit auswählen.
+* Der Partner-Abgleich (Screenshot) schaltet den Bereich automatisch frei, wenn das Partner-CRM Leads für die Person zeigt.
+
+## Mitarbeiter-Leistung
+* **Organisation → Mitarbeiter-Leistung**: Liste aller Mitarbeiter mit **aktiven Tagen** (Tage mit mindestens einer bestätigten Leistung), **Sales**, Ø je Tag, offenen und stornierten Leistungen sowie **Umsatz** (nur für die Agenturleitung; bestätigte Leistungen × Satz „Agentur“). Zeitraum wählbar, Spalten per Klick sortierbar, immer nur für den gewählten Bereich.
 
 ## Provisionen
 1. Produkte unter **Verwaltung → Produkte** anlegen. Braucht ein Produkt **mehrere Provisionen** (z. B. PV-Lead nach Anzahl Module), direkt darunter **Provisionsstufen** hinzufügen: „bis 14 Module“, „15-39 Module“, „ab 40 Module“.

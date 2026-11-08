@@ -4,6 +4,8 @@ import { CheckCircle2, Clock, Database, Download, Plus, RefreshCw, TrendingUp, U
 import { requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getVisibleEmployees } from "@/lib/queries";
+import { getAreaContext } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 import { filtersToQuery, parsePerformanceFilters } from "@/lib/performance-filters";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { todayBerlin } from "@/lib/dates";
@@ -23,7 +25,10 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const user = await requirePermission("performance.read.self", "performance.read.assigned", "performance.read.team", "performance.read.all");
   const f = parsePerformanceFilters(await searchParams);
   const supabase = await createClient();
-  const [products, employees] = await Promise.all([getProducts(true), getVisibleEmployees()]);
+  const [allProducts, employees, { areas, current: area }] = await Promise.all([getProducts(true), getVisibleEmployees(), getAreaContext(user)]);
+  // Nur Produkte des gewählten Bereichs (Glasfaser und Leads werden nie zusammengezählt)
+  const products = allProducts.filter((p) => !area || p.area_id === area.id);
+  const productIds = products.map((p) => p.id);
 
   let q = supabase
     .from("performance_records")
@@ -35,6 +40,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
     .range((f.page - 1) * PAGE_SIZE, f.page * PAGE_SIZE - 1);
   if (f.userId) q = q.eq("user_id", f.userId);
   if (f.productId) q = q.eq("product_id", f.productId);
+  if (area) q = q.in("product_id", productIds.length ? productIds : ["00000000-0000-0000-0000-000000000000"]);
   if (f.status) q = q.eq("status", f.status);
   const { data: records, count } = await q;
 
@@ -44,6 +50,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
     p_to: f.to,
     p_user_ids: f.userId ? [f.userId] : undefined,
     p_product_id: f.productId,
+    p_area_id: area?.id,
   });
   const sum = (s: string) => (daily ?? []).filter((r) => r.status === s).reduce((a, r) => a + Number(r.quantity), 0);
 
@@ -76,6 +83,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
           </>
         }
       />
+      {areas.length ? <AreaSwitch areas={areas} current={area} className="mb-4" /> : null}
       <PerformanceFilterBar f={f} employees={employees.length > 1 ? employees : undefined} products={products} />
       <div className="stagger mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Bestätigt" value={formatNumber(sum("bestaetigt"))} icon={CheckCircle2} accent="emerald" />

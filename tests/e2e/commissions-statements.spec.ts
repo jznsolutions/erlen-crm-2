@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import pg from "pg";
 import { login, logout, setSelfRecording } from "./helpers";
 
 // Prüft die Selbsterfassung durch Vertriebspartner (standardmäßig aus, unter Administration → Rollen wählbar)
@@ -6,12 +7,25 @@ test.beforeAll(async () => setSelfRecording(true));
 test.afterAll(async () => setSelfRecording(false));
 
 
-test("Leistungserfassung zeigt nur freigeschaltete Produkte", async ({ page }) => {
-  await login(page, "partner4");
-  await page.goto("/leistungen/neu");
-  const options = await page.locator("#product_id option").allTextContents();
-  expect(options).toContain("Glasfaser");
-  expect(options).not.toContain("Gas");
+test("Leistungserfassung zeigt nur Produkte der freigeschalteten Bereiche", async ({ page }) => {
+  // partner4 nur für Glasfaser freischalten (danach Ausgangszustand wiederherstellen)
+  const db = new pg.Client({ connectionString: process.env.TEST_DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres" });
+  await db.connect();
+  const before = (await db.query("select area_id from public.user_areas where user_id = (select id from public.profiles where email = 'partner4@erlen.local')")).rows;
+  await db.query("delete from public.user_areas where user_id = (select id from public.profiles where email = 'partner4@erlen.local') and area_id <> (select id from public.business_areas where key = 'glasfaser')");
+  await db.query("insert into public.user_areas (user_id, area_id) select p.id, a.id from public.profiles p, public.business_areas a where p.email = 'partner4@erlen.local' and a.key = 'glasfaser' on conflict do nothing");
+  try {
+    await login(page, "partner4");
+    await page.goto("/leistungen/neu");
+    const options = await page.locator("#product_id option").allTextContents();
+    expect(options).toContain("Glasfaser");
+    expect(options).not.toContain("Gas");
+    expect(options).not.toContain("PV-Leads");
+  } finally {
+    await db.query("delete from public.user_areas where user_id = (select id from public.profiles where email = 'partner4@erlen.local')");
+    for (const r of before) await db.query("insert into public.user_areas (user_id, area_id) select id, $1 from public.profiles where email = 'partner4@erlen.local'", [r.area_id]);
+    await db.end();
+  }
 });
 
 test("Provisionssätze sind nur für die Verwaltung zugänglich", async ({ page }) => {

@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/misc";
+import { getAreaContext } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { KpiRow, MemberTable, ProductCard, TargetsCard, TrendCard } from "@/components/dashboard/sections";
 import { TeamDialog } from "@/components/team-form";
@@ -27,14 +29,17 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
   const { data: team } = await supabase.from("teams").select("*").eq("id", id).maybeSingle();
   if (!team) notFound();
   const today = todayBerlin();
-  const [teams, employees, { data: memberships }, rows, products, targets] = await Promise.all([
+  const { areas, current: area } = await getAreaContext(user);
+  const [teams, employees, { data: memberships }, rows, allProducts, allTargets] = await Promise.all([
     getVisibleTeams(),
     getVisibleEmployees(),
     supabase.from("team_memberships").select("id, user_id, member_role, started_at, ended_at, end_reason, includes_subteams, profiles!team_memberships_user_id_fkey(first_name, last_name)").eq("team_id", id).order("started_at", { ascending: false }),
-    getDaily(addDays(today, -89), today, { teamId: id }),
+    getDaily(addDays(today, -89), today, { teamId: id, areaId: area?.id }),
     getProducts(),
-    getTargetProgress() as Promise<(TargetProgress & { team_id: string | null; user_id: string | null })[]>,
+    getTargetProgress() as Promise<(TargetProgress & { team_id: string | null; user_id: string | null; area_id?: string | null })[]>,
   ]);
+  const products = allProducts.filter((p) => !area || p.area_id === area.id);
+  const targets = allTargets.filter((t) => !area || t.area_id === area.id);
   const active = (memberships ?? []).filter((m) => !m.ended_at);
   const memberIds = new Set(active.filter((m) => m.member_role === "mitglied").map((m) => m.user_id));
   const members = employees.filter((e) => memberIds.has(e.id));
@@ -49,6 +54,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
         description={[team.description, parent ? `Unterteam von ${parent.name}` : null].filter(Boolean).join(" · ") || "Team"}
         actions={user.permissions.has("teams.manage") ? <TeamDialog team={team} teams={teams} trigger={<Button variant="secondary"><Pencil />Bearbeiten</Button>} /> : undefined}
       />
+      {areas.length ? <AreaSwitch areas={areas} current={area} /> : null}
       <Card>
         <CardHeader><CardTitle>Teamleitung</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-2">

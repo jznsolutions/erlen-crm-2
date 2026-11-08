@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getAreaContext } from "@/lib/areas";
 import { createClient } from "@/lib/supabase/server";
 import { getProducts, getVisibleEmployees } from "@/lib/queries";
 import { parsePerformanceFilters } from "@/lib/performance-filters";
@@ -32,6 +33,9 @@ export async function GET(request: NextRequest) {
   if (f.userId) q = q.eq("user_id", f.userId);
   if (userIds) q = q.in("user_id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]);
   if (f.productId) q = q.eq("product_id", f.productId);
+  // Nur der gewählte Bereich (Glasfaser bzw. Leads)
+  const { current: area } = await getAreaContext(user, request.nextUrl.searchParams.get("bereich"));
+  if (area) q = q.in("product_id", products.filter((p) => p.area_id === area.id).map((p) => p.id).concat("00000000-0000-0000-0000-000000000000"));
   if (f.status) q = q.eq("status", f.status);
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: "Export fehlgeschlagen" }, { status: 500 });

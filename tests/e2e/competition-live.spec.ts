@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import pg from "pg";
-import { login } from "./helpers";
+import { chooseArea, login } from "./helpers";
 
 const DB = process.env.TEST_DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const title = `Live-Cup ${Date.now()}`;
@@ -15,7 +15,7 @@ const sql = async (q: string, p: unknown[] = []) => {
 };
 
 test.beforeAll(async () => {
-  await sql("insert into public.competitions (title, starts_on, ends_on, product_id) values ($1, (now() at time zone 'Europe/Berlin')::date - 2, (now() at time zone 'Europe/Berlin')::date + 3, (select id from public.products where name = 'Strom'))", [title]);
+  await sql("insert into public.competitions (title, starts_on, ends_on, product_id, area_id) select $1, (now() at time zone 'Europe/Berlin')::date - 2, (now() at time zone 'Europe/Berlin')::date + 3, id, area_id from public.products where name = 'Strom'", [title]);
 });
 test.afterAll(async () => {
   await sql("delete from public.competitions where title = $1", [title]);
@@ -23,6 +23,7 @@ test.afterAll(async () => {
 
 test("Laufender Wettbewerb erscheint live auf dem Dashboard", async ({ page }) => {
   await login(page, "partner1");
+  await chooseArea(page, "Leads"); // Strom-Wettbewerb gehört zum Bereich Leads
   const card = page.getByTestId("competition-live").filter({ hasText: title });
   await expect(page.getByRole("heading", { name: "Wettbewerbe live" })).toBeVisible();
   await expect(card).toBeVisible();

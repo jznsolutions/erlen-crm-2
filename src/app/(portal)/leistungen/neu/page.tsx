@@ -24,9 +24,10 @@ export default async function NewPerformancePage() {
   const list = employees && !selfAllowed ? employees.filter((e) => e.id !== user.id) : employees;
   // Produktfreigaben (RLS: eigene bzw. sichtbare Mitarbeiter)
   const supabase = await createClient();
-  const { data: grants } = await supabase.from("user_products").select("user_id, product_id");
+  // Freischaltung je Bereich: alle Produkte der freigeschalteten Bereiche
+  const { data: grants } = await supabase.from("user_areas").select("user_id, area_id");
   const clearance: Record<string, string[]> = {};
-  for (const g of grants ?? []) (clearance[g.user_id] ??= []).push(g.product_id);
+  for (const g of grants ?? []) (clearance[g.user_id] ??= []).push(...products.filter((p) => p.area_id === g.area_id).map((p) => p.id));
 
   return (
     <div className="mx-auto max-w-2xl">

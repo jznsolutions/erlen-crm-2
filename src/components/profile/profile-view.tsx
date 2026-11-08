@@ -22,9 +22,11 @@ import { BadgesCard } from "@/components/badges-card";
 import { canChangeEmail } from "@/lib/employee-permissions";
 import { DocList, type DocRow } from "@/components/unterlagen/doc-list";
 import { OnboardingChecklist, type OnboardingItem } from "@/components/onboarding-checklist";
-import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, ProductClearanceForm } from "./billing-forms";
+import { BillingForm, CommissionLevelForm, CustomerNumberForm, ExtrasEditor, AreaClearanceForm } from "./billing-forms";
 import { formatCents } from "@/lib/format";
 import { levelForRole, levelRateLines } from "@/lib/commission";
+import { getAreaContext, getAreas } from "@/lib/areas";
+import { AreaSwitch } from "@/components/areas/area-switch";
 import {
   EditEmployeeDialog, EndMembershipButton, ManagerForm, OwnProfileForm, PermissionForm, RecruiterForm, RoleForm, StatusButtons, TeamAssignForm, TrainingNoteForm,
 } from "./admin-forms";
@@ -95,10 +97,17 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   if (!profile) return null;
 
   const canPerf = isSelf ? perms.has("performance.read.self") : true;
-  const [rows, products, targets, training, history, notes, employees, avatarUrl] = await Promise.all([
-    canPerf ? getDaily(addDays(today, -179), today, { userIds: [userId] }).catch(() => []) : Promise.resolve([]),
+  // Bereich (Glasfaser/Leads): Leistungszahlen des Profils gelten nur für den gewählten Bereich
+  const [{ areas: viewerAreas, current: area }, allAreas, { data: userAreaRows }] = await Promise.all([
+    getAreaContext(viewer),
+    getAreas(),
+    supabase.from("user_areas").select("area_id").eq("user_id", userId),
+  ]);
+  const userAreas = (userAreaRows ?? []).map((r) => r.area_id);
+  const [rows, allProducts, allTargets, training, history, notes, employees, avatarUrl] = await Promise.all([
+    canPerf ? getDaily(addDays(today, -179), today, { userIds: [userId], areaId: area?.id }).catch(() => []) : Promise.resolve([]),
     getProducts(),
-    getTargetProgress() as Promise<(TargetProgress & { user_id: string | null })[]>,
+    getTargetProgress() as Promise<(TargetProgress & { user_id: string | null; area_id?: string | null })[]>,
     supabase.rpc("get_training_overview", { p_user: userId }).then((r) => (r.data ?? []).map((c) => ({ ...c, total_lessons: Number(c.total_lessons), completed_lessons: Number(c.completed_lessons) })) as TrainingRow[]),
     supabase.rpc("get_profile_history", { p_user: userId, p_limit: 50 }).then((r) => r.data ?? []),
     supabase.from("training_notes").select("id, body, shared_with_trainee, created_at, author_id").eq("trainee_id", userId).order("created_at", { ascending: false }).limit(20).then((r) => r.data ?? []),
@@ -106,6 +115,8 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
     signedUrl("avatars", profile.avatar_path, 3600),
   ]);
 
+  const products = allProducts.filter((p) => !area || p.area_id === area.id);
+  const targets = allTargets.filter((t) => !area || t.area_id === area.id);
   // Namen von Vorgesetzten/Ausbildern (immer sichtbar für Betroffene)
   const { data: contactProfiles } = await supabase.from("profiles").select("id, first_name, last_name").in("id", [...(relations ?? []).map((r) => r.manager_id), ...notes.map((n) => n.author_id), ...(details?.recruited_by ? [details.recruited_by] : [])]);
   const names = new Map([...employees.map((e) => [e.id, `${e.first_name} ${e.last_name}`] as const), ...(contactProfiles ?? []).map((p) => [p.id, `${p.first_name} ${p.last_name}`] as const)]);
@@ -137,8 +148,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   const employeeDocs = canDocs
     ? (((await supabase.from("employee_documents").select("id, user_id, category, title, file_name, mime_type, valid_until, status, review_note, created_at").eq("user_id", userId).order("created_at", { ascending: false })).data ?? []) as DocRow[])
     : [];
-  const [userProducts, billing, levels, rates, extras] = await Promise.all([
-    supabase.from("user_products").select("product_id").eq("user_id", userId).then((r) => (r.data ?? []).map((x) => x.product_id)),
+  const [billing, levels, rates, extras] = await Promise.all([
     canBilling || canCommission ? supabase.from("employee_billing").select("*").eq("user_id", userId).maybeSingle().then((r) => r.data) : Promise.resolve(null),
     supabase.from("commission_levels").select("id, key, name, is_active").not("key", "is", null).order("sort_order").then((r) => r.data ?? []),
     supabase.from("commission_rates").select("level_id, product_id, variant_id, amount_cents").then((r) => r.data ?? []),
@@ -155,7 +165,7 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   const manualLevel = levels.find((l) => l.id === billing?.commission_level_id);
   const level = manualLevel ?? levels.find((l) => l.key === levelForRole(profile.roles?.key));
   const variants = await getProductVariants();
-  const rateLines = levelRateLines(products.filter((p) => userProducts.includes(p.id)), variants, rates, level?.id, true);
+  const rateLines = levelRateLines(allProducts.filter((p) => userAreas.includes(p.area_id)), variants, rates, level?.id, true);
   const allRoles = await getRoles();
   const roleNames = new Map(allRoles.map((r) => [r.id, r.name]));
   const teamNames = new Map((memberships ?? []).map((m) => [m.team_id, m.teams?.name ?? "Team"]));
@@ -166,7 +176,6 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
   // Einzelne Leistungserfassungen stehen in der Leistungsliste; die Historie zeigt Status- und Organisationsänderungen
   const historyRows = history.filter((h) => !(h.table_name === "performance_records" && h.action === "insert"));
   const userTargets = targets.filter((t) => t.scope === "mitarbeiter" && t.user_id === userId);
-  const unitOfFirst = products[0]?.unit_label;
 
   return (
     <div className="space-y-6">
@@ -233,10 +242,13 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
 
       {canPerf ? (
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Performance</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Performance</h2>
+            {viewerAreas.length ? <AreaSwitch areas={viewerAreas} current={area} /> : null}
+          </div>
           <KpiRow rows={rows} today={today} scopeLabel="" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatTile label="Gesamt (180 Tage)" value={formatNumber(sum180.confirmed)} sub={unitOfFirst ? "bestätigt, alle Produkte" : undefined} />
+            <StatTile label="Gesamt (180 Tage)" value={formatNumber(sum180.confirmed)} sub={area ? `bestätigt, ${area.name}` : undefined} />
             <StatTile label="Ø pro aktivem Tag" value={formatDecimal(sum180.avgPerActiveDay)} sub={`${sum180.activeDays} aktive Tage`} />
             <StatTile label="Offen" value={formatNumber(sum180.pending)} sub="zur Prüfung" />
             <StatTile label="Schulungsfortschritt" value={trainingRatio === null ? "–" : `${Math.round(trainingRatio * 100)} %`} sub="abgeschlossene Lektionen" />
@@ -275,14 +287,14 @@ export async function ProfileView({ userId, viewer, isSelf }: { userId: string; 
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><div><CardTitle>Produkte & Provision</CardTitle><CardDescription>Leistungen können nur für freigeschaltete Produkte erfasst werden.</CardDescription></div></CardHeader>
+          <CardHeader><div><CardTitle>Bereiche & Provision</CardTitle><CardDescription>Leistungen können nur in freigeschalteten Bereichen (z. B. Glasfaser, Leads) gebucht werden.</CardDescription></div></CardHeader>
           <CardContent className="space-y-5">
             {canAssignProducts ? (
-              <ProductClearanceForm userId={userId} products={products.map((p) => ({ id: p.id, label: p.name }))} granted={userProducts} />
+              <AreaClearanceForm userId={userId} areas={allAreas.map((a) => ({ id: a.id, label: a.name }))} granted={userAreas} />
             ) : (
               <ul className="flex flex-wrap gap-2">
-                {products.filter((p) => userProducts.includes(p.id)).map((p) => <li key={p.id}><Badge variant="success">{p.name}</Badge></li>)}
-                {userProducts.length === 0 ? <li className="text-sm text-muted-foreground">Noch keine Produkte freigeschaltet.</li> : null}
+                {allAreas.filter((a) => userAreas.includes(a.id)).map((a) => <li key={a.id}><Badge variant="success">{a.name}</Badge></li>)}
+                {userAreas.length === 0 ? <li className="text-sm text-muted-foreground">Noch kein Bereich freigeschaltet.</li> : null}
               </ul>
             )}
             <div className="space-y-3 border-t pt-4">

@@ -39,13 +39,13 @@ export function InviteForm({ roles, teams, people, recruiters, products, canAssi
             </div>
             {products?.length ? (
               <fieldset>
-                <legend className="mb-2 text-sm font-medium">Freigeschaltete Produkte</legend>
+                <legend className="mb-2 text-sm font-medium">Freigeschaltete Bereiche</legend>
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                   {products.map((p) => (
-                    <label key={p.id} className="flex items-center gap-2 text-sm"><Checkbox name="product_ids" value={p.id} defaultChecked />{p.label}</label>
+                    <label key={p.id} className="flex items-center gap-2 text-sm"><Checkbox name="area_ids" value={p.id} defaultChecked={products.length === 1} aria-label={`Bereich ${p.label}`} />{p.label}</label>
                   ))}
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Nur für freigeschaltete Produkte kann die Person Leistungen erfassen. Später im Profil änderbar.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Nur in freigeschalteten Bereichen (z. B. Glasfaser oder Leads) kann die Person Leistungen haben und erscheint dort in Auswertungen. Später im Profil änderbar.</p>
               </fieldset>
             ) : null}
             <div className="flex justify-end"><SubmitButton pendingText="Wird versendet …">Einladung per E-Mail senden</SubmitButton></div>
