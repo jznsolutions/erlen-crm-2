@@ -115,7 +115,10 @@ export default async function EmployeePerformancePage({ searchParams }: { search
                   </TD>
                   <TD className="hidden sm:table-cell">{r.team_name ?? "–"}</TD>
                   <TD className="text-right tabular">{formatNumber(r.active_days)}</TD>
-                  <TD className="text-right font-semibold tabular">{formatNumber(r.sales)}</TD>
+                  <TD className="text-right tabular">
+                    <span className="font-semibold">{formatNumber(r.sales)}</span>
+                    {r.pending ? <span className="block text-xs text-warning md:hidden">+{formatNumber(r.pending)} offen</span> : null}
+                  </TD>
                   <TD className="hidden text-right tabular md:table-cell">{r.active_days ? formatDecimal(r.sales / r.active_days) : "–"}</TD>
                   <TD className="hidden text-right tabular md:table-cell">{r.pending ? formatNumber(r.pending) : "–"}</TD>
                   <TD className="hidden text-right tabular md:table-cell">{r.cancelled ? formatNumber(r.cancelled) : "–"}</TD>

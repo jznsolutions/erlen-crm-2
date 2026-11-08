@@ -58,6 +58,18 @@ describe("Bereiche Glasfaser und Leads", () => {
     expect(own).toEqual([{ user_id: o.partner2, revenue_cents: null }]);
   });
 
+  it("Eigene Sales der Leitung erscheinen – auch mit Rolle Administrator", async () => {
+    await db.query("reset role");
+    await db.query("savepoint b");
+    await insertRecord(db, o.admin, o.productRef, { quantity: 4, ref: "ADM-1" });
+    await insertRecord(db, o.agenturleiter, o.productRef, { quantity: 2, ref: "AL-1" });
+    await as(o.agenturleiter);
+    const rows = (await db.query("select user_id, sales::int s from public.employee_performance(private.today_berlin() - 5, private.today_berlin(), $1)", [o.leads])).rows;
+    expect(rows).toEqual(expect.arrayContaining([{ user_id: o.admin, s: 4 }, { user_id: o.agenturleiter, s: 2 }]));
+    await db.query("reset role");
+    await db.query("rollback to savepoint b");
+  });
+
   it("Leistungen nur in freigeschalteten Bereichen; Freischalten nur mit Berechtigung", async () => {
     await db.query("reset role");
     await db.query("savepoint a");
