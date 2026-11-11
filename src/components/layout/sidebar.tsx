@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   BarChart3, BookOpen, CalendarClock, CheckCheck, FileSignature, FileText, FolderLock, FolderUp, Gauge, GraduationCap, Inbox, LayoutDashboard, Menu, Network,
-  Package, Percent, Receipt, Rocket, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Trophy, UserPlus, Users,
+  Package, Percent, Receipt, Rocket, ScrollText, Settings, ShieldCheck, Sparkles, Target, TrendingUp, Trophy, UserPlus, Users,
 } from "lucide-react";
 import { Sheet } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -85,7 +85,21 @@ function Brand() {
   );
 }
 
-export function Sidebar({ sections, badges }: { sections: NavSection[]; badges: Record<string, number> }) {
+type Quote = { title: string; text: string };
+
+/** Spruch des Tages (wechselt täglich, für alle gleich) */
+function DailyQuoteCard({ quote }: { quote: Quote }) {
+  return (
+    <figure className="m-3 rounded-2xl border border-white/10 bg-gradient-to-br from-[#4f8bff]/15 via-[#7c5cff]/10 to-[#22d3ee]/10 p-3 text-xs text-white/70" data-testid="daily-quote">
+      <figcaption className="mb-1 flex items-center gap-1.5 font-semibold text-white/90">
+        <Sparkles className="size-3.5 text-[#c084fc]" />Spruch des Tages · {quote.title}
+      </figcaption>
+      <blockquote className="leading-relaxed">„{quote.text}“</blockquote>
+    </figure>
+  );
+}
+
+export function Sidebar({ sections, badges, quote }: { sections: NavSection[]; badges: Record<string, number>; quote: Quote }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#070b18]/95 via-sidebar/95 to-[#0a0718]/95 backdrop-blur-xl lg:flex">
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-[#818cf8]/40 to-transparent" />
@@ -93,15 +107,12 @@ export function Sidebar({ sections, badges }: { sections: NavSection[]; badges: 
       <div className="flex-1 overflow-y-auto">
         <NavList sections={sections} badges={badges} />
       </div>
-      <div className="m-3 rounded-2xl border border-white/10 bg-gradient-to-br from-[#4f8bff]/15 via-[#7c5cff]/10 to-[#22d3ee]/10 p-3 text-xs text-white/60">
-        <p className="font-semibold text-white/90">ERLEN Portal</p>
-        <p>Verdiene Geld im Vertrieb.<br />Nicht mit Zeit.</p>
-      </div>
+      <DailyQuoteCard quote={quote} />
     </aside>
   );
 }
 
-export function MobileNav({ sections, badges }: { sections: NavSection[]; badges: Record<string, number> }) {
+export function MobileNav({ sections, badges, quote }: { sections: NavSection[]; badges: Record<string, number>; quote: Quote }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -116,6 +127,7 @@ export function MobileNav({ sections, badges }: { sections: NavSection[]; badges
       <Sheet open={open} onOpenChange={setOpen} title="Navigation">
         <Brand />
         <NavList sections={sections} onNavigate={() => setOpen(false)} badges={badges} />
+        <DailyQuoteCard quote={quote} />
       </Sheet>
     </>
   );
