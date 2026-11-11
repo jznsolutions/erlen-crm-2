@@ -9,6 +9,8 @@ import { MobileNav, Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { MoneyToggle } from "@/components/money-toggle";
 import { BackButton } from "@/components/layout/back-button";
+import { quoteForDay } from "@/lib/daily-quote";
+import { todayBerlin } from "@/lib/dates";
 
 export const metadata: Metadata = {
   title: { default: "ERLEN Portal", template: "%s · ERLEN Portal" },
@@ -20,6 +22,8 @@ export default async function PortalLayout({ children }: { children: React.React
   const supabase = await createClient();
 
   // Menüpunkte nach Berechtigung filtern (nur Darstellung – Zugriff schützt der Server)
+  // Spruch des Tages (jeden Tag ein anderer, für alle gleich)
+  const quote = quoteForDay(todayBerlin());
   const sections: NavSection[] = NAV.map((s) => ({
     ...s,
     items: s.items.filter((i) => i.any === "all" || i.any.some((p) => user.permissions.has(p))),
@@ -36,11 +40,11 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div id="portal-root" data-money="hidden" className="portal-bg min-h-dvh">
-      <Sidebar sections={sections} badges={badges} />
+      <Sidebar sections={sections} badges={badges} quote={quote} />
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-white/[0.06] bg-background/60 px-4 backdrop-blur-xl sm:px-6">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#818cf8]/50 to-transparent" />
-          <MobileNav sections={sections} badges={badges} />
+          <MobileNav sections={sections} badges={badges} quote={quote} />
           <BackButton />
           <div className="flex-1" />
           <MoneyToggle />
