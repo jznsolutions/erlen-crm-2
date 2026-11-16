@@ -21,6 +21,14 @@ Das Partner-CRM zeigt je Verkäufer, wie viele Leads **qualifiziert** sind, aufg
 2. **Verwaltung → Provisionen**: in den drei Zeilen „PV-Lead – …“ die Beträge je Rang eintragen und speichern.
 3. Datenbank-Update auf `/einrichtung` einspielen (falls das Portal darauf hinweist).
 
+## Wärmepumpe
+
+Wärmepumpen-Leads stehen im Partner-CRM nicht bei „Anzahl Module“. Das Portal rechnet sie automatisch aus:
+**Zahl am grünen Haken unter dem Namen (qualifiziert gesamt) − Summe der PV-Module = Wärmepumpe.**
+Beispiel: grüner Haken 7, PV-Module 4 + 2 = 6 → **1 Wärmepumpe**.
+
+Einmalig unter **Verwaltung → Produkte** ein Produkt **„Wärmepumpe“** (Bereich Leads) anlegen und unter **Provisionen** die Beträge eintragen – das Portal ordnet es dann automatisch zu. Die erkannte Gesamtzahl steht in jeder Karte im Feld „Qualifiziert gesamt“ und lässt sich korrigieren; gelb markiert heißt: bitte kurz prüfen.
+
 ## Jeden Morgen
 
 1. Im Partner-CRM die Karte eines Verkäufers **aufklappen**, so weit scrollen, dass Name **und** „Anzahl Module“ zu sehen sind (gern auch zwei Bilder) → **Screenshot**. Das für alle Verkäufer wiederholen.

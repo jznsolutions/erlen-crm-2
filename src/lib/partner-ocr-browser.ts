@@ -1,7 +1,7 @@
 // Texterkennung im Browser (Tesseract, kostenlos). Das Bild verlässt den Rechner nicht;
 // Programm und Sprachdaten kommen vom eigenen Server (public/ocr).
 import type { Worker } from "tesseract.js";
-import { wordsToTable, type OcrWord } from "@/lib/partner-ocr";
+import { mergeLines, wordsToTable, type OcrWord } from "@/lib/partner-ocr";
 import { parseCountLines, type CountCard } from "@/lib/partner-counts";
 import type { Person } from "@/lib/partner-sync";
 
@@ -47,7 +47,8 @@ async function recognize(worker: Worker, file: Blob, zoom?: number) {
   for (const b of data.blocks ?? [])
     for (const p of b.paragraphs)
       for (const l of p.lines) {
-        const words = l.words.filter((w) => w.confidence > 20).map((w) => ({ text: w.text, ...w.bbox }));
+        // Zahlen neben Symbolen werden oft unsicher erkannt – Ziffern trotzdem behalten (Prozentprobe prüft)
+        const words = l.words.filter((w) => w.confidence > 20 || /\d/.test(w.text)).map((w) => ({ text: w.text, ...w.bbox }));
         if (words.length) lines.push({ y: l.bbox.y0, x: l.bbox.x0, words });
       }
   return lines.sort((a, b) => a.y - b.y || a.x - b.x);
@@ -58,7 +59,7 @@ export async function readTableFromImage(file: Blob, onProgress?: Progress): Pro
   return withWorker(onProgress, async (w) => wordsToTable((await recognize(w, file)).flatMap((l) => l.words)));
 }
 
-const toText = (lines: Awaited<ReturnType<typeof recognize>>) => lines.map((l) => l.words.map((x) => x.text).join(" "));
+const toText = (lines: Awaited<ReturnType<typeof recognize>>) => mergeLines(lines);
 
 /**
  * Mehrere Screenshots der Partner-Übersicht → Verkäufer-Karten.
@@ -67,7 +68,9 @@ const toText = (lines: Awaited<ReturnType<typeof recognize>>) => lines.map((l) =
  */
 export async function readCountCards(files: Blob[], people: Person[], onProgress?: (image: number, p: number) => void): Promise<CountCard[]> {
   let current = 0;
-  const unsure = (cards: CountCard[]) => cards.flatMap((c) => c.categories).filter((k) => k.total === null).length;
+  // Unsicher: Kategorie ohne „x / y“ oder Zahl am grünen Haken fehlt bzw. passt nicht zur Prozentzahl
+  const unsure = (cards: CountCard[]) =>
+    cards.flatMap((c) => c.categories).filter((k) => k.total === null).length + cards.filter((c) => c.qualifiedTotal == null || !c.totalSure).length;
   return withWorker(
     (p) => onProgress?.(current, p),
     async (w) => {
