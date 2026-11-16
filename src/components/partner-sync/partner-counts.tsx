@@ -7,13 +7,16 @@ import { Alert } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox, Input, Select } from "@/components/ui/input";
 import { formatDate } from "@/lib/format";
-import { guessCardSeller, matchVariant, splitTarget, type VariantOption } from "@/lib/partner-counts";
+import { guessCardSeller, HEAT_PUMP, heatPumpCount, matchVariant, splitTarget, type VariantOption } from "@/lib/partner-counts";
 import type { Person } from "@/lib/partner-sync";
 import { applyPartnerCounts, type CountOutcome } from "@/app/(portal)/leistungen/partner-abgleich/actions";
 
 type Prev = { user_id: string; category: string; qualified: number; updated_at: string };
-type Card = { key: string; name: string; user_id: string; categories: { label: string; qualified: string; total: number | null }[] };
-type Row = { card: Card; label: string; user_id: string; qualified: number | null; total: number | null; prev: Prev | undefined; delta: number };
+// qualTotal: Zahl am grünen Haken (alle qualifizierten Leads) – Rest nach PV = Wärmepumpe
+type Card = { key: string; name: string; user_id: string; qualTotal: string; totalSure: boolean; categories: { label: string; qualified: string; total: number | null }[] };
+type Row = { card: Card; label: string; user_id: string; qualified: number | null; total: number | null; prev: Prev | undefined; delta: number; derived?: boolean };
+
+const catLabel = (l: string) => (l === HEAT_PUMP ? HEAT_PUMP : `${l} Module`);
 
 export function PartnerCounts({ people, options, categoryMap, prev }: { people: Person[]; options: VariantOption[]; categoryMap: Record<string, string>; prev: Prev[] }) {
   const [cards, setCards] = useState<Card[] | null>(null);
@@ -42,7 +45,7 @@ export function PartnerCounts({ people, options, categoryMap, prev }: { people: 
         setError("Auf den Bildern wurden keine Modul-Zahlen gefunden. Bitte die Karte des Verkäufers aufklappen, sodass „Anzahl Module“ zu sehen ist.");
         return;
       }
-      const labels = new Set(found.flatMap((c) => c.categories.map((k) => k.label)));
+      const labels = new Set(found.flatMap((c) => [...c.categories.map((k) => k.label), ...(c.qualifiedTotal != null ? [HEAT_PUMP] : [])]));
       setCatMap((m) => {
         const next = { ...m };
         for (const l of labels) if (!next[l]) next[l] = matchVariant(l, options) ?? "";
@@ -54,6 +57,8 @@ export function PartnerCounts({ people, options, categoryMap, prev }: { people: 
           key: `${Date.now()}-${i}`,
           name: c.name,
           user_id: guessCardSeller(c.name, people) ?? "",
+          qualTotal: c.qualifiedTotal == null ? "" : String(c.qualifiedTotal),
+          totalSure: Boolean(c.totalSure),
           categories: c.categories.map((k) => ({ label: k.label, qualified: k.qualified === null ? "" : String(k.qualified), total: k.total })),
         })),
       ]);
@@ -82,15 +87,20 @@ export function PartnerCounts({ people, options, categoryMap, prev }: { people: 
   // Je Verkäufer und Kategorie zählt der zuletzt eingelesene Stand
   const rows: Row[] = useMemo(() => {
     const byKey = new Map<string, Row>();
-    for (const card of cards ?? [])
-      for (const k of card.categories) {
-        const q = k.qualified.trim() === "" ? null : Number(k.qualified);
-        const p = card.user_id ? prevMap.get(`${card.user_id}|${k.label}`) : undefined;
-        const delta = q === null || !Number.isInteger(q) ? 0 : !p && startOnly ? 0 : q - (p?.qualified ?? 0);
-        byKey.set(card.user_id ? `${card.user_id}|${k.label}` : `${card.key}|${k.label}`, { card, label: k.label, user_id: card.user_id, qualified: q, total: k.total, prev: p, delta });
-      }
-    return [...byKey.values()];
-  }, [cards, prevMap, startOnly]);
+    const add = (card: Card, label: string, q: number | null, total: number | null, derived = false) => {
+      const p = card.user_id ? prevMap.get(`${card.user_id}|${label}`) : undefined;
+      const delta = q === null || !Number.isInteger(q) || q < 0 ? 0 : !p && startOnly ? 0 : q - (p?.qualified ?? 0);
+      byKey.set(card.user_id ? `${card.user_id}|${label}` : `${card.key}|${label}`, { card, label, user_id: card.user_id, qualified: q, total, prev: p, delta, derived });
+    };
+    for (const card of cards ?? []) {
+      const pv = card.categories.map((k) => (k.qualified.trim() === "" ? null : Number(k.qualified)));
+      card.categories.forEach((k, i) => add(card, k.label, pv[i], k.total));
+      // Wärmepumpe = grüner Haken − Summe PV
+      if (card.qualTotal.trim() !== "") add(card, HEAT_PUMP, heatPumpCount(Number(card.qualTotal), pv), null, true);
+    }
+    // Keine Wärmepumpe (0, noch nie gebucht) und noch kein Produkt dafür → nichts zu tun, kein Pflichtfeld
+    return [...byKey.values()].filter((r) => !(r.derived && r.qualified === 0 && !r.prev && !catMap[HEAT_PUMP]));
+  }, [cards, prevMap, startOnly, catMap]);
   const labels = [...new Set(rows.map((r) => r.label))].sort();
   const invalid = rows.filter((r) => !r.user_id || r.qualified === null || !Number.isInteger(r.qualified) || r.qualified < 0 || !catMap[r.label]);
   const added = rows.reduce((s, r) => s + Math.max(0, r.delta), 0);
@@ -173,7 +183,7 @@ export function PartnerCounts({ people, options, categoryMap, prev }: { people: 
             <div className="grid gap-3 sm:grid-cols-3">
               {labels.map((l) => (
                 <label key={l} className="text-sm">
-                  <span className="mb-1 block">{l} Module</span>
+                  <span className="mb-1 block">{catLabel(l)}</span>
                   <Select value={catMap[l] ?? ""} onChange={(e) => setCatMap({ ...catMap, [l]: e.target.value })} aria-label={`Produkt ${l}`}>
                     <option value="">– bitte wählen –</option>
                     {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -197,6 +207,18 @@ export function PartnerCounts({ people, options, categoryMap, prev }: { people: 
                   </label>
                   <Button variant="ghost" size="sm" onClick={() => setCards((cs) => (cs ?? []).filter((x) => x.key !== c.key))}>Entfernen</Button>
                 </div>
+                <label className="flex flex-wrap items-center gap-3 text-sm">
+                  <span className="w-28 font-medium">Qualifiziert gesamt</span>
+                  <Input
+                    className="w-20"
+                    inputMode="numeric"
+                    value={c.qualTotal}
+                    onChange={(e) => update(c.key, (x) => ({ ...x, qualTotal: e.target.value.replace(/\D/g, ""), totalSure: true }))}
+                    aria-label={`Qualifiziert gesamt ${c.name || "unbekannt"}`}
+                  />
+                  <span className="text-muted-foreground">Zahl am grünen Haken unter dem Namen</span>
+                  {c.qualTotal === "" ? <Badge variant="warning">nicht erkannt – bitte eintragen, sonst wird Wärmepumpe nicht gezählt</Badge> : !c.totalSure ? <Badge variant="warning">Zahl bitte prüfen</Badge> : null}
+                </label>
                 <div className="grid gap-2">
                   {c.categories.map((k) => {
                     const row = rows.find((r) => r.card === c && r.label === k.label);
@@ -224,6 +246,21 @@ export function PartnerCounts({ people, options, categoryMap, prev }: { people: 
                       </div>
                     );
                   })}
+                  {(() => {
+                    const row = rows.find((r) => r.card === c && r.label === HEAT_PUMP);
+                    if (!row) return null;
+                    return (
+                      <div className="flex flex-wrap items-center gap-3 text-sm" data-testid="heat-pump-row">
+                        <span className="w-28 font-medium">{HEAT_PUMP}</span>
+                        <span className="w-20 text-center font-semibold tabular" aria-label={`Wärmepumpe ${c.name || "unbekannt"}`}>{row.qualified ?? "–"}</span>
+                        <span className="text-muted-foreground">= gesamt − PV · {row.prev ? `bisher ${row.prev.qualified} (${formatDate(row.prev.updated_at.slice(0, 10))})` : c.user_id ? "erstmals" : ""}</span>
+                        {row.qualified !== null && row.qualified < 0 ? <Badge variant="danger">PV-Summe größer als gesamt – bitte prüfen</Badge> : null}
+                        {row.delta > 0 ? <Badge variant="success">+{row.delta} neu</Badge> : null}
+                        {row.delta < 0 ? <Badge variant="danger">−{-row.delta} Storno</Badge> : null}
+                        {row.delta === 0 && row.qualified !== null && row.qualified >= 0 && c.user_id ? <Badge>keine Änderung</Badge> : null}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
@@ -236,7 +273,7 @@ export function PartnerCounts({ people, options, categoryMap, prev }: { people: 
             </label>
           ) : null}
 
-          {invalid.length ? <Alert tone="warning">Bitte noch ergänzen: {[...new Set(invalid.map((r) => (!r.user_id ? "Verkäufer zuordnen" : !catMap[r.label] ? `Produkt für ${r.label} Module` : "Zahl eintragen")))].join(", ")}</Alert> : null}
+          {invalid.length ? <Alert tone="warning">Bitte noch ergänzen: {[...new Set(invalid.map((r) => (!r.user_id ? "Verkäufer zuordnen" : r.derived && r.qualified !== null && r.qualified < 0 ? "Qualifiziert gesamt prüfen (kleiner als PV-Summe)" : r.derived && r.qualified === null ? "Qualifiziert gesamt bzw. PV-Zahlen eintragen" : !catMap[r.label] ? `Produkt für ${catLabel(r.label)} (unter Produkte anlegen, z. B. „${r.label === HEAT_PUMP ? "Wärmepumpe" : "PV-Lead"}“)` : "Zahl eintragen")))].join(", ")}</Alert> : null}
 
           <div className="flex flex-wrap items-center gap-3">
             <Button size="lg" onClick={submit} disabled={pending || !!invalid.length || !rows.length}>

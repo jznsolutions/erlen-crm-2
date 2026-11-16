@@ -68,6 +68,39 @@ test("Partner-Übersicht: Screenshot je Verkäufer, gebucht wird nur die Differe
   await expect(page.getByRole("button", { name: /Übernehmen \(\+0\)/ })).toBeVisible({ timeout: 90_000 });
 });
 
+test("Wärmepumpe = grüner Haken minus PV-Module, automatisch gebucht", async ({ page, browser }) => {
+  test.setTimeout(180_000);
+  await sql("delete from public.performance_records where external_ref like $1", [`L:${p3}:%`]);
+  await sql("delete from public.partner_lead_counts where user_id = $1", [p3]);
+  await sql("insert into public.products (name, unit_label, area_id) select 'Wärmepumpe E2E', 'Leads', id from public.business_areas where key = 'leads' on conflict do nothing");
+  try {
+    await login(page, "leitung");
+    await page.goto("/leistungen/partner-abgleich");
+    await page.waitForLoadState("networkidle");
+    // 2 + 1 PV, dazu 2 Wärmepumpe → grüner Haken 5
+    await page.getByLabel("Screenshots auswählen").setInputFiles({ name: "wp1.png", mimeType: "image/png", buffer: await cardShot(browser, "Jonas Becker", [2, 2], [1, 1], 2) });
+    await expect(page.getByLabel("Qualifiziert gesamt Jonas Becker")).toHaveValue("5", { timeout: 90_000 });
+    await expect(page.getByLabel("Wärmepumpe Jonas Becker")).toHaveText("2");
+    const [{ id: wp }] = await sql("select id from public.products where name = 'Wärmepumpe E2E'");
+    await expect(page.getByLabel("Produkt Wärmepumpe")).toHaveValue(`${wp}:`);
+    await page.getByLabel("Produkt 15-39").selectOption({ label: "PV-Leads" });
+    await page.getByLabel("Produkt >39").selectOption({ label: "Strom" });
+    await page.getByRole("button", { name: /Übernehmen \(\+5\)/ }).click();
+    await expect(page.getByTestId("counts-result")).toContainText("5 neue Leads");
+    expect((await sql("select count(*)::int c from public.performance_records where external_ref like $1 and product_id = $2 and status = 'bestaetigt'", [`L:${p3}:Wärmepumpe:%`, wp]))[0].c).toBe(2);
+
+    // Nächster Morgen: eine Wärmepumpe mehr qualifiziert → nur +1
+    await page.getByRole("button", { name: "Weitere Screenshots" }).click();
+    await page.getByLabel("Screenshots auswählen").setInputFiles({ name: "wp2.png", mimeType: "image/png", buffer: await cardShot(browser, "Jonas Becker", [2, 2], [1, 1], 3) });
+    await expect(page.getByLabel("Wärmepumpe Jonas Becker")).toHaveText("3", { timeout: 90_000 });
+    await page.getByRole("button", { name: /Übernehmen \(\+1\)/ }).click();
+    await expect(page.getByTestId("counts-result")).toContainText("1 neue Leads");
+  } finally {
+    await sql("delete from public.performance_records where product_id = (select id from public.products where name = 'Wärmepumpe E2E')");
+    await sql("delete from public.products where name = 'Wärmepumpe E2E'");
+  }
+});
+
 test("Vertriebspartner können keine Leistungen mehr selbst erfassen", async ({ page }) => {
   await login(page, "partner1");
   await expect(page.getByRole("link", { name: "Leistung erfassen" })).toHaveCount(0);

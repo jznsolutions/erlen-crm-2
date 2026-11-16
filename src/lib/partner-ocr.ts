@@ -75,3 +75,26 @@ export function wordsToTable(words: OcrWord[]): string[][] {
   }
   return out;
 }
+
+/**
+ * Erkannte Zeilen zu Textzeilen zusammenfassen: Was auf derselben Höhe steht, gehört zu einer Zeile
+ * (die Texterkennung trennt eine Zeile manchmal in mehrere Blöcke). Reihenfolge: oben → unten, links → rechts.
+ */
+export function mergeLines(lines: { words: OcrWord[] }[]): string[] {
+  const items = lines
+    .filter((l) => l.words.length)
+    .map((l) => {
+      const y0 = Math.min(...l.words.map((w) => w.y0));
+      const y1 = Math.max(...l.words.map((w) => w.y1));
+      return { c: (y0 + y1) / 2, h: Math.max(1, y1 - y0), words: l.words };
+    })
+    .sort((a, b) => a.c - b.c);
+  const groups: { c: number; h: number; words: OcrWord[] }[] = [];
+  for (const it of items) {
+    const g = groups[groups.length - 1];
+    if (g && Math.abs(it.c - g.c) < 0.5 * Math.min(it.h, g.h)) {
+      g.words.push(...it.words);
+    } else groups.push({ ...it, words: [...it.words] });
+  }
+  return groups.map((g) => g.words.sort((a, b) => a.x0 - b.x0).map((w) => w.text).join(" "));
+}

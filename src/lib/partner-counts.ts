@@ -4,7 +4,42 @@
 import { guessSeller, type Person } from "@/lib/partner-sync";
 
 export type CountCategory = { label: string; qualified: number | null; total: number | null };
-export type CountCard = { name: string; categories: CountCategory[] };
+/**
+ * qualifiedTotal: Zahl am grünen Haken unter dem Namen (alle qualifizierten Leads).
+ * Was davon nicht in den Modul-Kategorien (PV) steckt, ist Wärmepumpe.
+ * totalSure: Zahl passt zur Erfolgsquote in Prozent (sonst bitte prüfen).
+ */
+export type CountCard = { name: string; categories: CountCategory[]; qualifiedTotal?: number | null; totalSure?: boolean; expanded?: boolean };
+
+/** Kategorie für qualifizierte Leads ohne Modul-Angabe (Gesamt minus PV) */
+export const HEAT_PUMP = "Wärmepumpe";
+
+/**
+ * Kennzahlenzeile unter dem Namen: [Personen] Gesamt · [Haken] Qualifiziert · [Uhr] In Bearbeitung ·
+ * [X] Storniert · Erfolgsquote %. Die Texterkennung liest die Symbole teils als Zeichen mit
+ * („24“ statt „4“) – geprüft wird deshalb gegen die Prozentzahl (Qualifiziert ÷ Gesamt).
+ */
+export function parseStatsLine(line: string): { qualified: number; sure: boolean } | null {
+  const tokens = line.trim().split(/\s+/);
+  const pi = tokens.findIndex((t) => /\d+\s*%/.test(t));
+  if (pi < 0) return null;
+  // Symbol vor der Prozentzahl wird manchmal als Ziffer gelesen („↗100%“ → „2100%“)
+  const pctRaw = tokens[pi].match(/(\d+)\s*%/)![1];
+  const pcts = [...new Set([pctRaw, pctRaw.slice(1), pctRaw.slice(-3), pctRaw.slice(-2)].filter(Boolean).map(Number).filter((x) => x <= 100))];
+  const nums = tokens.slice(0, pi).map((t) => t.replace(/[Oo]/g, "0").replace(/\D/g, "")).filter(Boolean);
+  if (nums.length < 4) return null;
+  const [g, q] = nums.slice(-4);
+  const cands = (x: string) => [...new Set([x, x.slice(1), x.slice(-1)].filter(Boolean).map(Number))];
+  for (const qq of cands(q)) {
+    for (const gg of cands(g)) {
+      for (const pct of pcts) {
+        if (gg > 0 && qq <= gg && Math.abs(Math.round((100 * qq) / gg) - pct) <= 1) return { qualified: qq, sure: true };
+        if (gg === 0 && qq === 0 && pct === 0) return { qualified: 0, sure: true };
+      }
+    }
+  }
+  return { qualified: Number(q), sure: false };
+}
 
 const CAT = /([<>≤≥]=?\s*\d{1,3}|\d{1,3}\s*[-–]\s*\d{1,3}|\d{1,3}\s*\+)\s*Modul(?:e|en)?\b/i;
 const FRACTION = /(\d{1,5})\s*[/|]\s*(\d{1,5})/;
@@ -39,10 +74,21 @@ export function parseCountLines(lines: string[], people: Person[]): CountCard[] 
     const line = lines[i];
     const name = sellerName(line, people, lines[i - 1]);
     if (name) {
-      card = { name, categories: [] };
+      card = { name, categories: [], qualifiedTotal: null, totalSure: false, expanded: false };
       cards.push(card);
       continue;
     }
+    // Kennzahlenzeile direkt unter dem Namen (grüner Haken = qualifiziert)
+    if (card && card.qualifiedTotal == null && !card.categories.length && /\d\s*%/.test(line)) {
+      const st = parseStatsLine(line);
+      if (st) {
+        card.qualifiedTotal = st.qualified;
+        card.totalSure = st.sure;
+        continue;
+      }
+    }
+    // Nur in der aufgeklappten Karte sichtbar
+    if (card && /Anzahl\s+Module|Erfolgsquote|Disqualifizierung/i.test(line)) card.expanded = true;
     const c = line.match(CAT);
     if (!c) continue;
     if (!card) {
@@ -69,7 +115,14 @@ export function parseCountLines(lines: string[], people: Person[]): CountCard[] 
     }
     card.categories = [...card.categories.filter((k) => k.label !== label), { label, qualified, total }];
   }
-  return cards.filter((k) => k.categories.length);
+  // Karten ohne PV-Kategorien zählen nur, wenn sie aufgeklappt sind (dann ist alles Wärmepumpe)
+  return cards.filter((k) => k.categories.length || (k.expanded && k.qualifiedTotal != null));
+}
+
+/** Wärmepumpen-Leads = qualifiziert gesamt − Summe der PV-Kategorien (null, wenn nicht bestimmbar) */
+export function heatPumpCount(qualifiedTotal: number | null | undefined, pv: (number | null)[]): number | null {
+  if (qualifiedTotal == null || pv.some((x) => x == null)) return null;
+  return qualifiedTotal - pv.reduce<number>((a, b) => a + (b ?? 0), 0);
 }
 
 /** Verkäufer einer Karte vorschlagen */
@@ -95,6 +148,9 @@ export type VariantOption = { value: string; label: string; productId: string; v
 
 /** Passende Provisionsstufe für eine Partner-Kategorie (größte Überschneidung der Modul-Bereiche). */
 export function matchVariant(category: string, options: VariantOption[]): string | null {
+  if (category === HEAT_PUMP) {
+    return options.find((o) => /w(ä|ae)rme|\bwp\b/i.test(`${o.label} ${o.name}`))?.value ?? null;
+  }
   const r = moduleRange(category);
   if (!r) return null;
   let best: string | null = null;
