@@ -8,6 +8,7 @@ export const NAV: NavSection[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard", any: "all" },
       { href: "/leistungen", label: "Leistungen", icon: "TrendingUp", any: ["performance.read.self", "performance.read.team", "performance.read.all", "performance.read.assigned"] },
+      { href: "/leistungen/glasfaser", label: "Glasfaser-Abgleich", icon: "ScanLine", any: "all" },
       { href: "/leistungen/freigaben", label: "Freigaben", icon: "CheckCheck", any: ["performance.approve"] },
       { href: "/ziele", label: "Ziele & Rankings", icon: "Target", any: "all" },
       { href: "/karriere", label: "Karriere & Empfehlen", icon: "Rocket", any: "all" },

@@ -65,16 +65,18 @@ const one = async (sql, params = []) => (await q(sql, params)).rows[0];
 
 // Produkte
 const products = {};
-for (const [name, unit, ref, order] of [
-  ["Glasfaser", "Verträge", false, 1],
-  ["PV-Leads", "Leads", false, 2],
-  ["Strom", "Verträge", false, 3],
-  ["Gas", "Verträge", false, 4],
+// Bereich je Produkt: Glasfaser bzw. Leads (Zahlen werden nie bereichsübergreifend gerechnet)
+for (const [name, unit, ref, order, area] of [
+  ["Glasfaser", "Verträge", false, 1, "glasfaser"],
+  ["PV-Leads", "Leads", false, 2, "leads"],
+  ["Strom", "Verträge", false, 3, "leads"],
+  ["Gas", "Verträge", false, 4, "leads"],
 ]) {
   products[name] = (await one(
-    `insert into public.products (name, unit_label, requires_external_ref, sort_order) values ($1, $2, $3, $4)
+    `insert into public.products (name, unit_label, requires_external_ref, sort_order, area_id)
+     values ($1, $2, $3, $4, (select id from public.business_areas where key = $5))
      on conflict (lower(name)) do update set unit_label = excluded.unit_label returning id`,
-    [name, unit, ref, order],
+    [name, unit, ref, order, area],
   )).id;
 }
 
@@ -82,6 +84,11 @@ for (const [name, unit, ref, order] of [
 await q(
   "insert into public.user_products (user_id, product_id) select u, p from unnest($1::uuid[]) u, unnest($2::uuid[]) p on conflict do nothing",
   [Object.values(ids), Object.values(products)],
+);
+// Bereichsfreigaben: alle Beispielpersonen für Glasfaser und Leads
+await q(
+  "insert into public.user_areas (user_id, area_id) select u, a.id from unnest($1::uuid[]) u, public.business_areas a on conflict do nothing",
+  [Object.values(ids)],
 );
 
 // Teams

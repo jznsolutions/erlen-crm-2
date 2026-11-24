@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, ScanLine, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CountUp } from "@/components/count-up";
 
@@ -15,6 +15,7 @@ export function DashboardHero({
   canCreate,
   streak = 0,
   areaSwitch,
+  uploadHref,
 }: {
   greeting: string;
   name: string;
@@ -24,6 +25,7 @@ export function DashboardHero({
   canCreate: boolean;
   streak?: number;
   areaSwitch?: React.ReactNode;
+  uploadHref?: string | null;
 }) {
   return (
     <section className="hero-panel animate-rise rounded-3xl p-5 sm:p-8" aria-labelledby="hero-heading">
@@ -46,10 +48,19 @@ export function DashboardHero({
               🔥 {streak} Tage in Folge – Serie halten!
             </Link>
           ) : null}
-          {canCreate ? (
-            <Button asChild size="lg" className="mt-5">
-              <Link href="/leistungen/neu"><Plus />Leistung erfassen</Link>
-            </Button>
+          {canCreate || uploadHref ? (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {uploadHref ? (
+                <Button asChild size="lg">
+                  <Link href={uploadHref}><ScanLine />Verträge hochladen</Link>
+                </Button>
+              ) : null}
+              {canCreate ? (
+                <Button asChild size="lg" variant={uploadHref ? "secondary" : "default"}>
+                  <Link href="/leistungen/neu"><Plus />Leistung erfassen</Link>
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
         {stats.length ? (

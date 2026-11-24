@@ -19,6 +19,11 @@
 * Freischalten: **Mitarbeiterprofil → Bereiche & Provision** → Haken bei **Glasfaser** und/oder **Leads** → **Freigaben speichern**. Die Person wird benachrichtigt. Bei der **Einladung** neuer Mitarbeiter direkt mit auswählen.
 * Der Partner-Abgleich (Screenshot) schaltet den Bereich automatisch frei, wenn das Partner-CRM Leads für die Person zeigt.
 
+## Glasfaser-Abgleich (alle, auch Vertriebspartner)
+* **Menü → Glasfaser-Abgleich** bzw. Startseite (Bereich Glasfaser) → **Verträge hochladen**: Screenshot der eigenen Auftragsliste aus dem Partner-CRM hochladen → **Übernehmen**. Nur neue Verträge werden gebucht.
+* Leitung: Tarife einmalig zuordnen und am Monatsende die **Stornoliste** hochladen – die Stornos werden bei allen abgezogen. Ausführlich: `docs/ANLEITUNG_GLASFASER_ABGLEICH.md`.
+* Im Dashboard der Vertriebspartner heißt der Betrag **„Bruttoverdienst“** (vor Stornos und Abzügen).
+
 ## Mitarbeiter-Leistung
 * **Organisation → Mitarbeiter-Leistung**: Liste aller Mitarbeiter mit **aktiven Tagen** (Tage mit mindestens einer bestätigten Leistung), **Sales**, Ø je Tag, offenen und stornierten Leistungen sowie **Umsatz** (nur für die Agenturleitung; bestätigte Leistungen × Satz „Agentur“). Zeitraum wählbar, Spalten per Klick sortierbar, immer nur für den gewählten Bereich.
 
