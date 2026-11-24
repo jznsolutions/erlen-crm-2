@@ -43,7 +43,7 @@ export function KpiRow({ rows, today, scopeLabel, money }: { rows: DailyRow[]; t
         {showRevenue ? (
           <StatTile label="Umsatz diesen Monat" value={<span className="money">{formatCents(money!.revenueCents!)}</span>} sub="bestätigte Leistung × Agentur-Satz" icon={Euro} accent="pink" />
         ) : (
-          <StatTile label="Meine Provision (Monat)" value={<span className="money">{formatCents(money?.ownCommissionCents ?? 0)}</span>} sub="inkl. Overhead, vor Abzügen" icon={Euro} accent="pink" />
+          <StatTile label="Bruttoverdienst (Monat)" value={<span className="money">{formatCents(money?.ownCommissionCents ?? 0)}</span>} sub="inkl. Overhead, vor Stornos und Abzügen" icon={Euro} accent="pink" />
         )}
       </div>
       <p className="px-1 text-xs text-muted-foreground">

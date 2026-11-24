@@ -1754,6 +1754,19 @@ isOneToOne: false
               "completed_lessons": number,"course_id": string,"due_on": string,"is_mandatory": boolean,"last_activity": string,"title": string,"total_lessons": number
             }[]
                            },
+"glasfaser_settings_save":
+{ Args: { "p_product_map": Json }; Returns: undefined
+                           },
+"glasfaser_storno_apply":
+{ Args: { "p_rows": Json }; Returns: {
+              "action": string,"idx": number,"message": string
+            }[]
+                           },
+"glasfaser_upload_apply":
+{ Args: { "p_rows": Json }; Returns: {
+              "added": number,"idx": number,"message": string
+            }[]
+                           },
 "gong_mute_set":
 { Args: { "p_muted": boolean }; Returns: undefined
                            },

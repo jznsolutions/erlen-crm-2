@@ -143,6 +143,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         canCreate={user.permissions.has("performance.create")}
         streak={streak}
         areaSwitch={canPerf && areas.length ? <AreaSwitch areas={areas} current={area} /> : null}
+        uploadHref={area?.key === "glasfaser" ? "/leistungen/glasfaser" : null}
       />
 
       {pendingUpdates ? (

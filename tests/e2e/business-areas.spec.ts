@@ -55,10 +55,10 @@ test("Glasfaser und Leads sind getrennt: Umschalter, Mitarbeiter-Leistung", asyn
   const [{ first_name, last_name }] = await sql("select first_name, last_name from public.profiles where email = 'partner1@erlen.local'");
   const partnerRow = () => page.getByTestId("employee-row").filter({ hasText: `${first_name} ${last_name}` });
   await expect(page.getByRole("radio", { name: "Leads" })).toHaveAttribute("aria-checked", "true");
-  await expect(partnerRow().locator("td").nth(3)).toHaveText(String(leads));
+  await expect(partnerRow().locator("td").nth(3).locator("span").first()).toHaveText(String(leads));
   await page.getByRole("radio", { name: "Glasfaser" }).click();
   await expect(page.getByRole("radio", { name: "Glasfaser" })).toHaveAttribute("aria-checked", "true");
-  await expect(partnerRow().locator("td").nth(3)).toHaveText(String(glas));
+  await expect(partnerRow().locator("td").nth(3).locator("span").first()).toHaveText(String(glas));
   // Umsatzspalte für die Leitung vorhanden
   await expect(page.getByRole("link", { name: "Umsatz" })).toBeVisible();
 });
